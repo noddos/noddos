@@ -11,7 +11,7 @@ The noddos client consists of the following tools:
 - nodreport.py: reads the local database and attempts to match them against the device profiles and then uploads traffic and/or host data to the cloud
 - janitor.py: keeps the local database to a manageable size
 
-##### Nodlisten.py
+##### nodlisten.py
 Nodlisten runs as a daemon to listen to DHCP, DNS and SSDP traffic on the home netowrk. It persists collect data to a SQLite3 database. It reads DHCP and DNS data from the dnsmasq daemon that should be configured to log extended DNS and DHCP data. If incoming SSDP data has a 'Location' header than nodlisten will call the URL contained in the header to collect additional device information. Configuration can be set in a configuration file (see below) that can be overridden by command line options. The process should be started at boot time.
 
 ##### getdeviceprofiles.sh
@@ -31,7 +31,7 @@ The janitor tool should be called from cron to delete data from noddos.db to pre
 
 ## Installation
 
-Pre-requisites
+Prerequisites
 - Linux v2.6.13 or later (as inotify support is needed)
 - python3
 - dnsmasq
