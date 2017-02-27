@@ -110,21 +110,21 @@ Set up NoDDos
     sudo chown $MYUSERNAME /var/log/noddos /etc/noddos /var/lib/noddos
 
     cp noddosconfig.crt /etc/noddos
-    ./getdeviceprofiles.sh 
+    tools//getdeviceprofiles.sh 
     # Install a cronjob to do this frequently, ie
     # 0 */3 * * * /path/to/noddos/tools/getdeviceprofiles.sh
 
     cp noddosconfig-sample.json /etc/noddosconfig.json
 
-    ./makecert.sh
+    tools/makecert.sh
     mv noddosapiclient.pem /etc/noddos
 
     # Install cronjob to run nodreport.py every hour. Please chose a random
     # minute of the hour to help spread load to the cloud API
-    # 38 * * * * /home/steven/src/noddosserver/client/nodreport.py
+    # 38 * * * * /path/to/noddos/pyclient/nodreport.py
 
     # Nodlisten is still at alpha quality so best to run it from `screen'
-    listener/nodlisten.py --verbose debug --nodaemon
+    pyclient/listener/nodlisten.py --verbose debug --nodaemon
 
 ## Configuration
 The noddos client configuration file (Default: /etc/noddos/noddosconfig.json, -c / --configurationfile command line parameter) is a JSON file with a JSON object under the 'client' key. Some of its settings can be overrriden by command line options. The keys for the configuration items in the JSON file are:
