@@ -2,9 +2,15 @@
 __pycache__/
 *.py[cod]
 *$py.class
+worker/bin/
+worker/lib/
+pip-selfcheck.json
+worker/include/
 
 # C extensions
 *.so
+
+*.swp
 
 # Distribution / packaging
 .Python
