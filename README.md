@@ -1,6 +1,6 @@
 # NoDDos - Stop DDos attacks at the source
 
-The NoDDos client monitors network traffic in the home and dynamically applies device-specific ACLs to that traffic to stop a device from being used in a DDOS attack. The ACLs are downloaded from the cloud and are generated based on traffic data uploaded anonymously by the NoDDos client. You can install the NoDDos client on Linux DIY routers and on Home Gateways running OpenWRT. . For more information see the [NoDDos website](https://www.noddos.io/).
+The NoDDos client monitors network traffic in the home- or enterprise network and dynamically applies device-specific ACLs to that traffic to stop a device from being used in a DDOS attack. The ACLs are downloaded from the cloud and are generated based on traffic data uploaded anonymously by the NoDDos client. You can install the NoDDos client on Linux-based (DIY) routers and firewalls and on Home Gateways running OpenWRT. For more information see the [NoDDos website](https://www.noddos.io/).
 
 ## Client Overview
 
@@ -12,11 +12,7 @@ The noddos client consists of the following tools:
 - janitor.py: keeps the local database to a manageable size
 
 ##### Nodlisten.py
-Nodlisten runs as a daemon to listen to DHCP, DNS and SSDP traffic on the home netowrk. It persists collect data to a SQLite3 database
-. It reads DHCP and DNS data from the dnsmasq daemon that should be configured to log extended DNS and DHCP data. If incoming SSDP dat
-a has a 'Location' header than nodlisten will call the URL contained in the header to collect additional device information. Configura
-tion can be set in a configuration file (see below) that can be overridden by command line options. The process should be started at b
-oot time.
+Nodlisten runs as a daemon to listen to DHCP, DNS and SSDP traffic on the home netowrk. It persists collect data to a SQLite3 database. It reads DHCP and DNS data from the dnsmasq daemon that should be configured to log extended DNS and DHCP data. If incoming SSDP data has a 'Location' header than nodlisten will call the URL contained in the header to collect additional device information. Configuration can be set in a configuration file (see below) that can be overridden by command line options. The process should be started at boot time.
 
 ##### getdeviceprofiles.sh
 The 'getdeviceprofiles.sh' script is used to securely download the list of Device Profiles over HTTPS from the Noddos web site, check the digital signature of the file using a Noddos certificate and save the verified file under '/var/lib/noddos/DeviceProfiles.json' by default, although this can be modified with the --directory command line parameter. It needs access to the public cert that was used to sign the file by default from /etc/noddos/noddosconfig.crt but this can be modified with the --certificate parameter. This script should be called at least once per day from cron. This script does not read the noddosconfig.json configuration file (see below) so use the command line options if the defaults do not apply.
