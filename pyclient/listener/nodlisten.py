@@ -114,6 +114,7 @@ def read_file_events(fd, logfd, hosts, dhcpqueries, conn):
                     host.lastseen_set()
                     if host.dnsquery_add(qn, fqdn, action, result):
                         host.write_db_record_dns(conn, qn, result)
+                    host.write_db_record_thing(conn)
                 else:
                     logging.debug("Is it a DHCP log entry?")
                     m = dhcp_rx.search(line)
@@ -138,6 +139,7 @@ def read_file_events(fd, logfd, hosts, dhcpqueries, conn):
                             host.write_db_record_thing(conn)
                             host.lastseen = datetime.now(timezone.utc)
                             del dhcpqueries[qn]
+                            host.write_db_record_thing(conn)
 
         buffer_i += s_size + fname_len
         count += 1

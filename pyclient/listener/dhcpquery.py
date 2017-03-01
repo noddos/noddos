@@ -99,12 +99,14 @@ class DhcpQuery:
             if m:
                 self.vendor = m.group(1)
                 logging.debug("DHCP vendor: %s", self.vendor)
+                return True
             else:
                 m = dhcp_clientprovidedname_rx.search(line)
 
                 if m:
                     self.clientname = m.group(1)
                     logging.debug("DHCP client provided name: %s", self.clientname)
+                    return True
 
         return False
 

@@ -136,6 +136,7 @@ class Host:
                 header)
             self._ssdp[header] = []
 
+        self.lastseen_set()
         found = 0
         for v in self._ssdp[header]:
             if v['Value'] == value:
@@ -152,7 +153,7 @@ class Host:
             self.lastmodified_set()
             logging.debug('Sender %s adding header %s with %s', self._Ipv4Address,\
                 header, value)
-
+        return found
 
     def ssdpheader_compare(self, header, value):
         if not header in self._ssdp:
@@ -168,6 +169,7 @@ class Host:
             if v['Value'] == value:
                 found = 1
                 v['LastSeen']=datetime.now(timezone.utc)
+                self._LastSeen = v['LastSeen']
                 return 0
 
         return 1
@@ -176,6 +178,8 @@ class Host:
     def dnsquery_add(self, qn, fqdn, action, result):
         logging.debug("Q# %s from %s : %s %s %s", qn, self._Ipv4Address, \
             action, fqdn, result)
+
+        self.lastseen_set()
 
         change = 0
         if not qn in self._dns:
@@ -195,7 +199,6 @@ class Host:
                     fqdn, result)
                 change = self._dns[qn].update(fqdn,result)
 
-        self.lastseen_set()
 
         return change
 
@@ -232,7 +235,7 @@ class Host:
     def create_db_record_thing(self, conn):
         cur = conn.cursor()
         cur.execute('''INSERT INTO Things (Mac, Ipv4Address, Ipv6Address,
-            Hostname, DhcpHostname, DhcpVendor,
+           Hostname, DhcpHostname, DhcpVendor,
             SsdpFriendlyName, SsdpManufacturer, SsdpModelName, SsdpUdn,
             SsdpSerialNumber, SsdpManufacturerUrl, SsdpModelUrl,
             FirstSeen, LastModified, LastSeen, Status, DeviceProfileUuid)
