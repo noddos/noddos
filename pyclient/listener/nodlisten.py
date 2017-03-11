@@ -71,9 +71,12 @@ def recv_ssdp_packet(sock, hosts, conn):
                 if header.lower() == 'location':
                     hosts[sender].request_ssdphostinfo(value)
                     
-
-    if change:
-        hosts[sender].write_db_record_ssdp(conn)
+    if sender in hosts:
+        host = hosts[sender]
+        if change:
+            host.write_db_record_ssdp(conn)
+        host.lastseen_set()
+        host.write_db_record_thing(conn)
 
     return change
 
@@ -136,10 +139,9 @@ def read_file_events(fd, logfd, hosts, dhcpqueries, conn):
                             host.mac = dhcpquery.mac
                             host.ipv4address = dhcpquery.ipv4address
                             host.ipv6address = dhcpquery.ipv6address
+                            host.lastseen_set()
                             host.write_db_record_thing(conn)
-                            host.lastseen = datetime.now(timezone.utc)
                             del dhcpqueries[qn]
-                            host.write_db_record_thing(conn)
 
         buffer_i += s_size + fname_len
         count += 1
