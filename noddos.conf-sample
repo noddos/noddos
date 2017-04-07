@@ -1,0 +1,26 @@
+{
+    "DeviceProfilesFile": "/var/lib/noddos/DeviceProfiles.json",
+    "MatchFile": "/var/lib/noddos/DeviceMatches.json",
+    "DumpFile": "/var/lib/noddos/DeviceDump.json",
+    "ClientCertFile": "/etc/noddos/noddosclientcert.pem",
+    "SignatureCertFile": "/etc/noddos/noddossignature.pem",
+    "PidFile": "/var/lib/noddos/noddos.pid",
+    "DnsmasqLogFile": "/var/log/dnsmasq.log",
+    "WhitelistedIpv4Addresses": [
+        "127.0.0.1", 
+        "192.168.1.240",
+        "192.168.1.11",
+        "192.168.1.232",
+        "192.168.1.98"
+    ],
+    "WhitelistedIpv6Addresses": [],
+    "WhitelistedMacAddresses": [  "18:22:7e:d2:7b:00", "ec:9b:f3:e4:23:e5" ],
+    "ListenIpAddresses": [],
+    "ListenInterfaces": [],
+    "TrafficReportInterval": 3600,
+    "DeviceReportInterval": 14400,
+    "ExpireDnsQuery": 86400,
+    "ExpireHost": 604800,
+    "UploadMode": "Anonymous"
+}
+
