@@ -25,7 +25,7 @@ OPENSSL=`which openssl`
 RM=`which rm`
 CURRENTDIR=`pwd`
 
-CERTFILE=/etc/noddos/noddosconfig.crt
+CERTFILE=/etc/noddos/noddosconfig.pem
 OUTDIR=/var/lib/noddos
 while [[ $# -gt 1 ]]
 do
@@ -111,7 +111,7 @@ $GETURL https://www.noddos.io/config/DeviceProfiles.json.sha256
 
 if [ $? -gt 0 ]
 then
-    echo "Error getting checksum file"
+    echo "Error getting checksum file: https://www.noddos.io/config/DeviceProfiles.json.sha256"
     cd $CWD
     exit
 fi
@@ -120,7 +120,7 @@ $GETURL https://www.noddos.io/config/DeviceProfiles.json$EXT
 
 if [ $? -gt 0 ]
 then
-    echo "Error getting device profiles"
+    echo "Error getting device profiles: https://www.noddos.io/config/DeviceProfiles.json$EXT"
     cd $CWD
     exit
 fi
@@ -136,7 +136,7 @@ then
         $UNZIP --decompress --input DeviceProfiles.json$EXT --output DeviceProfiles.json
         if [ $? -gt 0 ]
         then
-            echo "Error uncompressing device profiles"
+            echo "Error uncompressing device profiles in $PWD"
             cd $CWD
             exit
         fi
