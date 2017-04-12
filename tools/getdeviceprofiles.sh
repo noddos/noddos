@@ -133,7 +133,7 @@ then
     fi
     if [ "$EXT" == ".brotli" ]
     then
-        $UNZIP --input DeviceProfiles.json$EXT --output DeviceProfiles.json
+        $UNZIP --decompress --input DeviceProfiles.json$EXT --output DeviceProfiles.json
         if [ $? -gt 0 ]
         then
             echo "Error uncompressing device profiles"

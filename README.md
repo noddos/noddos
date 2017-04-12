@@ -54,6 +54,15 @@ Set up Noddos
     git clone https://github.com/noddos/noddos
     cd noddos
 
+    # Download Requests library for C++
+    git submodule add https://github.com/whoshuu/cpr.git
+    git submodule update --init --recursive
+    export BUILD_CPR_TESTS=OFF
+    export USE_SYSTEM_GTEST=ON
+    export USE_SYSTEM_CURL=ON
+    cmake .
+    make
+
     sudo mkdir /var/log/noddos /etc/noddos/ /var/lib/noddos
     MYUSERNAME=`whoami`
     sudo chown $MYUSERNAME /var/log/noddos /etc/noddos /var/lib/noddos
