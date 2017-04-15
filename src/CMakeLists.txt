@@ -91,4 +91,3 @@ target_link_libraries(SsdpServer_test ${CPR_LIBRARIES})
 add_test (Noddos noddos_test)
 add_executable(noddos_test noddos_test.cxx)
 
-add_custom_command(TARGET noddos POST_BUILD COMMAND sudo ./setnoddoscap.sh)

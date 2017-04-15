@@ -19,6 +19,7 @@ Prerequisites
 - libcurl 
 - libnetfilter_conntrack
 - wget (preferred because of conditional GET support) or curl
+- ca-certificates 
 - gzip or bzip2 or brotli (latter is preferred due to superior compression rate)
 
 Noddos leverages dnsmasq logs. The following changes are required to make dnsmasq log the right data to the right place: 
@@ -52,7 +53,7 @@ Set up Noddos
 ### Compile noddos yourself
     # install development packages for libcurl, libopenssl and libnetfilter_conntrack
     git clone https://github.com/noddos/noddos
-    cd noddos
+    cd noddos/src
 
     # Download Requests library for C++
     git submodule add https://github.com/whoshuu/cpr.git
@@ -63,24 +64,25 @@ Set up Noddos
     cmake .
     make
 
-    sudo mkdir /var/log/noddos /etc/noddos/ /var/lib/noddos
-    MYUSERNAME=`whoami`
-    sudo chown $MYUSERNAME /var/log/noddos /etc/noddos /var/lib/noddos
-
-    cp noddosconfig.crt /etc/noddos
+    sudo adduser --system --home /var/lib/noddos --shell /bin/false \
+         --disabled-login --disabled-password\
+         --quiet  --group noddos
+    sudo mkdir /etc/noddos
+    sudo cp noddos.conf-sample /etc/noddos.conf
+    cp noddosconfig.pem /etc/noddos
+    sudo apt install ca-certificates
     tools/getdeviceprofiles.sh 
     # Install a cronjob to do this frequently (please pick a randon time of day instead of 3:23am), ie
-    # 23 */3 * * * /path/to/noddos/tools/getdeviceprofiles.sh
+    23 */3 * * * /path/to/noddos/tools/getdeviceprofiles.sh
 
-    cp noddos.conf-sample /etc/noddos/noddos.conf
-
-    # Noddos is still at beta quality so best to run it from `screen' without spanning a daemon.
-    noddos -n -f >/tmp/noddos.out
+    # Noddos needs to be started as root as it will need to get Linux
+    # firewall connection state changes. It will drop to an unprivileged
+    # user/group after that has been set up.
+    sudo noddos 
 
 ## Command line options
 The following command line options are supported by the Noddos client:
 __-n, --no-daemon__: Don't run as daemon and send log messages to STDERR in addition to syslog
-__-f, --flowtrack__: Enabling tracking for network flows
 __-c, --config-file__: Location of configuration default, default /etc/noddos/noddos.conf
 
 ## Configuration file
