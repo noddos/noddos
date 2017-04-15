@@ -1,12 +1,12 @@
 # Noddos - A device-aware firewall
 
-The Noddos client monitors network traffic in the home- or enterprise network, identifies with IOT devices are present and dynamically applies device-specific ACLs to the traffic of the IOT devices to stop a device from sending rogue traffic, for example when being used in a DDOS attack. The ACLs are downloaded from the cloud and are generated based on traffic stats uploaded anonymously by the Noddos client. You can install the Noddos client on Linux-based (DIY) routers and firewalls and real soon now on Home Gateways running OpenWRT. For more information see the [NoDDos website](https://www.noddos.io/). Note that the original client written in Python has been removed as it will soon be replaced by a C++ client that is faster, uses less memory, doesn't rely on Ulogd and that is easier to install on OpenWRT routers.
+The Noddos client monitors network traffic in the home- or enterprise network, identifies with IOT devices are present and dynamically applies device-specific ACLs to the traffic of the IOT devices to stop a device from sending rogue traffic, for example when being used in a DDOS attack. The ACLs are downloaded from the cloud and are generated based on traffic stats uploaded anonymously by the Noddos client. You can install the Noddos client on Linux-based (DIY) routers and firewalls and real soon now on Home Gateways running OpenWRT. For more information see the [NoDDos website](https://www.noddos.io/). 
 
 The current focus of Noddos is on building the database of device profiles by getting the client distributed. The implementation of the firewall functionality will start once the collection functionality is up and running and available in the C++ client on OpenWRT routers.
 
 ## Client Overview
 
-Noddos runs as a daemon to listen to DHCP, DNS and SSDP traffic on the home network. It reads DHCP and DNS data from the dnsmasq daemon that should be configured to log extended DNS and DHCP data. If incoming SSDP data has a 'Location' header than nodlisten will call the URL contained in the header to collect additional device information. Using the Linux Netfilter functionality it tracks network flows in real time. Noddos reads the DeviceProfiles file that specifies the matching conditions and traffic filtering rules. Every hour, Noddos matches discovered devices with the device profile database to identify known devices. Noddos can be configured upload traffic statistics for identified devices and device attributes for devices it not yet has been able to match to a device profile. There is a configuration file that can be used to specify a.o. whether traffic and device statistics should be uploaded and whether or not they should be uploaded anonymously. The Noddos process should be started at boot time.
+Noddos runs as a daemon to listen to DHCP, DNS and SSDP traffic on the home network. It reads DHCP and DNS data from the dnsmasq daemon that should be configured to log extended DNS and DHCP data. If incoming SSDP data has a 'Location' header than nodlisten will call the URL contained in the header to collect additional device information. Using the Linux Netfilter functionality, it tracks network flows in real time. Noddos reads the DeviceProfiles file that specifies the matching conditions and traffic filtering rules. Every hour, Noddos matches discovered devices with the device profile database to identify known devices. Noddos can be configured upload traffic statistics for identified devices and device attributes for devices it not yet has been able to match to a device profile. There is a configuration file that can be used to specify a.o. whether traffic and device statistics should be uploaded and whether or not they should be uploaded anonymously. The Noddos process should be started at boot time.
 
 The 'getdeviceprofiles.sh' script is used to securely download the list of Device Profiles over HTTPS from the Noddos web site, check the digital signature of the file using a Noddos certificate and makes the file available to the Noddos client. It needs access to the public cert that was used to sign the file. This script should be called at least once per day from cron. 
 
@@ -55,6 +55,11 @@ Set up Noddos
     git clone https://github.com/noddos/noddos
     cd noddos/src
 
+    # Install 3rd party development libraries
+    sudo apt install libssl-dev
+    sudo apt install libnetfilter-conntrack-dev
+    sudo apt install libcurl4-openssl-dev
+
     # Download Requests library for C++
     git submodule add https://github.com/whoshuu/cpr.git
     git submodule update --init --recursive
@@ -69,9 +74,16 @@ Set up Noddos
          --quiet  --group noddos
     sudo mkdir /etc/noddos
     sudo cp noddos.conf-sample /etc/noddos.conf
-    cp noddosconfig.pem /etc/noddos
+    sudo cp noddosconfig.pem /etc/noddos
+    ### edit /etc/noddos.conf, for one to whitelist the IP addresses of the interfaces of your router
+    sudo chown -R root:root /etc/noddos
+
+    # getdeviceprofiles.sh needs the certificates of well-known CAs installed to be able to connect to
+    # https://www.noddos.io/
+
     sudo apt install ca-certificates
-    tools/getdeviceprofiles.sh 
+    install noddos -o 0 -g 0 -s noddos /usr/sbin 
+    install noddos -o 0 -g 0 ../tools/getdeviceprofiles.sh /usr/sbin 
     # Install a cronjob to do this frequently (please pick a randon time of day instead of 3:23am), ie
     23 */3 * * * /path/to/noddos/tools/getdeviceprofiles.sh
 
