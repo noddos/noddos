@@ -1,0 +1,12 @@
+install:
+  - apt install libssl-dev
+  - apt install libnetfilter-conntrack-dev
+  - apt install libcurl4-openssl-dev
+  - git submodule add https://github.com/whoshuu/cpr.git
+  - git submodule update --init --recursive
+language: cpp
+script:
+  - cd src
+  - BUILD_CPR_TESTS=OFF USE_SYSTEM_GTEST=ON USE_SYSTEM_CURL=ON cmake .
+  - make
+compiler: gcc

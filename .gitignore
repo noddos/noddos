@@ -6,6 +6,9 @@ CMakeFiles/
 Makefile
 cmake_install.cmake
 CMakeCache.txt
+.project
+.cproject
+.settings/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
