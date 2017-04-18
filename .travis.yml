@@ -1,10 +1,21 @@
-install:
-  - git submodule add https://github.com/whoshuu/cpr.git
-  - git submodule update --init --recursive
 language: cpp
 script:
+compiler: gcc
+dist: trusty
+
+before_install:
+  # C++11
+  - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+  - sudo apt-get update -qq
+
+install: 
+  # C++11
+  - sudo apt-get install -qq g++-5
+  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-5 90
+  - git submodule add https://github.com/whoshuu/cpr.git
+  - git submodule update --init --recursive
+
+script: 
   - cd src
   - BUILD_CPR_TESTS=OFF USE_SYSTEM_GTEST=ON USE_SYSTEM_CURL=ON cmake .
-  - make
-compiler: gcc
-dist: xenial
+  - make noddos
