@@ -1,7 +1,4 @@
 install:
-  - apt install libssl-dev
-  - apt install libnetfilter-conntrack-dev
-  - apt install libcurl4-openssl-dev
   - git submodule add https://github.com/whoshuu/cpr.git
   - git submodule update --init --recursive
 language: cpp
