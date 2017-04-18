@@ -1,9 +1,3 @@
-addons:
-  apt:
-    - sourceline: 'ppa:ubuntu-toolchain-r/test'
-  packages:
-    - g++-5
-
 install:
   - git submodule add https://github.com/whoshuu/cpr.git
   - git submodule update --init --recursive
@@ -13,3 +7,4 @@ script:
   - BUILD_CPR_TESTS=OFF USE_SYSTEM_GTEST=ON USE_SYSTEM_CURL=ON cmake .
   - make
 compiler: gcc
+dist: xenial
