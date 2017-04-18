@@ -1,3 +1,9 @@
+addons:
+  apt:
+    - sourceline: 'ppa:ubuntu-toolchain-r/test'
+  packages:
+    - g++-5
+
 install:
   - git submodule add https://github.com/whoshuu/cpr.git
   - git submodule update --init --recursive
