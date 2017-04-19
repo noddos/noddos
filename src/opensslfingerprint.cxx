@@ -49,7 +49,7 @@ std::string getCertFingerprint(std::string certfile) {
 
 	// allocates memory
 	unsigned char * buff;
-	if (!(buff = (unsigned char *) malloc(len))) {
+	if (not(buff = (unsigned char *) malloc(len))) {
 		fprintf(stderr, "peminfo: out of virtual memory\n");
 		return"";
 	};
@@ -81,7 +81,7 @@ std::string getCertFingerprint(std::string certfile) {
 
 	// decodes buffer
 	X509 * x;
-	if (!(x = PEM_read_bio_X509(bio, NULL, 0L, NULL))) {
+	if (not(x = PEM_read_bio_X509(bio, NULL, 0L, NULL))) {
 		unsigned	err;
 		char		errmsg[1024];
 		while((err = ERR_get_error())) {
@@ -94,12 +94,13 @@ std::string getCertFingerprint(std::string certfile) {
 		return "";
 	};
 
-   printf("name:      %s\n",    x->name);
-   printf("serial:    ");
-   printf("%02X", x->cert_info->serialNumber->data[0]);
-   for(int pos = 1; pos < x->cert_info->serialNumber->length; pos++)
-      printf(":%02X", x->cert_info->serialNumber->data[pos]);
-   printf("\n");
+    printf("name:      %s\n",    x->name);
+    printf("serial:    ");
+    printf("%02X", x->cert_info->serialNumber->data[0]);
+    for(int pos = 1; pos < x->cert_info->serialNumber->length; pos++) {
+        printf(":%02X", x->cert_info->serialNumber->data[pos]);
+    }
+    printf("\n");
 
 	// calculate fingerprint
 	const EVP_MD * digest = EVP_get_digestbyname("sha1");
@@ -110,14 +111,16 @@ std::string getCertFingerprint(std::string certfile) {
 	X509_digest(x, digest, md, &n);
 
 	char fpbuf[64];
-	for(int pos = 0; pos < 19; pos++)
-		  snprintf(&fpbuf[pos * 3], 4, "%02x:", md[pos]);
+	for(int pos = 0; pos < 19; pos++) {
+	    snprintf(&fpbuf[pos * 3], 4, "%02x:", md[pos]);
+    }
 	snprintf(&fpbuf[57], 3, "%02x", md[19]);
 
-	  printf("Fingerprint: ");
-	   for(int pos = 0; pos < 19; pos++)
-	      printf("%02x:", md[pos]);
-	   printf("%02x\n", md[19]);
+    printf("Fingerprint: ");
+	for(int pos = 0; pos < 19; pos++) {
+	    printf("%02x:", md[pos]);
+    }
+    printf("%02x\n", md[19]);
 
 	std::string fp = fpbuf;
 	// frees memory

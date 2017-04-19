@@ -27,8 +27,9 @@ using json = nlohmann::json;
 
 uint32_t DnsLogEntry::DnsStats (json & j, const uint32_t time_interval) {
 	auto dnsentries = 0;
-	if (! Fresh(time_interval))
+	if (not Fresh(time_interval)) {
 		return dnsentries;
+    }
 
 	std::forward_list<std::string> l;
 	for (auto &ip: Ips) {

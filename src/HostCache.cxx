@@ -86,8 +86,9 @@ bool HostCache::MatchByIpAddress(const std::string inIpAddress) {
 }
 
 std::shared_ptr<Host> HostCache::FindOrCreateHostByMac (const std::string mac, const std::string Uuid) {
-	if (WhitelistedNodes.find(mac) != WhitelistedNodes.end())
+	if (WhitelistedNodes.find(mac) != WhitelistedNodes.end()) {
 		return nullptr;
+    }
 	if (mac == "") {
 		syslog(LOG_WARNING, "empty Mac Address provided");
 		return nullptr;
@@ -121,9 +122,9 @@ std::shared_ptr<Host> HostCache::FindOrCreateHostByIp (const std::string ip, con
 }
 
 bool HostCache::AddByMac (const std::string inMacAddress, const std::string inIpAddress) {
-	if (hC.find(inMacAddress) != hC.end())
+	if (hC.find(inMacAddress) != hC.end()) {
 		return false;
-
+    }
 	auto h = std::make_shared<Host>(inMacAddress);
 	h->IpAddress_set (inIpAddress);
 	hC[inMacAddress] = h;
@@ -258,7 +259,7 @@ std::string HostCache::MacLookup (const std::string inIpAddress, std::string inI
 		sin6->sin6_family = domain = AF_INET6;
 	    addr_ptr = &(sin6->sin6_addr);
 	}
-    if (! inet_pton(domain, inIpAddress.c_str(), addr_ptr)) {
+    if (not inet_pton(domain, inIpAddress.c_str(), addr_ptr)) {
 		syslog (LOG_ERR, "inet_pton failed for %s", inIpAddress.c_str());
 		return "";
 	}
@@ -360,12 +361,12 @@ bool HostCache::ExportDeviceProfileMatches(const std::string filename, bool deta
 	std::ofstream ofs(filename);
 	json j;
 	for (auto it : hC) {
-		if (! isWhitelisted(*(it.second))) {
+		if (not isWhitelisted(*(it.second))) {
 			it.second->ExportDeviceInfo(j, detailed);
 		}
 	}
 
-	if (!ofs.is_open()) {
+	if (not ofs.is_open()) {
 		syslog(LOG_WARNING, "Couldn't open %s", filename.c_str());
 		return false;
 	}
@@ -388,7 +389,7 @@ uint32_t HostCache::UploadDeviceStats(const std::string ClientCertFingerprint) {
 	uint32_t uploads = 0;
 	json j;
 	for (auto it : hC) {
-		if ( (! isWhitelisted(*(it.second))) && ! it.second->isMatched()) {
+		if ( (not isWhitelisted(*(it.second))) && not it.second->isMatched()) {
 			json h;
 			it.second->DeviceStats(h, 604800, false, false);
 			uploads++;
@@ -404,7 +405,7 @@ bool HostCache::UploadTrafficStats(const time_t interval, const std::string Clie
 	uint32_t uploads = 0;
 	json j;
 	for (auto it : hC) {
-		if ( (! isWhitelisted(*(it.second))) && it.second->isMatched()) {
+		if ( (not isWhitelisted(*(it.second))) && it.second->isMatched()) {
 			json h;
 			it.second->TrafficStats(h, interval, false);
 			uploads++;
@@ -419,7 +420,7 @@ bool HostCache::UploadTrafficStats(const time_t interval, const std::string Clie
 bool HostCache::ImportDeviceProfileMatches(const std::string filename) {
 	syslog(LOG_DEBUG, "Opening & reading %s", filename.c_str());
 	std::ifstream ifs(filename);
-	if (!ifs.is_open()) {
+	if (not ifs.is_open()) {
 		syslog(LOG_WARNING, "Couldn't open %s", filename.c_str());
 		return false;
 	}
@@ -442,25 +443,25 @@ bool HostCache::ImportDeviceInfo (json &j) {
 		syslog(LOG_ERR, "No DeviceProfileUuid set, ignoring this Object");
 		return false;
 	}
-	if (! j["DeviceProfileUuid"].is_string()) {
+	if (not j["DeviceProfileUuid"].is_string()) {
 		syslog(LOG_ERR, "DeviceProfileUuid is not a string, ignoring this Object");
 		return false;
 	}
-	if (DeviceProfileUuid != j["DeviceProfileUuid"].get<std::string>())
+	if (DeviceProfileUuid != j["DeviceProfileUuid"].get<std::string>()) {
 		return false;
-
+    }
 	std::string MacAddress;
 	if (j.find("MacAddress") == j.end()) {
 		syslog(LOG_ERR, "No MacAddress set, ignoring this Object");
 		return false;
 	}
-	if (! j["MacAddress"].is_string()) {
+	if (not j["MacAddress"].is_string()) {
 		syslog(LOG_ERR, "MacAddress is not a string, ignoring this Object");
 		return false;
 	}
-	if (MacAddress != j["MacAddress"].get<std::string>())
+	if (MacAddress != j["MacAddress"].get<std::string>()) {
 		return false;
-
+    }
 	syslog(LOG_DEBUG, "Importing Device Profile for UUID %s with MacAddress %s", DeviceProfileUuid.c_str(), MacAddress.c_str());
 
 	auto hit = hC.find(MacAddress);
@@ -471,7 +472,7 @@ bool HostCache::ImportDeviceInfo (json &j) {
 			return false;
 		}
 	}
-	if (! FindOrCreateHostByMac(MacAddress, DeviceProfileUuid)) {
+	if (not FindOrCreateHostByMac(MacAddress, DeviceProfileUuid)) {
 		syslog(LOG_WARNING, "Failed to create Host with MacAddress %s and uuid %s", MacAddress.c_str(), DeviceProfileUuid.c_str());
 		return false;
 	}
@@ -481,7 +482,7 @@ uint32_t HostCache::DeviceProfiles_load(const std::string filename) {
 	syslog(LOG_DEBUG, "Opening & reading %s", filename.c_str());
 	// Read the DeviceProfiles file
 	std::ifstream ifs(filename);
-	if (!ifs.is_open()) {
+	if (not ifs.is_open()) {
 		syslog(LOG_WARNING, "Couldn't open %s", filename.c_str());
 		return 0;
 	}

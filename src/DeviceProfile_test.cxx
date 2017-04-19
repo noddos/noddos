@@ -48,7 +48,8 @@ int main()
 		  std::cout << "Invalid Device Profile " << uuid << std::endl;
 	  }
 	}
-	if (invalid)
+	if (invalid) {
 		exit (1);
+    }
 	exit(0);
 }

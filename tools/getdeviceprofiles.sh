@@ -17,14 +17,14 @@
 
 PATH=/usr/bin:/bin
 
-WGET=`which wget`
-CURL=`which curl`
-BUNZIP2=`which bunzip2`
-GUNZIP=`which gunzip`
-BROTLI=`which brotli`
-OPENSSL=`which openssl`
-RM=`which rm`
-CURRENTDIR=`pwd`
+WGET=$(which wget)
+CURL=$(which curl)
+BUNZIP2=$(which bunzip)2
+GUNZIP=$(which gunzip)
+BROTLI=$(which brotli)
+OPENSSL=$(which openssl)
+RM=$(which rm)
+CWD=$(pwd)
 
 CERTFILE=/etc/noddos/noddosconfig.pem
 OUTDIR=/var/lib/noddos
