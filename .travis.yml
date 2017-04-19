@@ -19,5 +19,6 @@ install:
 
 script: 
   - cd src
-  - BUILD_CPR_TESTS=OFF USE_SYSTEM_GTEST=ON USE_SYSTEM_CURL=ON cmake .
-  - make noddos
+  - BUILD_CPR_TESTS=ON USE_SYSTEM_GTEST=ON USE_SYSTEM_CURL=ON cmake .
+  - make 
+  # - make test

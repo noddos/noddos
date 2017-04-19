@@ -43,52 +43,54 @@ int main () {
 
 	DnsmasqLogFile d ("tests/dnsmasqdnsdata.log", hc, 86400);
 	auto lp = d.LinesParsed();
-	std::cout << "Lines parsed: " << lp << std::endl;
-	if (lp != 216)
+	if (lp != 216) {
 		testfail = true;
+    }
 
 	auto c = hc.HostCount();
-	std::cout << "Hosts found: " << c << std::endl;
-	if (c != 8)
+	if (c != 8) {
+	    std::cout << "Hosts found: " << c << std::endl;
 		testfail = true;
-
+    }
 	c = hc.HostDnsQueryCount ("192.168.1.232");
-	std::cout << "DNS queries by 192.168.1.232: " << c << std::endl;
-	if (c != 4)
+	if (c != 4) {
+	    std::cout << "DNS queries by 192.168.1.232: " << c << std::endl;
 		testfail = true;
-
+    }
 	c = hc.HostDnsQueryCount ("192.168.1.98");
-	std::cout << "DNS queries by 192.168.1.98: " << c << std::endl;
-	if (c != 4)
+	if (c != 4) {
+	    std::cout << "DNS queries by 192.168.1.98: " << c << std::endl;
 		testfail = true;
-
+    }
 	c = hc.HostDnsQueryCount ("192.168.1.241");
-	std::cout << "DNS queries by 192.168.1.241: " << c << std::endl;
-	if (c != 21)
+	if (c != 21) {
+	    std::cout << "DNS queries by 192.168.1.241: " << c << std::endl;
 		testfail = true;
-
+    }
 	c = hc.HostDnsQueryCount ("192.168.1.99");
-	std::cout << "DNS queries by 192.168.1.99: " << c << std::endl;
-	if (c != 1)
+	if (c != 1) {
+	    std::cout << "DNS queries by 192.168.1.99: " << c << std::endl;
 		testfail = true;
-
+    }
 	c = hc.HostDnsQueryCount ("192.168.1.234");
-	std::cout << "DNS queries by 192.168.1.234: " << c << std::endl;
-	if (c != 1)
+	if (c != 1) {
+	    std::cout << "DNS queries by 192.168.1.234: " << c << std::endl;
 		testfail = true;
-
+    }
 	c = hc.HostDnsQueryCount ("192.168.1.235");
-	std::cout << "DNS queries by 192.168.1.235: " << c << std::endl;
-	if (c != 3)
+	if (c != 3) {
+	    std::cout << "DNS queries by 192.168.1.235: " << c << std::endl;
 		testfail = true;
-
+    }
 	c = hc.HostDnsQueryCount ("192.168.1.251");
-	std::cout << "DNS queries by 192.168.1.251: " << c << std::endl;
-	if (c != 2)
+	if (c != 2) {
+	    std::cout << "DNS queries by 192.168.1.251: " << c << std::endl;
 		testfail = true;
-
-	if(testfail)
+    }
+	if(testfail) {
+	    std::cout << "Lines parsed: " << lp << std::endl;
 		exit(1);
+    }
 	exit(0);
 }
 

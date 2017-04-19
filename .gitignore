@@ -9,6 +9,8 @@ CMakeCache.txt
 .project
 .cproject
 .settings/
+Testing/
+bin/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -78,7 +78,8 @@ int main () {
 		testfailure = true;
 
 	}
-	if (testfailure)
+	if (testfailure) {
 		exit(1);
+    }
 	exit(0);
 }

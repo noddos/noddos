@@ -49,16 +49,18 @@ int DnsmasqLogFile::GetLogLine () {
 	}
 
 	char cline[300];
-	if (fgets(cline, 300, fp) == NULL)
+	if (fgets(cline, 300, fp) == NULL) {
 		return -1;
+    }
 	cline[strcspn(cline, "\n")] = 0;
 	std::string line = cline;
 
 	// TODO: only process log lines if they are not older than `CacheExpiration'
 	syslog(LOG_DEBUG, "%s", line.c_str());
 
-	if (ParseDnsLine(line))
+	if (ParseDnsLine(line)) {
 		return 1;
+    }
 
 	if (ParseDhcpLine(line))
 		return 1;
@@ -70,8 +72,9 @@ int DnsmasqLogFile::GetLogLine () {
 bool DnsmasqLogFile::ParseDhcpLine (const std::string line) {
 	std::smatch m;
 
-	if (!std::regex_search(line, m, dhcp_rx))
+	if (not std::regex_search(line, m, dhcp_rx)) {
 		return false;
+    }
 	if(m.empty())
 		return false;
 
@@ -85,7 +88,7 @@ bool DnsmasqLogFile::ParseDhcpLine (const std::string line) {
 
 	std::smatch ack_m;
 	if (std::regex_match(dhcpmessage, ack_m, dhcp_ack_rx)) {
-		if (!cachedQuery) {
+		if (not cachedQuery) {
 			DhcpRequestMap[querynumber] = std::make_shared<DhcpRequest>();
 			syslog(LOG_DEBUG, "creating entry in QueryMap for query number %lu", querynumber);
 		}
@@ -158,7 +161,7 @@ uint32_t DnsmasqLogFile::PruneDhcpRequestMap (bool Force) {
 bool DnsmasqLogFile::ParseDnsLine (const std::string line) {
 	std::smatch m;
 
-	if (!std::regex_search(line, m, dns_rx))
+	if (not std::regex_search(line, m, dns_rx))
 		return false;
 	if(m.empty())
 		return false;
@@ -221,7 +224,7 @@ int DnsmasqLogFile::Open(std::string inFileName, uint32_t inExpiration) {
 	syslog(LOG_DEBUG, "Opening dnsmasq logfile at %s", inFileName.c_str());
 	if ((fp = fopen (inFileName.c_str(),"r")) != NULL) {
 		FileName = inFileName;
-    	if (!inExpiration) {
+    	if (not inExpiration) {
     		fseek(fp, 0, SEEK_END);
     	} else {
     		int parsed;
@@ -246,16 +249,21 @@ int DnsmasqLogFile::Open(std::string inFileName, uint32_t inExpiration) {
 
 //! Close the dnsmasq log file
 bool DnsmasqLogFile::Close() {
-	if (inotify_watch > -1)
-		if (inotify_fd > -1)
-			if (inotify_rm_watch (inotify_fd, inotify_watch) < 0)
+	if (inotify_watch > -1) {
+		if (inotify_fd > -1) {
+			if (inotify_rm_watch (inotify_fd, inotify_watch) < 0) {
 				syslog(LOG_ERR, "Remove inotify watch for log file");
+            }
+        }
+    }
 	inotify_watch = -1;
 
-	if (fp != NULL)
-		if (fclose(fp) < 0)
+	if (fp != NULL) {
+		if (fclose(fp) < 0) {
 			syslog(LOG_ERR,  "Close log file");
+        }
 		fp = NULL;
+    }
 
 	return true;
 }
@@ -268,18 +276,17 @@ bool DnsmasqLogFile::ProcessEvent(struct epoll_event &epoll_event) {
 	char buf[4096] __attribute__ ((aligned(__alignof__(struct inotify_event))));
     const struct inotify_event *event;
 
-	ssize_t len;
 	char *ptr;
 	for (;;) {
-		len = read(inotify_fd, buf, 4096);
+	    ssize_t len = read(inotify_fd, buf, 4096);
         if (len == -1 && errno != EAGAIN) {
             syslog(LOG_ERR, "read on inotify_fd");
             Close();
             return false;
         }
-        if (len <= 0)
+        if (len <= 0) {
         	break;
-
+        }
         for (ptr = buf; ptr < buf + len; ptr += sizeof(struct inotify_event) + event->len) {
             event = (const struct inotify_event *) ptr;
             if ((event->mask & IN_CLOSE_NOWRITE) || (event->mask & IN_DELETE_SELF)) {

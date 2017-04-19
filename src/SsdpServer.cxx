@@ -46,9 +46,7 @@ bool SsdpServer::ProcessEvent (struct epoll_event &event) {
 	memset(&addr, 0, sizeof(addr));
 
 	socklen_t addrlen = sizeof(addr);
-	int flags = MSG_DONTWAIT | MSG_TRUNC;
 	int nbytes;
-	// TODO this fd does not seem to have been set to NON_BLOCK succesfully
 	int packets = 0;
 	while (packets++ < 3 && (nbytes = recvfrom(socket_fd, msgbuf, MSGBUFSIZE, 0, &addr, &addrlen)) > 0) {
 		if (addr.sa_family == AF_INET) {
@@ -57,10 +55,11 @@ bool SsdpServer::ProcessEvent (struct epoll_event &event) {
 			sHost->IpAddress = inet_ntoa(addr_in_ptr->sin_addr);
 			syslog(LOG_DEBUG, "Received multicast packet from %s with %d bytes", sHost->IpAddress.c_str(), nbytes);
 
-			if (ParseSsdpMessage(sHost, msgbuf, nbytes))
+			if (ParseSsdpMessage(sHost, msgbuf, nbytes)) {
 				hCache.AddSsdpInfo(sHost);
-			else
+			} else {
 				syslog(LOG_DEBUG, "Didn't parse SSDP packet");
+            }
 		} else {
 			syslog(LOG_WARNING, "Unknown address family: %u", addr.sa_family);
 		}
@@ -87,7 +86,7 @@ bool SsdpServer::ParseSsdpMessage (std::shared_ptr<SsdpHost> host, const char * 
 				 std::smatch m;
 				 syslog(LOG_DEBUG, "Line %s", line.c_str());
 				 std::regex_search(line, m, ssdp_rx);
-				 if (! m.empty()) {
+				 if (not m.empty()) {
 					 std::string header = m.str(1);
 					 std::transform(header.begin(), header.end(), header.begin(), std::ptr_fun<int, int>(std::toupper));
 					 std::string value = m.str(2);
@@ -111,9 +110,9 @@ bool SsdpServer::ParseSsdpMessage (std::shared_ptr<SsdpHost> host, const char * 
 		}
 		pos++;
 	}
-	if (host->Server == "" && host->Location == "" && host->UserAgent == "")
+	if (host->Server == "" && host->Location == "" && host->UserAgent == "") {
 		return false;
-
+    }
 	return true;
 }
 
@@ -142,8 +141,9 @@ int SsdpServer::Open (std::string input, uint32_t inExpiration) {
 		exit(1);
 	}
 	int flags = fcntl(socket_fd, F_GETFD, 0);
-	if (flags == -1)
+	if (flags == -1) {
 		flags = 0;
+    }
 	if ((fcntl(socket_fd,F_SETFD,flags | O_NONBLOCK)) == -1) {
 		syslog(LOG_ERR, "Set socket O_NONBLOCK");
 	}
@@ -151,10 +151,11 @@ int SsdpServer::Open (std::string input, uint32_t inExpiration) {
 	// TODO: add support for multiple IP addresses or interfaces to join multicast groups with
 	struct ip_mreqn mreqn;
 	mreqn.imr_multiaddr.s_addr=inet_addr("239.255.255.250");
-	if (IpAddress == "")
+	if (IpAddress == "") {
 		mreqn.imr_address.s_addr=htonl(INADDR_ANY);
-	else
+	} else {
 		mreqn.imr_address.s_addr=inet_addr(IpAddress.c_str());
+    }
 	mreqn.imr_ifindex = 0;
 	if (setsockopt(socket_fd,IPPROTO_IP,IP_ADD_MEMBERSHIP,&mreqn,sizeof(mreqn)) < 0) {
 		syslog(LOG_CRIT, "setsockopt");

@@ -58,8 +58,9 @@ int main () {
 		std::cout << "Mac lookup failure for 192.168.1.240 resulting in: " << s << std::endl;
 		testfailure = true;
 	}
-	if (testfailure)
+	if (testfailure) {
 		exit(1);
+    }
 	exit(0);
 }
 

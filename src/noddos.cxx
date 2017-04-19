@@ -81,8 +81,9 @@ int main(int argc, char* argv[]) {
 
 
 		options.parse(argc, argv);
-		if (options.count("n"))
+		if (options.count("n")) {
 			daemon = false;
+        }
 	} catch (const cxxopts::OptionException& e) {
 	    std::cout << "error parsing options: " << e.what() << std::endl;
 	    exit(1);
@@ -182,7 +183,8 @@ int main(int argc, char* argv[]) {
 		int ev;
     	for (ev = 0; ev< eCnt; ev++) {
 
-			if ((epoll_events[ev].events & EPOLLERR) || (epoll_events[ev].events & EPOLLHUP) || (! epoll_events[ev].events & EPOLLIN)) {
+			if ((epoll_events[ev].events & EPOLLERR) || (epoll_events[ev].events & EPOLLHUP) ||
+                    (not epoll_events[ev].events & EPOLLIN)) {
 				syslog(LOG_ERR, "Epoll event error for FD %d", epoll_events[ev].data.fd);
 				close(epoll_events[ev].data.fd);
 			} else {
@@ -192,11 +194,12 @@ int main(int argc, char* argv[]) {
 					syslog(LOG_DEBUG, "Processing signal event");
 					struct signalfd_siginfo si;
  					auto res = read (sfd, &si, sizeof(si));
-					if (res < 0)
+					if (res < 0) {
 						syslog(LOG_ERR, "reading from signal event filehandle");
-					if (res != sizeof(si))
+                    }
+					if (res != sizeof(si)) {
 						syslog(LOG_ERR, "Something wrong with reading from signal event filehandle");
-
+                    }
 					if (si.ssi_signo == SIGTERM ) {
 						syslog(LOG_INFO, "Processing signal event SIGTERM");
 						goto exitprog;
@@ -282,10 +285,12 @@ int setup_signal_fd (int sfd) {
 
 bool drop_process_privileges(Config &inConfig) {
 	size_t bufsize = sysconf(_SC_GETPW_R_SIZE_MAX);
-    if (bufsize == -1)          /* Value was indeterminate */
-        bufsize = 16384;        /* Should be more than enough */
-    if (sysconf(_SC_GETGR_R_SIZE_MAX) > bufsize)
+    if (bufsize == -1) {         /* Value was indeterminate */
+        bufsize = 16384;         /* Should be more than enough */
+    }
+    if (sysconf(_SC_GETGR_R_SIZE_MAX) > bufsize) {
     	bufsize = sysconf(_SC_GETGR_R_SIZE_MAX);
+    }
     char buf[bufsize];
 
     struct passwd *accountresult;
@@ -297,9 +302,9 @@ bool drop_process_privileges(Config &inConfig) {
 		int s;
 		if ((s = getpwnam_r(inConfig.User.c_str(), &accountdetails, buf, bufsize, &accountresult)) != 0) {
 		    if (accountresult == NULL) {
-		        if (s == 0)
+		        if (s == 0) {
 		            syslog(LOG_CRIT, "Username %s not found\n", inConfig.User.c_str());
-		        else {
+		        } else {
 		            syslog(LOG_CRIT, "getpwnam_r");
 		        }
 		        exit(EXIT_FAILURE);
@@ -309,9 +314,9 @@ bool drop_process_privileges(Config &inConfig) {
 		struct group groupdetails;
 		if ((s = getgrnam_r(inConfig.Group.c_str(), &groupdetails, buf, (unsigned long int) bufsize, &groupresult)) != 0) {
 			if (groupresult == NULL) {
-		        if (s == 0)
+		        if (s == 0) {
 		            syslog(LOG_CRIT, "Group %s not found\n", inConfig.Group.c_str());
-		        else {
+		        } else {
 		            syslog(LOG_CRIT, "getgrnam_r");
 		        }
 		        exit(EXIT_FAILURE);
@@ -399,8 +404,7 @@ bool daemonize (Config &inConfig) {
     }
 
     // Change the current working directory to a directory guaranteed to exist
-	if((chdir("/")) < 0)
-	{
+	if((chdir("/")) < 0) {
 	   // Log failure and exit
 	   syslog(LOG_ERR, "Could not change working directory to /");
 

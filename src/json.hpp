@@ -4922,7 +4922,7 @@ class basic_json
         static constexpr difference_type end_value = begin_value + 1;
 
         /// iterator as signed integer type
-        difference_type m_it = std::numeric_limits<std::ptrdiff_t>::min();
+        difference_type m_it = (std::numeric_limits<std::ptrdiff_t>::min());
     };
 
     /*!

@@ -76,18 +76,19 @@ ConfidenceLevel Host::Match(const DeviceProfile& dp) {
 	auto v = dp.Identifiers_get();
 	for (auto& i : v) {
 		auto match = Match(*i);
-		if (match >= ConfidenceLevel::High)
+		if (match >= ConfidenceLevel::High) {
 			return match;
-
-		if 	(match > bestmatch)
+        }
+		if 	(match > bestmatch) {
 			bestmatch = match;
+        }
 	}
 	return bestmatch;
 }
 
 ConfidenceLevel Host::Match(const Identifier& i) {
 	for (auto& mc : i.MatchConditions_get()) {
-		if(! Match (*mc)) {
+		if(not Match (*mc)) {
 			return ConfidenceLevel::None;
 		}
 	}
@@ -95,39 +96,40 @@ ConfidenceLevel Host::Match(const Identifier& i) {
 }
 
 bool Host::Match(const MatchCondition& mc) {
-	if (mc.SubsetMatch)
+	if (mc.SubsetMatch) {
 		return MatchSubset(mc);
+    }
 
 	std::string value;
-	if (mc.Key == "MacOid")
+	if (mc.Key == "MacOid") {
 		value = MacAddress.substr(0,8);
-	if (mc.Key == "DhcpHostname")
+	} else if (mc.Key == "DhcpHostname") {
 		value = Dhcp.DhcpHostname;
-	else if (mc.Key == "DhcpVendor")
+	} else if (mc.Key == "DhcpVendor") {
 		value = Dhcp.DhcpVendor;
-	else if (mc.Key == "DhcpHostname")
+	} else if (mc.Key == "DhcpHostname") {
 		value = Dhcp.DhcpHostname ;
-	else if (mc.Key == "Hostname")
+	} else if (mc.Key == "Hostname") {
 		value = Dhcp.Hostname ;
-	else if (mc.Key == "SsdpFriendlyName" )
+	} else if (mc.Key == "SsdpFriendlyName" ) {
 		value = Ssdp.FriendlyName;
-	else if (mc.Key == "SsdpManufacturer")
+	} else if (mc.Key == "SsdpManufacturer") {
 		value = Ssdp.Manufacturer;
-	else if (mc.Key == "SsdpManufacturerUrl")
+	} else if (mc.Key == "SsdpManufacturerUrl") {
 		value = Ssdp.ManufacturerUrl;
-	else if (mc.Key == "SsdpModelName")
+	} else if (mc.Key == "SsdpModelName") {
 		value = Ssdp.ModelName;
-	else if (mc.Key == "SsdpModelUrl")
+	} else if (mc.Key == "SsdpModelUrl") {
 		value = Ssdp.ModelUrl;
-	else if (mc.Key == "SsdpSerialNumber")
+	} else if (mc.Key == "SsdpSerialNumber") {
 		value = Ssdp.SerialNumber;
-	else if (mc.Key == "SsdpUserAgent")
+	} else if (mc.Key == "SsdpUserAgent") {
 		value = Ssdp.UserAgent;
-	else if (mc.Key == "SsdpServer")
+	} else if (mc.Key == "SsdpServer") {
 		value = Ssdp.Server;
-	else if (mc.Key == "SsdpLocation")
+	} else if (mc.Key == "SsdpLocation") {
 		value = Ssdp.Location;
-
+	}
 	size_t startpos = 0;
 	size_t mcvaluelength = mc.Value.length();
 	size_t datavaluelength = value.length();
@@ -164,7 +166,7 @@ bool Host::MatchSubset(const MatchCondition& mc) {
 bool Host::DeviceStats(json& j, uint32_t time_interval, bool force, bool detailed) {
 	// Don't report info if device has been matched
 	// or if device hasn't been modified since last reporting run
-	if (!force && (isMatched() || LastModified < (time(nullptr) - time_interval))) {
+	if (not force && (isMatched() || LastModified < (time(nullptr) - time_interval))) {
 		return false;
 	}
 	j["MacOid"] = MacAddress.substr(0,8);
@@ -188,8 +190,9 @@ bool Host::DeviceStats(json& j, uint32_t time_interval, bool force, bool detaile
 		else
 			fqdns += dq.second->Fqdn_get() + " ";
 	}
-	if (! detailed)
+	if (not detailed) {
 		j["DnsQueries"] = fqdns;
+    }
 
 	return true;
 }
@@ -280,17 +283,17 @@ bool Host::DnsLogEntry_set(const std::string inFqdn, const std::string inIpAddre
 		syslog(LOG_DEBUG, "Creating DnsLogEntry for %s", inFqdn.c_str());
 	}
 
-	if (DnsCache[inFqdn]->Ips_set(inIpAddress, inExpiration))
+	if (DnsCache[inFqdn]->Ips_set(inIpAddress, inExpiration)) {
 		iCache::LastModified = iCache::LastSeen;
-
+    }
 	return newentry;
 }
 
 bool Host::Dhcp_set (const std::shared_ptr<DhcpRequest> inDhcp_sptr) {
 	iCache::LastSeen = time(nullptr);
-	if (Dhcp == *(inDhcp_sptr))
+	if (Dhcp == *(inDhcp_sptr)) {
 		return false;
-
+    }
 	iCache::FirstSeen = iCache::LastModified = iCache::LastSeen = time(nullptr);
 
 	Dhcp = *inDhcp_sptr;
@@ -345,7 +348,6 @@ uint32_t Host::Prune (bool Force) {
 	// FlowCache is a map, so iterate over it
 	auto fc = FlowCache.begin();
 	while (fc != FlowCache.end()) {
-		std::string destip = fc->first;
 		// fc is an iterator to pair{std::string,shared_ptr<FlowEntryList>}
 		// fc.second a shared_ptr<FlowEntryList>
 		// *(fc.second) is a FlowEntryList

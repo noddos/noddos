@@ -87,7 +87,7 @@ namespace cxxopts
     bool
     operator!=(const UnicodeStringIterator& rhs) const
     {
-      return !(*this == rhs);
+      return not(*this == rhs);
     }
 
     UnicodeStringIterator&
@@ -404,7 +404,7 @@ namespace cxxopts
     parse_value(const std::string& text, T& value)
     {
       std::istringstream is(text);
-      if (!(is >> value))
+      if (not(is >> value))
       {
         throw argument_incorrect_type(text);
       }
@@ -1052,7 +1052,7 @@ Options::consume_positional(std::string a)
     auto iter = m_options.find(*m_next_positional);
     if (iter != m_options.end())
     {
-      if (!iter->second->value().is_container()) 
+      if (not iter->second->value().is_container()) 
       {
         if (iter->second->count() == 0)
         {
@@ -1150,7 +1150,7 @@ Options::parse(int& argc, char**& argv)
           auto value = iter->second;
 
           //if no argument then just add it
-          if (!value->has_arg())
+          if (not value->has_arg())
           {
             parse_option(value, name);
           }
@@ -1192,7 +1192,7 @@ Options::parse(int& argc, char**& argv)
           //parse the option given
 
           //but if it doesn't take an argument, this is an error
-          if (!opt->has_arg())
+          if (not opt->has_arg())
           {
             throw option_not_has_argument_exception(name, result[3]);
           }
@@ -1224,7 +1224,7 @@ Options::parse(int& argc, char**& argv)
     auto& detail = opt.second;
     auto& value = detail->value();
 
-    if(!detail->count() && value.has_default()){
+    if(not detail->count() && value.has_default()){
       detail->parse_default();
     }
   }
@@ -1286,7 +1286,7 @@ Options::add_one_option
 {
   auto in = m_options.emplace(option, details);
 
-  if (!in.second)
+  if (not in.second)
   {
     throw option_exists_error(option);
   }
@@ -1309,7 +1309,7 @@ Options::help_one_group(const std::string& g) const
 
   String result;
 
-  if (!g.empty())
+  if (not g.empty())
   {
     result += toLocalString(" " + g + " options:\n");
   }
@@ -1326,7 +1326,7 @@ Options::help_one_group(const std::string& g) const
     format.push_back(std::make_pair(s, String()));
   }
 
-  longest = std::min(longest, static_cast<size_t>(OPTION_LONGEST));
+  longest = (std::min)(longest, static_cast<size_t>(OPTION_LONGEST));
 
   //widest allowed description
   auto allowed = size_t{76} - longest - OPTION_DESC_GAP;
@@ -1377,7 +1377,10 @@ Options::help(const std::vector<std::string>& groups) const
   for (std::size_t i = 0; i < groups.size(); ++i)
   {
     String const& group_help = help_one_group(groups[i]);
-    if (empty(group_help)) continue;
+    if (empty(group_help))
+    {
+        continue;
+    }
     result += group_help;
     if (i < groups.size() - 1)
     {
