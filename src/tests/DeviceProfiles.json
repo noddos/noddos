@@ -33,7 +33,7 @@
                 "DhcpVendor": "udhcp 1.19.4"
             },
             "MustContain" : {
-                "DnsQueries": "pins.amazon.com"
+                "DnsQueries": [ "pins.amazon.com" ]
             }
         }
     ]
@@ -73,7 +73,7 @@
                     "DhcpHostname": "kindle-*"
             },
             "MustContain": {
-                "DnsQueries": "api.amazon.com"
+                "DnsQueries": [ "api.amazon.com" ]
             }
         }
     ]
@@ -196,14 +196,14 @@
             "IdentifyConfidenceLevel": "High",
             "EnforceConfidenceLevel": "None",
             "MustContain": {
-                    "DnsQueries": "ping.enphaseenergy.com"
+                    "DnsQueries": [ "ping.enphaseenergy.com" ]
             }
         },
         {
             "IdentifyConfidenceLevel": "High",
             "EnforceConfidenceLevel": "None",
             "MustContain": {
-                    "DnsQueries": "reports.enphaseenergy.com"
+                    "DnsQueries": [ "reports.enphaseenergy.com" ]
             }
         }
     ]
@@ -225,7 +225,7 @@
                     "DhcpVendor": "dhcpcd-5.5.6"
             },
             "MustContain": {
-                    "DnsQueries": "play.googleapis.com"
+                    "DnsQueries": [ "play.googleapis.com" ]
             }
         },
         {
@@ -292,7 +292,7 @@
                     "DhcpHostname": "MSFT 5.0"
             },
             "MustContain": {
-                "DnsQueries": "winphone.wns.windows.com"
+                "DnsQueries": [ "winphone.wns.windows.com" ]
             }
         }
     ]
@@ -373,7 +373,7 @@
             "IdentifyConfidenceLevel": "Medium",
             "EnforceConfidenceLevel": "Medium",
             "MustContain": {
-                    "DnsQueries": "fw-update.smartthings.com"
+                    "DnsQueries": [ "fw-update.smartthings.com" ]
             }
         },
         {
@@ -425,26 +425,25 @@
                     "DhcpVendor": "Linux 3.4.39.13 armv7l"
             },
             "MustContain": {
-                "DnsQueries": "ctv.zenfs.com"
-            },
-            "MustContain": {
-                "DnsQueries": "control.tvinteractive.tv"
-            },
-            "MustContain": {
-                "DnsQueries": "gallery.tv.widgets.yahoo.com"
+                "DnsQueries": [
+                    "ctv.zenfs.com",
+                    "control.tvinteractive.tv",
+                    "gallery.tv.widgets.yahoo.com"
+                ]
             }
         },
         {
             "IdentifyConfidenceLevel": "Medium",
             "EnforceConfidenceLevel": "None",
             "MustMatch": {
-                    "DhcpHostname": "udhcp 0.9.9-pre"
+                "DhcpHostname": "udhcp 0.9.9-pre"
             },
             "MustContain": {
-                "DnsQueries": "control2.tvinteractive.tv"
-            },
-            "MustContain": {
-                "DnsQueries": "bis-tv-widgets.secure.yahoo.com"
+                "DnsQueries": [
+                    "ctv.zenfs.com",
+                    "control2.tvinteractive.tv",
+                    "bis-tv-widgets.secure.yahoo.com"
+                ]
             }
         }
     ]
