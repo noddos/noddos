@@ -85,27 +85,29 @@ bool HostCache::MatchByIpAddress(const std::string inIpAddress) {
 	return false;
 }
 
-std::shared_ptr<Host> HostCache::FindOrCreateHostByMac (const std::string mac, const std::string Uuid) {
-	if (WhitelistedNodes.find(mac) != WhitelistedNodes.end()) {
+std::shared_ptr<Host> HostCache::FindOrCreateHostByMac (const std::string inMac, const std::string Uuid) {
+	if (WhitelistedNodes.find(inMac) != WhitelistedNodes.end()) {
 		return nullptr;
     }
-	if (mac == "") {
+	if (inMac == "") {
 		syslog(LOG_WARNING, "empty Mac Address provided");
 		return nullptr;
 	}
-	if (hC.find(mac) == hC.end()) {
-		syslog(LOG_DEBUG, "Adding new Host with MAC address %s", mac.c_str());
-		auto h = std::make_shared<Host>(mac, Uuid);
-		hC[mac] = h;
+	std::string Mac = inMac;
+	std::transform(Mac.begin(), Mac.end(), Mac.begin(), ::tolower);
+	if (hC.find(Mac) == hC.end()) {
+		syslog(LOG_DEBUG, "Adding new Host with MAC address %s", Mac.c_str());
+		auto h = std::make_shared<Host>(Mac, Uuid);
+		hC[Mac] = h;
 		return h;
 	}
-	return hC[mac];
+	return hC[Mac];
 }
 
 std::shared_ptr<Host> HostCache::FindOrCreateHostByIp (const std::string ip, const std::string Uuid) {
-	if (WhitelistedNodes.find(ip) != WhitelistedNodes.end())
+	if (WhitelistedNodes.find(ip) != WhitelistedNodes.end()) {
 		return nullptr;
-
+    }
 	std::string MacAddress;
 	auto it = Ip2MacMap.find(ip);
 	if ( it == Ip2MacMap.end()) {
@@ -122,13 +124,15 @@ std::shared_ptr<Host> HostCache::FindOrCreateHostByIp (const std::string ip, con
 }
 
 bool HostCache::AddByMac (const std::string inMacAddress, const std::string inIpAddress) {
-	if (hC.find(inMacAddress) != hC.end()) {
+	std::string Mac = inMacAddress;
+	std::transform(Mac.begin(), Mac.end(), Mac.begin(), ::tolower);
+	if (hC.find(Mac) != hC.end()) {
 		return false;
     }
-	auto h = std::make_shared<Host>(inMacAddress);
+	auto h = std::make_shared<Host>(Mac);
 	h->IpAddress_set (inIpAddress);
-	hC[inMacAddress] = h;
-	Ip2MacMap[inIpAddress] = inMacAddress;
+	hC[Mac] = h;
+	Ip2MacMap[inIpAddress] = Mac;
 	return true;
 }
 
@@ -174,29 +178,6 @@ bool HostCache::AddDhcpRequest (const std::shared_ptr<DhcpRequest> inDhcpRequest
 
 	if (h) {
 		h->Dhcp_set(inDhcpRequest_sptr);
-		return true;
-	}
-	return false;
-}
-
-bool HostCache::AddDhcpRequest (const DhcpRequest &inDhcpRequest) {
-	if (inDhcpRequest.IpAddress == "" && inDhcpRequest.MacAddress == "") {
-		syslog(LOG_WARNING, "No IpAdddress or Macaddress in DHCP request");
-		return false;
-
-	}
-	if (isWhitelisted(inDhcpRequest.IpAddress) || isWhitelisted(inDhcpRequest.MacAddress))
-		return false;
-
-	std::shared_ptr<Host> h;
-	if (inDhcpRequest.MacAddress != "") {
-		h = FindOrCreateHostByMac(inDhcpRequest.MacAddress);
-	} else {
-		h = FindOrCreateHostByIp(inDhcpRequest.IpAddress);
-	}
-
-	if (h) {
-		h->Dhcp_set(inDhcpRequest);
 		return true;
 	}
 	return false;
@@ -396,8 +377,12 @@ uint32_t HostCache::UploadDeviceStats(const std::string ClientCertFingerprint) {
 			j.push_back(h);
 		}
 	}
-	auto r = RestApiCall ("/v1/uploaddevices", j, ClientCertFingerprint);
-	syslog(LOG_INFO, "Called v1/uploaddevices API with status_code %u", r);
+	if (uploads > 0) {
+		auto r = RestApiCall ("/v1/uploaddevices", j, ClientCertFingerprint);
+		syslog(LOG_INFO, "Called v1/uploaddevices API with status_code %u", r);
+	} else {
+		syslog(LOG_INFO, "Not calling v1/uploaddevices API as there is no data to report");
+	}
 	return uploads;
 }
 
@@ -412,8 +397,12 @@ bool HostCache::UploadTrafficStats(const time_t interval, const std::string Clie
 			j.push_back(h);
 		}
 	}
-	auto r = RestApiCall ("/v1/uploadstats", j, ClientCertFingerprint);
-	syslog(LOG_INFO, "Called v1/uploadstats API with status_code %u", r);
+	if (uploads > 0) {
+		auto r = RestApiCall ("/v1/uploadstats", j, ClientCertFingerprint);
+		syslog(LOG_INFO, "Called v1/uploadstats API with status_code %u", r);
+	} else {
+		syslog(LOG_INFO, "Not calling v1/uploadstats API as there is no data to report");
+	}
 	return uploads;
 }
 

@@ -127,6 +127,7 @@ public:
 			return false;
 		}
 		for (json::iterator it = ijson.begin(); it != ijson.end(); ++it ) {
+			syslog(LOG_ERR, "Adding Identifier");
 			auto i = std::make_shared<Identifier>(*it);
 			Identifiers.push_back(i);
 		}

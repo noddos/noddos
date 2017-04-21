@@ -1,5 +1,24 @@
 [
 {
+    "DeviceProfileUuid": "f9e3b2c8-cef9-4d9c-a3d6-b3812f8446e5",
+    "LastUpdated": "2017-04-15 05:44:47.634603+00:00",
+    "UploadStats": true,
+    "Manufacturer": "Actiontec",
+    "Model": "GT784WN",
+    "ThingClass": "Home Gateway",
+    "Identifiers": [
+        {
+            "IdentifyConfidenceLevel": "High",
+            "EnforceConfidenceLevel": "None",
+            "MustMatch": {
+                    "SsdpManufacturer": "ActionTec",
+                    "SsdpModelName": "GT784WNV"
+            }
+        }
+    ]
+}
+,
+{
     "DeviceProfileUuid": "f574b260-6949-4a5b-b809-b13f1b9a2fd5",
     "LastUpdated": "2017-02-05 11:44:47.634603+00:00",
     "UploadStats": true,
@@ -14,7 +33,7 @@
                 "DhcpVendor": "udhcp 1.19.4"
             },
             "MustContain" : {
-                "DnsQueries":  "pins.amazon.com"
+                "DnsQueries": "pins.amazon.com"
             }
         }
     ]
@@ -41,7 +60,7 @@
 ,
 {
     "DeviceProfileUuid": "beae329a-1836-446b-974c-d429ad05862b",
-    "LastUpdated": "2017-02-05 11:44:47.634603+00:00",
+    "LastUpdated": "2017-04-02 11:44:47.634603+00:00",
     "UploadStats": true,
     "Manufacturer": "Amazon",
     "Model": "Kindle",
@@ -72,13 +91,11 @@
             "IdentifyConfidenceLevel": "High",
             "EnforceConfidenceLevel": "None",
             "MustContain": {
-                "DnsQueries": "init.itunes.apple.com"
-            }, 
-            "MustContain": {
-                "DnsQueries": "apps.itunes.com"
-            },
-            "MustContain": {
-                "DnsQueries": "time-ios.g.aaplimg.com"
+                "DnsQueries": [
+                    "init.itunes.apple.com",
+                    "apps.itunes.com",
+                    "time-ios.g.aaplimg.com"
+                ]
             }
         }
     ]
@@ -261,7 +278,7 @@
 }
 ,
 {
-    "DeviceProfileUuid": "8ed07ef0-5e47-4de6-ae47-fdeaeed174fe",
+    "DeviceProfileUuid": "13af20e3-3619-47d2-a5fc-7fda65d3a571",
     "LastUpdated": "2017-02-04 05:44:47.634603+00:00",
     "UploadStats": true,
     "Manufacturer": "Microsoft",
@@ -357,6 +374,16 @@
             "EnforceConfidenceLevel": "Medium",
             "MustContain": {
                     "DnsQueries": "fw-update.smartthings.com"
+            }
+        },
+        {
+            "IdentifyConfidenceLevel": "Medium",
+            "EnforceConfidenceLevel": "Medium",
+            "MustContain": {
+                "DnsQueries": [ 
+                    "fw-update2.smartthings.com",
+                    "dc.connect.smartthings.com"
+                ]
             }
         }
     ]

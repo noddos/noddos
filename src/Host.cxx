@@ -66,6 +66,7 @@ bool Host::Match(const DeviceProfileMap& dpMap) {
 	}
 	if (bestmatch >= ConfidenceLevel::Low) {
 		Uuid = matcheduuid;
+		syslog(LOG_DEBUG, "Host %s matched %s", MacAddress.c_str(), Uuid.c_str());
 		return true;
 	}
 	return false;
@@ -75,31 +76,40 @@ ConfidenceLevel Host::Match(const DeviceProfile& dp) {
 	ConfidenceLevel bestmatch = ConfidenceLevel::None;
 	auto v = dp.Identifiers_get();
 	for (auto& i : v) {
+		syslog (LOG_DEBUG, "Testing identifier");
 		auto match = Match(*i);
 		if (match >= ConfidenceLevel::High) {
+			syslog(LOG_DEBUG, "Host %s matched with high confidence", MacAddress.c_str());
 			return match;
         }
 		if 	(match > bestmatch) {
 			bestmatch = match;
         }
 	}
+	syslog(LOG_DEBUG, "Host %s match level %d", MacAddress.c_str(), static_cast<int>(bestmatch));
 	return bestmatch;
 }
 
 ConfidenceLevel Host::Match(const Identifier& i) {
 	for (auto& mc : i.MatchConditions_get()) {
+		syslog (LOG_DEBUG, "Testing match condition %s", (*mc).Key.c_str());
 		if(not Match (*mc)) {
+			syslog (LOG_DEBUG, "Host %s did not match condition %s", MacAddress.c_str(), (*mc).Key.c_str());
 			return ConfidenceLevel::None;
 		}
 	}
+	for (auto& cc : i.ContainConditions_get()) {
+		syslog (LOG_DEBUG, "Testing contain condition %s", (*cc).Key.c_str());
+		if(not Match (*cc)) {
+			syslog (LOG_DEBUG, "Host %s did not contain condition %s", MacAddress.c_str(), (*cc).Key.c_str());
+			return ConfidenceLevel::None;
+		}
+	}
+	syslog(LOG_DEBUG, "Host %s matched MustMatch and/or MustContain conditions", MacAddress.c_str());
 	return i.IdentifyConfidenceLevel_get();
 }
 
 bool Host::Match(const MatchCondition& mc) {
-	if (mc.SubsetMatch) {
-		return MatchSubset(mc);
-    }
-
 	std::string value;
 	if (mc.Key == "MacOid") {
 		value = MacAddress.substr(0,8);
@@ -141,26 +151,31 @@ bool Host::Match(const MatchCondition& mc) {
 		mcvalue = mcvalue.substr(0,mcvaluelength-1);
 		startpos = 0;
 	}
-	syslog (LOG_DEBUG, "Evaluating %s to match condition %s with value %s from position %lu", value.c_str(), mc.Key.c_str(), mcvalue.c_str(), startpos);
-	if (value.compare(startpos, mcvalue.length() - startpos, mcvalue) == 0)
+	if (value.compare(startpos, mcvalue.length() - startpos, mcvalue) == 0) {
+		syslog(LOG_DEBUG, "Host %s matched MustMatch condition", MacAddress.c_str());
 		return true;
-
+    }
+	syslog (LOG_DEBUG, "Host %s did not match condition %s with value %s from position %lu", value.c_str(), mc.Key.c_str(), mcvalue.c_str(), startpos);
 	return false;
 }
 
-bool Host::MatchSubset(const MatchCondition& mc) {
-
-	if(mc.Key == "DnsQueries") {
-		if (DnsCache.find(mc.Value) != DnsCache.end()) {
-			syslog(LOG_DEBUG, "Found DnsQuery for %s from host %s", mc.Value.c_str(), MacAddress.c_str());
-			return true;
-		} else {
-			syslog(LOG_DEBUG, "Didn't find DnsQuery for %s from host %s", mc.Value.c_str(), MacAddress.c_str());
+bool Host::Match(const ContainCondition& cc) {
+	bool matched = true;
+	if(cc.Key == "DnsQueries") {
+		for (auto fqdn: cc.Values) {
+			if (DnsCache.find(fqdn) != DnsCache.end()) {
+				syslog(LOG_DEBUG, "Found DnsQuery for %s from host %s", fqdn.c_str(), MacAddress.c_str());
+			} else {
+				syslog(LOG_DEBUG, "Didn't find DnsQuery for %s from host %s", fqdn.c_str(), MacAddress.c_str());
+				return false;
+			}
 		}
 	} else {
-		syslog(LOG_DEBUG, "Unsupported MustContain key %s", mc.Key.c_str());
+		syslog(LOG_DEBUG, "Unsupported MustContain key %s", cc.Key.c_str());
+		return false;
 	}
-	return false;
+	syslog(LOG_DEBUG, "Host %s matched MustContain condition", MacAddress.c_str());
+	return true;
 }
 
 bool Host::DeviceStats(json& j, uint32_t time_interval, bool force, bool detailed) {
@@ -185,10 +200,11 @@ bool Host::DeviceStats(json& j, uint32_t time_interval, bool force, bool detaile
 
 	std::string fqdns;
 	for (auto &dq: DnsCache) {
-		if (detailed)
+		if (detailed) {
 			dq.second->DnsStats(j, time_interval);
-		else
+		} else {
 			fqdns += dq.second->Fqdn_get() + " ";
+        }
 	}
 	if (not detailed) {
 		j["DnsQueries"] = fqdns;
@@ -198,27 +214,37 @@ bool Host::DeviceStats(json& j, uint32_t time_interval, bool force, bool detaile
 }
 
 bool Host::TrafficStats(json& j, const uint32_t time_interval, bool force) {
-	if (!force && (!isMatched() || LastModified < (time(nullptr) - time_interval))) {
+	if (not isMatched()) {
 		return false;
 	}
+	if (not force && LastSeen < (time(nullptr) - time_interval)) {
+		return false;
+	}
+	bool hasdata = false;
 	std::unordered_set<std::string> allIps;
 	std::unordered_set<std::string> allFqdns;
 	j = { {"DeviceProfileUuid", Uuid } };
 	j["DnsQueries"] = json::array();
 	for (auto &dq: DnsCache) {
 		j["DnsQueries"].push_back(dq.first);
+		hasdata = true;
 		dq.second->Ips_get(allIps);
 	}
 
 	j["TrafficStats"] = json::array();
 	for (auto &fc: FlowCache) {
 		std::string ip = fc.first;
-		if (allIps.find(ip) == allIps.end()) {
-			j["TrafficStats"].push_back(ip);
-			allIps.insert(ip);
+		for (auto &fe : *(fc.second)) {
+			if(fe->Fresh(time_interval)) {
+				if (allIps.find(ip) == allIps.end()) {
+					j["TrafficStats"].push_back(ip);
+					allIps.insert(ip);
+					hasdata = true;
+				}
+			}
 		}
 	}
-	return true;
+	return hasdata;
 }
 
 void Host::ExportDeviceInfo (json &j, bool detailed) {
@@ -275,7 +301,7 @@ bool Host::FlowEntry_set(const uint16_t inSrcPort, const std::string &inDstIp, c
  *  Returns true if a DnsLogEntry was added, false if existing DnsLogEntry was updated
  */
 bool Host::DnsLogEntry_set(const std::string inFqdn, const std::string inIpAddress, const uint32_t inExpiration) {
-	iCache::LastSeen = time(nullptr);
+	iCache::LastSeen = iCache::LastModified = time(nullptr);
 	bool newentry = false;
 	if(DnsCache.find(inFqdn) == DnsCache.end()) {
 		DnsCache[inFqdn] = std::make_shared<DnsLogEntry>(inFqdn);
@@ -283,9 +309,7 @@ bool Host::DnsLogEntry_set(const std::string inFqdn, const std::string inIpAddre
 		syslog(LOG_DEBUG, "Creating DnsLogEntry for %s", inFqdn.c_str());
 	}
 
-	if (DnsCache[inFqdn]->Ips_set(inIpAddress, inExpiration)) {
-		iCache::LastModified = iCache::LastSeen;
-    }
+	DnsCache[inFqdn]->Ips_set(inIpAddress, inExpiration);
 	return newentry;
 }
 
@@ -294,21 +318,9 @@ bool Host::Dhcp_set (const std::shared_ptr<DhcpRequest> inDhcp_sptr) {
 	if (Dhcp == *(inDhcp_sptr)) {
 		return false;
     }
-	iCache::FirstSeen = iCache::LastModified = iCache::LastSeen = time(nullptr);
+	iCache::FirstSeen = iCache::LastModified = iCache::LastSeen;
 
 	Dhcp = *inDhcp_sptr;
-	Dhcp.Expiration_set();
-	return true;
-}
-
-bool Host::Dhcp_set (const DhcpRequest &inDhcpRequest) {
-	iCache::LastSeen = time(nullptr);
-	if (Dhcp == inDhcpRequest)
-		return false;
-
-	iCache::FirstSeen = iCache::LastModified = iCache::LastSeen = time(nullptr);
-
-	Dhcp = inDhcpRequest;
 	Dhcp.Expiration_set();
 	return true;
 }
