@@ -81,7 +81,7 @@ class Host : public iCache {
 		ConfidenceLevel Match(const DeviceProfile& dp);
 		ConfidenceLevel Match(const Identifier& i);
 		bool Match(const MatchCondition& mc);
-		bool MatchSubset(const MatchCondition& mc);
+		bool Match(const ContainCondition& cc);
 
 		void IpAddress_set (const std::string IpAddress) { Ipv4Address = IpAddress; }
 		bool FlowEntry_set(const uint16_t inSrcPort, const std::string &inDstIp, const uint16_t inDstPort, const uint8_t inProtocol, const uint32_t inExpiration);
@@ -89,7 +89,6 @@ class Host : public iCache {
 		bool DnsLogEntry_set(const std::string fqdn, const std::string ipaddress, const uint32_t expiration = 86400);
 		uint32_t DnsLogEntryCount () { return DnsCache.size(); }
 		bool Dhcp_set (const std::shared_ptr<DhcpRequest> inDhcp_sptr);
-		bool Dhcp_set (const DhcpRequest & inDhcpRequest);
 		bool Dhcp_set (const std::string IpAddress, const std::string MacAddress, const std::string Hostname, const std::string DhcpHostname, const std::string DhcpVendor);
 		bool SsdpInfo_set(const std::shared_ptr<SsdpHost> insHost);
 
@@ -105,7 +104,7 @@ class Host : public iCache {
 
 	    // iCache interface methods.
 	    time_t Expiration_set (time_t inExpiration = HOSTDEFAULTEXPIRATION) {
-	    	iCache::Expiration = time(nullptr) + inExpiration;
+	    	iCache::Expires = time(nullptr) + inExpiration;
 	    	return iCache::LastSeen + HOSTDEFAULTEXPIRATION;
 	    }
 	    time_t Expiration_get () { return iCache::LastSeen + HOSTDEFAULTEXPIRATION; }

@@ -65,6 +65,7 @@ int main(int argc, char* argv[]) {
 	std::string configfile;
 	std::string verbose;
 	bool daemon = true;
+	bool prune = true;
 
 
 	try {
@@ -72,18 +73,27 @@ int main(int argc, char* argv[]) {
 
 		options.add_options()
 	  	  ("n,nodaemon", "Don't run as daemon, log to stderr")
-	  	  ("i,ipaddress", "IP address of interface to listen for multicast on", cxxopts::value<std::string>())
+	  	  ("p,noprune", "Don't prune host data")
+		  ("f,noflowtrack", "Don't track flows")
 		  ("h,help", "Noddos usage: -n/--nodaemon -p/--pidfile <filename> -f/--flowtrack")
 		  ("c,configfile", "Configuration file", cxxopts::value<std::string>(configfile)->default_value("/etc/noddos/noddos.conf"))
 	  	  ;
 		// TODO ("v,verbose", "Set verbosity (debug, info, warn, error, critical)", cxxopts::value<std::string>()->default_value("warn"))
 		// ("u,upload", "Upload device data (and network flows is -f is specified) to the cloud")
+	  	//  ("i,ipaddress", "IP address of interface to listen for multicast on", cxxopts::value<std::string>())
 
 
 		options.parse(argc, argv);
 		if (options.count("n")) {
 			daemon = false;
         }
+		if (options.count("p")) {
+			prune = false;
+		}
+		if (options.count("f")) {
+			flowtrack = false;
+		}
+
 	} catch (const cxxopts::OptionException& e) {
 	    std::cout << "error parsing options: " << e.what() << std::endl;
 	    exit(1);
@@ -243,7 +253,7 @@ int main(int argc, char* argv[]) {
 					hC.UploadTrafficStats(config.TrafficReportInterval, config.ClientCertFingerprint);
 					NextTrafficUpload = t + config.TrafficReportInterval;
 				}
-				if (t > NextPrune) {
+				if (prune && t > NextPrune) {
 					syslog(LOG_DEBUG, "Starting prune");
 					hC.Prune();
 					NextPrune = t + config.PruneInterval;

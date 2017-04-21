@@ -53,14 +53,14 @@ int main () {
 	auto res = hC.MatchByIpAddress("192.168.1.234");
 	std::cout << "Host with SsdpManufacturer " << sh->Manufacturer << " and SsdpModelName " << sh->ModelName << " matched " << res << " times" << std::endl;
 
-	DhcpRequest dr;
-	dr.DhcpHostname = "udhcp 0.9.9-pre";
-	dr.IpAddress = "192.168.1.98";
+	auto dr = std::make_shared<DhcpRequest>();
+	dr->DhcpHostname = "udhcp 0.9.9-pre";
+	dr->IpAddress = "192.168.1.98";
 	hC.AddDhcpRequest(dr);
 	hC.AddDnsQueryIp("192.168.1.98", "control2.tvinteractive.tv", "1.1.1.1");
 	hC.AddDnsQueryIp("192.168.1.98", "bis-tv-widgets.secure.yahoo.com", "1.1.1.2");
 	auto res2 = hC.MatchByIpAddress("192.168.1.98");
-	std::cout << "Host with DhcpHostname" << dr.DhcpHostname << " and DnsQuery for " << "control2.tvinteractive.tv" << " matched " << res2 << " times" << std::endl;
+	std::cout << "Host with DhcpHostname" << dr->DhcpHostname << " and DnsQuery for " << "control2.tvinteractive.tv" << " matched " << res2 << " times" << std::endl;
 
 	hC.AddDnsQueryIp("192.168.1.241", "init.itunes.apple.com", "2.2.2.2");
 	hC.AddDnsQueryIp("192.168.1.241", "apps.itunes.com", "2.2.2.3");
@@ -68,12 +68,12 @@ int main () {
 	auto res3 = hC.MatchByIpAddress("192.168.1.241");
 	std::cout << "Host with Dnsqueries init.itunes.apple.com apps.itunes.com apps.itunes.com matched " << res3 << " times" << std::endl;
 
-	dr.DhcpHostname = "kindle-a40752280";
-	dr.IpAddress = "192.168.1.251";
+	dr->DhcpHostname = "kindle-a40752280";
+	dr->IpAddress = "192.168.1.251";
 	hC.AddDhcpRequest(dr);
 	hC.AddDnsQueryIp("192.168.1.251", "api.amazon.com", "1.1.1.5");
 	auto res4 = hC.MatchByIpAddress("192.168.1.251");
-	std::cout << "Host with DhcpHostname " << dr.DhcpHostname << " and DnsQuery for " << "api.amazon.com" << " matched " << res4 << " times" << std::endl;
+	std::cout << "Host with DhcpHostname " << dr->DhcpHostname << " and DnsQuery for " << "api.amazon.com" << " matched " << res4 << " times" << std::endl;
 
 	return 0;
 }

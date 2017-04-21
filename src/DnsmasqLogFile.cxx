@@ -62,8 +62,9 @@ int DnsmasqLogFile::GetLogLine () {
 		return 1;
     }
 
-	if (ParseDhcpLine(line))
+	if (ParseDhcpLine(line)) {
 		return 1;
+    }
 
 	return 0;
 }
@@ -75,8 +76,9 @@ bool DnsmasqLogFile::ParseDhcpLine (const std::string line) {
 	if (not std::regex_search(line, m, dhcp_rx)) {
 		return false;
     }
-	if(m.empty())
+	if(m.empty()) {
 		return false;
+    }
 
 
 	uint64_t querynumber = std::stoll(m.str(1));
@@ -115,7 +117,7 @@ bool DnsmasqLogFile::ParseDhcpLine (const std::string line) {
 	} else {
 		std::smatch vendor_m;
 		if (std::regex_match(dhcpmessage, vendor_m, dhcp_vendor_rx)) {
-			if (!cachedQuery) {
+			if (not cachedQuery) {
 				DhcpRequestMap[querynumber] = std::make_shared<DhcpRequest>();
 				syslog(LOG_DEBUG, "creating entry in QueryMap for query number %lu for DHCP vendor rx", querynumber);
 			}
@@ -124,7 +126,7 @@ bool DnsmasqLogFile::ParseDhcpLine (const std::string line) {
 		} else {
 			std::smatch client_m;
 			if (std::regex_match(dhcpmessage, client_m, dhcp_clientprovidedname_rx)) {
-				if (!cachedQuery) {
+				if (not cachedQuery) {
 					DhcpRequestMap[querynumber] = std::make_shared<DhcpRequest>();
 					syslog(LOG_DEBUG, "creating entry in QueryMap for query number %lu for DHCP Client Provided Name ", querynumber);
 				}

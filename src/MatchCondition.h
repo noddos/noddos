@@ -23,16 +23,45 @@
 #ifndef MATCHCONDITION_H_
 #define MATCHCONDITION_H_
 
+#include <unordered_set>
+#include <utility>
+
 struct MatchCondition {
 public:
 	std::string Key;
 	std::string Value;
-	bool SubsetMatch;
 
-	MatchCondition(std::string inKey, std::string inValue, bool inSubsetMatch = false): Key{inKey}, Value{inValue}, SubsetMatch{inSubsetMatch} {}
+	MatchCondition(const std::string inKey, const std::string inValue): Key{inKey}, Value{inValue} {}
 	~MatchCondition() {
 		syslog (LOG_DEBUG, "Destroying MatchCondition instance");
 	}
 };
 
+class ContainCondition {
+public:
+	std::string Key;
+	std::unordered_set<std::string> Values;
+
+	ContainCondition(const std::string inKey, const json j): Key{inKey} {
+		for (auto &it: j) {
+			if (it.is_string()) {
+				std::string v = it.get<std::string>();
+				std::transform(v.begin(), v.end(), v.begin(), ::tolower);
+				Values.insert (v);
+			} else {
+				syslog (LOG_ERR, "Contain condition %s contains a value other than a string", Key.c_str());
+			}
+		}
+	}
+	bool contains(std::string inValue) {
+		std::transform(inValue.begin(), inValue.end(), inValue.begin(), ::tolower);
+		if (Values.find(inValue) == Values.end()) {
+			return false;
+		}
+		return true;
+	}
+	~ContainCondition() {
+		syslog (LOG_DEBUG, "Destroying ContainCondition instance");
+	}
+};
 #endif /* MATCHCONDITION_H_ */

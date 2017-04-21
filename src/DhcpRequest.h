@@ -40,17 +40,21 @@ public:
 
 	// iCache interface methods.
     time_t Expiration_set (time_t inExpiration = DHCPDEFAULTEXPIRATION) {
-    	return iCache::Expiration = time(nullptr) + inExpiration;
+    	return iCache::Expires = time(nullptr) + inExpiration;
     }
-    time_t Expiration_get () { return iCache::Expiration; }
-    bool isExpired() { return time(nullptr) >= iCache::Expiration; }
-    uint32_t Prune (bool Force = false) {}
+    time_t Expiration_get () { return iCache::Expires; }
+    bool isExpired() { return time(nullptr) >= iCache::Expires; }
+    uint32_t Prune (bool Force = false) { return 0; }
 
 	void operator = (const DhcpRequest &rhs) {
+		std::string lhsMac = MacAddress;
+		std::transform(lhsMac.begin(), lhsMac.end(), lhsMac.begin(), ::tolower);
+		std::string rhsMac = rhs.MacAddress;
+		std::transform(rhsMac.begin(), rhsMac.end(), rhsMac.begin(), ::tolower);
 		DhcpHostname = rhs.DhcpHostname;
 		DhcpVendor = rhs.DhcpVendor;
 		Hostname = rhs.Hostname;
-		MacAddress = rhs.MacAddress;
+		lhsMac= rhsMac;
 		IpAddress = rhs.IpAddress;
 		iCache::LastModified = time(nullptr);
 		iCache::LastSeen = time(nullptr);

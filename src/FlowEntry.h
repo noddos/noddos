@@ -23,7 +23,7 @@
 #ifndef FLOWENTRY_H_
 #define FLOWENTRY_H_
 
-#define FLOWDEFAULTEXPIRATION 30
+#define FLOWDEFAULTEXPIRATION 86400
 
 #include "iCache.h"
 
@@ -51,10 +51,10 @@ public:
 	}
     // iCache interface methods.
     time_t Expiration_set (time_t inExpiration = FLOWDEFAULTEXPIRATION) {
-    	return iCache::Expiration = time(nullptr) + inExpiration;
+    	return iCache::Expires = time(nullptr) + inExpiration;
     }
-    time_t Expiration_get () { return iCache::Expiration; }
-    bool isExpired() { return time(nullptr) >= iCache::Expiration; }
+    time_t Expiration_get () { return iCache::Expires; }
+    bool isExpired() { return time(nullptr) >= iCache::Expires; }
     uint32_t Prune (bool Force = false) {
     	return 0;
     }

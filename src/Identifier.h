@@ -40,6 +40,7 @@ private:
 	ConfidenceLevel IdentifyConfidenceLevel;
 	ConfidenceLevel EnforceConfidenceLevel;
 	std::vector<std::shared_ptr<MatchCondition>> MatchConditions;
+	std::vector<std::shared_ptr<ContainCondition>> ContainConditions;
 
 public:
 	Identifier(json &j) {
@@ -68,7 +69,7 @@ public:
 			syslog(LOG_INFO, "No EnforceConfidenceLevel set, defaulting to `None'");
 			EnforceConfidenceLevel = ConfidenceLevel::None;
 		} else {
-			if (! j["EnforceConfidenceLevel"].is_string()) {
+			if (not j["EnforceConfidenceLevel"].is_string()) {
 				syslog(LOG_ERR, "EnforceConfidenceLevel is not a string, defaulting to `None'");
 				EnforceConfidenceLevel = ConfidenceLevel::None;
 			} else {
@@ -77,24 +78,26 @@ public:
 				for(unsigned int i = 0; i < cl.length(); ++i)
 				    cl[i] = tolower(cl[i]);
 				EnforceConfidenceLevel = ConfidenceLevel::None;
-				if(cl == "low")
+				if(cl == "low") {
 					EnforceConfidenceLevel = ConfidenceLevel::Low;
-				else if (cl == "medium")
+				} else if (cl == "medium") {
 					EnforceConfidenceLevel = ConfidenceLevel::Medium;
-				else if (cl == "high")
+				} else if (cl == "high") {
 					EnforceConfidenceLevel = ConfidenceLevel::High;
+				}
 			}
 		}
 		if (j.find("MustMatch") == j.end() && j.find("MustContain") == j.end()) {
-			syslog(LOG_ERR, "Identifier has no MustMatch and no MustContain restrctions");
+			syslog(LOG_ERR, "Identifier has no MustMatch and no MustContain restrictions");
 			return;
 		}
 		if (j.find("MustMatch") != j.end()) {
-			if (!j["MustMatch"].is_object()) {
+			if (not j["MustMatch"].is_object()) {
 				syslog(LOG_ERR, "MustMatch condition is not a JSON Object");
 			} else {
 				for (json::iterator it = j["MustMatch"].begin(); it != j["MustMatch"].end(); ++it ) {
-					auto mc = std::make_shared<MatchCondition>(it.key(), it.value(), false);
+					syslog (LOG_DEBUG, "Adding MatchCondition %s", it.key().c_str());
+					auto mc = std::make_shared<MatchCondition>(it.key(), it.value());
 					MatchConditions.push_back(mc);
 				}
 			}
@@ -104,8 +107,11 @@ public:
 				syslog(LOG_ERR, "MustContain condition is not a JSON Object");
 			} else {
 				for (json::iterator it = j["MustContain"].begin(); it != j["MustContain"].end(); ++it) {
-					auto mc = std::make_shared<MatchCondition>(it.key(), it.value(), true);
-					MatchConditions.push_back(mc);
+					syslog (LOG_DEBUG, "Adding ContainCondition %s", it.key().c_str());
+					if (it.value().is_array()) {
+						auto cc = std::make_shared<ContainCondition>(it.key(), it.value());
+						ContainConditions.push_back(cc);
+					}
 				}
 			}
 		}
@@ -115,6 +121,7 @@ public:
 	};
 	ConfidenceLevel IdentifyConfidenceLevel_get () const { return IdentifyConfidenceLevel; }
 	const std::vector<std::shared_ptr<MatchCondition>>& MatchConditions_get() const { return MatchConditions; }
+	const std::vector<std::shared_ptr<ContainCondition>>& ContainConditions_get() const { return ContainConditions; }
 };
 
 #endif /* IDENTIFIER_H_ */
