@@ -25,7 +25,7 @@
 
 #include <regex>
 #include <syslog.h>
-
+#include <iostream>
 #include "cpr/cpr.h"
 #include <curl/curl.h>
 
@@ -52,8 +52,8 @@ public:
 		auto serialnumber_rx = std::regex(R"delim(\<serialnumber\>(.*?)\<\/serialnumber\>)delim",
 				std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
 
-		auto response = cpr::Get(cpr::Url{s.Location},cpr::Timeout{timeout});
-	    /*
+		// auto response = cpr::Get(cpr::Url{s.Location},cpr::Timeout{timeout});
+
 	    std::string response_string;
 	    std::string header_string;
 	    long response_code;
@@ -65,14 +65,18 @@ public:
 		    curl_easy_setopt(curl, CURLOPT_USERAGENT, "noddos/1.0.0");
 		    curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 0L);
 		    curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 0L);
-		    curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, (long) timeout);
+		    curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, (long) timeout * 1000);
 		    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlwriteFunction);
 		    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_string);
 
 		    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
 		    curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &elapsed);
 
-
+			if (false && inDebug) {
+				// TODO test on whether STDOUT is open for writing
+				// 'always' disabled as this logs to STDOUT, which is normally closed
+				curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+			}
 		    curl_easy_perform(curl);
 		    curl_easy_cleanup(curl);
 		    curl = NULL;
@@ -81,11 +85,11 @@ public:
 			syslog(LOG_WARNING, "Ssdp info time-out after %d ms for %s", timeout, s.Location.c_str());
 			return false;
 		}
-		*/
-		std::string response_string = response.text;
+
+		// std::string response_string = response.text;
 
 		if(inDebug) {
-			syslog(LOG_DEBUG, "%s", response_string.c_str());
+			syslog(LOG_DEBUG, "HTTP response: %s", response_string.c_str());
 		}
 
 		std::smatch m;

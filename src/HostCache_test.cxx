@@ -21,8 +21,13 @@
 
 
 #include <iostream>
+#include <fstream>
+#include <sstream>
 
 #include <syslog.h>
+
+#include <json.hpp>
+using json = nlohmann::json;
 
 #include "noddos.h"
 #include "HostCache.h"
@@ -33,7 +38,7 @@
 int main () {
 
 	openlog("Host_test", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
-	HostCache hC;
+	HostCache hC(true);
 	// hC.DeviceProfiles_load(deviceprofilesfile);
 	hC.AddByMac ("00:00:00:00:00:03", "192.168.1.99");
 
@@ -58,6 +63,12 @@ int main () {
 		std::cout << "Mac lookup failure for 192.168.1.240 resulting in: " << s << std::endl;
 		testfailure = true;
 	}
+    std::ifstream ifs("tests/v1-uploadstats");
+    std::stringstream body;
+    body << ifs.rdbuf();
+    ifs.close();
+    auto j = json::parse(body);
+    hC.RestApiCall("v1/uploadstats", j, "/etc/noddos/noddosapiclient.pem", "/etc/noddos/noddosapiclient.key");
 	if (testfailure) {
 		exit(1);
     }

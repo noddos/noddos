@@ -30,11 +30,12 @@
 
 int main () {
 	bool testfailure = false;
-	HostCache hC;
+	HostCache hC(true);
 	char msg[300] = "NOTIFY * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nCACHE-CONTROL: max-age=60\r\nlOCATION: http://192.168.1.248:49152/rootDesc.xml\r\nSERVER: Linux 3.0.8 UPnP/1.1 MiniUPnPd/1.7\r\nupnp:rootdevice\r\nuuid:Upnp-BasicDevice-1_0-BC66411075FD::upnp:rootdevice\r\n\01-NLS: 1\r\nBOOTID.UPNP.ORG: 1\r\nCONFIGID.UPNP.ORG: 1337\r\n";
 	auto sHost = std::make_shared<SsdpHost>();
+	sHost->Location="http://192.168.1.248:49152/rootDesc.xml";
 	sHost->IpAddress = "192.168.1.249";
-	if (SsdpLocation::Get(*sHost) != true) {
+	if (SsdpLocation::Get(*sHost, true) != true) {
 		testfailure=true;
 		std::cout << "Couldn't get SSDP Host info using call to the Location address 192.168.1.249" << std::endl;
 		if (sHost->FriendlyName != "SAMSUNG-SNH-E6440BN-BC66411075FD") {
