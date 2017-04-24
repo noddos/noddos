@@ -40,11 +40,13 @@ class DnsLogEntry : public iCache {
     private:
         std::string Fqdn;
         std::map<std::string, uint32_t> Ips;
+        bool Debug;
 
     public:
-        DnsLogEntry(const std::string inFqdn): Fqdn{inFqdn}
+        DnsLogEntry(const std::string inFqdn, const bool inDebug = false): Fqdn{inFqdn}, Debug{inDebug}
         	{ Expiration_set(); iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr); };
-        DnsLogEntry(const std::string inFqdn, const std::map<std::string, uint32_t> inIps): Fqdn{inFqdn}, Ips{inIps}
+        DnsLogEntry(const std::string inFqdn, const std::map<std::string, uint32_t> inIps, const bool inDebug = false):
+        	Fqdn{inFqdn}, Ips{inIps}, Debug{inDebug}
         	{ Expiration_set(); iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr); };
 
         uint32_t Ips_get(std::unordered_set<std::string> &outIps);

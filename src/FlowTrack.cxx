@@ -57,10 +57,14 @@ int netfilter_cb2(const struct nlmsghdr *nlh, enum nf_conntrack_msg_type type, s
 		uint16_t dstport = std::stoi(m.str(9));
 		// std::string bidirectional = m.str(10);
 		// std::string assured = m.str(12);
-		syslog(LOG_DEBUG, "Conntrack matched: %s:%u %s:%u %u expiration: %u", srcip.c_str(), srcport, dstip.c_str(), dstport, protocol, expiration);
+		if (hC.Debug_get()) {
+			syslog(LOG_DEBUG, "Conntrack matched: %s:%u %s:%u %u expiration: %u", srcip.c_str(), srcport, dstip.c_str(), dstport, protocol, expiration);
+		}
 		hC.AddFlow(srcip, srcport, dstip, dstport, protocol, expiration);
 	} else {
-		syslog(LOG_DEBUG, "Conntrack not matched: %s", line.c_str());
+		if (hC.Debug_get()) {
+			syslog(LOG_DEBUG, "Conntrack not matched: %s", line.c_str());
+		}
 	}
 
     // return NFCT_CB_CONTINUE;
@@ -90,10 +94,14 @@ int netfilter_cb(enum nf_conntrack_msg_type type, struct nf_conntrack *ct, void 
 		uint16_t dstport = std::stoi(m.str(9));
 		// std::string bidirectional = m.str(10);
 		// std::string assured = m.str(12);
-		syslog(LOG_DEBUG, "Conntrack matched: %s:%u - %s:%u %u exp %u", srcip.c_str(), srcport, dstip.c_str(), dstport, protocol, expiration);
+		if (hC.Debug_get()) {
+			syslog(LOG_DEBUG, "Conntrack matched: %s:%u - %s:%u %u exp %u", srcip.c_str(), srcport, dstip.c_str(), dstport, protocol, expiration);
+		}
 		hC.AddFlow(srcip, srcport, dstip, dstport, protocol, expiration);
 	} else {
-		syslog(LOG_DEBUG, "Conntrack not matched: %s", line.c_str());
+		if (hC.Debug_get()) {
+			syslog(LOG_DEBUG, "Conntrack not matched: %s", line.c_str());
+		}
 	}
 
     // return NFCT_CB_CONTINUE;

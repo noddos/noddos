@@ -70,6 +70,7 @@ private:
     int inotify_fd = -1;
     int inotify_watch = -1;
     uint32_t lines_parsed = 0;
+    bool Debug;
 
     void load_regexes() {
 		dns_rx = std::regex(R"delim(dnsmasq\[\d+?\]: (\d+?) (\d+?\.\d+?\.\d+?\.\d+?)\/\d+? (\D\S*?) (\S+?) (is|from) (\S+?)$)delim",
@@ -91,16 +92,20 @@ private:
 
 
 public:
-    DnsmasqLogFile (const std::string inFileName, HostCache &inhCache, const uint32_t inCacheExpiration = 0)
-		:hCache{inhCache} {
+    DnsmasqLogFile (const std::string inFileName, HostCache &inhCache, const uint32_t inCacheExpiration = 0, const bool inDebug = false)
+		:hCache{inhCache}, Debug{inDebug} {
 		load_regexes();
-		syslog (LOG_DEBUG, "Calling inotify_init");
+		if(Debug) {
+			syslog (LOG_DEBUG, "Calling inotify_init");
+		}
   	    if ((inotify_fd = inotify_init()) == -1) {
    	    	syslog (LOG_ERR, "Inotify init failed");
    	        perror ("inotify_init");
    	    	exit(1);
    	    } else {
-   	    	syslog (LOG_DEBUG, "Inotify main FD %d", inotify_fd);
+   	    	if(Debug) {
+   	    		syslog (LOG_DEBUG, "Inotify main FD %d", inotify_fd);
+   	    	}
    	    }
    	    if (Open(inFileName, inCacheExpiration) < 0) {
 			syslog(LOG_ERR, "Opening log file failed");
@@ -117,7 +122,9 @@ public:
    	}
     virtual ~DnsmasqLogFile() {
     	Close();
-		syslog (LOG_DEBUG, "Destroying DnsmasqLogFile instance: %s", FileName.c_str());
+    	if(Debug) {
+    		syslog (LOG_DEBUG, "Destroying DnsmasqLogFile instance: %s", FileName.c_str());
+    	}
 
     	PruneDhcpRequestMap(true);
     	PruneDnsQueryMap(true);

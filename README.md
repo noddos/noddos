@@ -20,6 +20,7 @@ The 'getdeviceprofiles.sh' script is used to securely download the list of Devic
 Prerequisites
 - Linux v2.6.13 or later (as inotify support is needed)
 - dnsmasq
+- openssl
 - libopenssl
 - libcurl 
 - libnetfilter_conntrack
@@ -74,23 +75,36 @@ Set up Noddos
     cmake .
     make
 
+    # Install openssl 
+    sudo apt install openssl
+
     sudo adduser --system --home /var/lib/noddos --shell /bin/false \
          --disabled-login --disabled-password\
          --quiet  --group noddos
     sudo mkdir /etc/noddos
     sudo cp noddos.conf-sample /etc/noddos.conf
     sudo cp noddosconfig.pem /etc/noddos
+
+    openssl req -x509 -nodes -subj '/CN=noddosapiclient' -newkey rsa:2048 -days 3650 \
+         -keyout /etc/noddos/noddosapiclient.key -out /etc/noddos/noddosapiclient.pem
+
     ### edit /etc/noddos.conf, for one to whitelist the IP addresses of the interfaces of your router
     sudo chown -R root:root /etc/noddos
+    chgrp noddos /etc/noddos/noddosapiclient.key
+    chmod 640 /etc/noddos/noddosapiclient.key
 
     # getdeviceprofiles.sh needs the certificates of well-known CAs installed to be able to connect to
     # https://www.noddos.io/
+
+    # Directory where DeviceProfiles.json will be downloaded to
+    mkdir /var/lib/noddos
+    chown noddos:noddos /var/lib/noddos
 
     sudo apt install ca-certificates
     install noddos -o 0 -g 0 -s noddos /usr/sbin 
     install noddos -o 0 -g 0 ../tools/getdeviceprofiles.sh /usr/sbin 
     # Install a cronjob to do this frequently (please pick a randon time of day instead of 3:23am), ie
-    23 */3 * * * /path/to/noddos/tools/getdeviceprofiles.sh
+    23 */3 * * * /usr/sbin/getdeviceprofiles.sh
 
     # Noddos needs to be started as root as it will need to get Linux
     # firewall connection state changes. It will drop to an unprivileged
@@ -101,6 +115,10 @@ Set up Noddos
 The following command line options are supported by the Noddos client:
 __-n, --no-daemon__: Don't run as daemon and send log messages to STDERR in addition to syslog
 __-c, --config-file__: Location of configuration default, default /etc/noddos/noddos.conf
+__-p, --no_prune__: Disable pruning of Hosts, DnsQueries, DHCP transactions and flows
+__-f, --no_flowtrack__: Disable tracking IP flows
+__-d, --debug__: Enable extensive logging, save uploaded data to /tmp
+__-h, --help__: Print command line options
 
 ## Configuration file
 The noddos client configuration file (Default: /etc/noddos/noddos.conf) is a JSON file with the configuration settings.
@@ -112,6 +130,10 @@ __DnsmasqLogFile__: The dnsmasq daemon is configured per the installation instru
 __MatchFile__: Noddos will write all current matched devices to this file after receiving a SIGUSR1 or SIGTERM signal. At startup, Noddos will read this file to have an initial list of matched devices. Default: /var/lib/noddos/DeviceMatches.json
 
 __DumpFile__: Noddos will write all informaiton it has on devices to this file after received a SIGUSR2 signal. Default /var/lib/nodds/DeviceDump.json
+
+__ClientApiCertFile__: certificate for key used to authenticate against Noddos API. Default: /etc/noddos/noddosapiclient.pem
+
+__ClientApiKeyFile__: Key used to authenticate against Noddos API. Default: /etc/noddos/noddosapiclient.key
 
 __SignatureCertFile__: certificate used to validate the digital signature for the DeviceProfiles.json file. This setting is not used by Noddos itself but by the shell script that downloads the DeviceProfiles.json file from the cloud. Default: /etc/noddos/noddossignaturecert.pem
 

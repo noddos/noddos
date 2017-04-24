@@ -27,22 +27,31 @@
 #include <fstream>
 #include <memory>
 
+#include <sys/types.h>
 #include <unistd.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
+#include <net/if.h>
 #include <net/if_arp.h>
 #include <arpa/inet.h>
-#include <syslog.h>
 // #include <netinet/in.h>
 #include <netinet/ip.h>
+#include <netdb.h>
+#include <ifaddrs.h>
+#include <linux/if_link.h>
+
+#include <syslog.h>
 #include <stdio.h>
+#include <iomanip>
+#include <string.h>
 
 #include <json.hpp>
 using nlohmann::json;
 
-#include "cpr/cpr.h"
+// #include "cpr/cpr.h"
+#include <curl/curl.h>
 
 #include "HostCache.h"
 
@@ -96,8 +105,10 @@ std::shared_ptr<Host> HostCache::FindOrCreateHostByMac (const std::string inMac,
 	std::string Mac = inMac;
 	std::transform(Mac.begin(), Mac.end(), Mac.begin(), ::tolower);
 	if (hC.find(Mac) == hC.end()) {
-		syslog(LOG_DEBUG, "Adding new Host with MAC address %s", Mac.c_str());
-		auto h = std::make_shared<Host>(Mac, Uuid);
+		if (Debug) {
+			syslog(LOG_DEBUG, "Adding new Host with MAC address %s", Mac.c_str());
+		}
+		auto h = std::make_shared<Host>(Mac, Uuid, Debug);
 		hC[Mac] = h;
 		return h;
 	}
@@ -113,7 +124,9 @@ std::shared_ptr<Host> HostCache::FindOrCreateHostByIp (const std::string ip, con
 	if ( it == Ip2MacMap.end()) {
 		MacAddress = MacLookup(ip);
 		if (MacAddress == "") {
-			syslog(LOG_DEBUG, "Couldn't find ARP entry for %s", ip.c_str());
+			if (Debug) {
+				syslog(LOG_DEBUG, "Couldn't find ARP entry for %s", ip.c_str());
+			}
 			return nullptr;
 		}
 		Ip2MacMap[ip] = MacAddress;
@@ -129,7 +142,7 @@ bool HostCache::AddByMac (const std::string inMacAddress, const std::string inIp
 	if (hC.find(Mac) != hC.end()) {
 		return false;
     }
-	auto h = std::make_shared<Host>(Mac);
+	auto h = std::make_shared<Host>(Mac, Debug);
 	h->IpAddress_set (inIpAddress);
 	hC[Mac] = h;
 	Ip2MacMap[inIpAddress] = Mac;
@@ -259,7 +272,9 @@ std::string HostCache::MacLookup (const std::string inIpAddress, std::string inI
     if (-1 == ioctl(s,SIOCGARP , (caddr_t) &areq)) {
 		syslog (LOG_ERR, "ARP lookup failure for %s", inIpAddress.c_str());
 		if (retries > 0) {
-			syslog(LOG_DEBUG, "Additional ARP lookup for %s", inIpAddress.c_str());
+			if (Debug) {
+				syslog(LOG_DEBUG, "Additional ARP lookup for %s", inIpAddress.c_str());
+			}
 			if (SendUdpPing (inIpAddress, 1900)) {
 				usleep(5000);
 				return MacLookup (inIpAddress, inInterface, retries - 1);
@@ -275,6 +290,81 @@ std::string HostCache::MacLookup (const std::string inIpAddress, std::string inI
 	std::string MacAddress(mA);
 	return MacAddress;
 }
+
+uint32_t HostCache::getInterfaceIpAddresses() {
+	/*
+
+	int fd = socket(AF_INET, SOCK_DGRAM, 0);
+
+	std::ifstream ifs("/proc/net/dev");
+	std::string line;
+	while (std::getline(ifs, line)) {
+		std::smatch m;
+		if(std::regex_search(line, m, dev_rx)) {
+			std::string interface = m.str(1);
+			struct ifreq ifr;
+			// ifr.ifr_addr.sa_family = AF_INET;
+			// strncpy(ifr.ifr_name, interface.c_str(), IFNAMSIZ-1);
+			ioctl(fd, SIOCGIFADDR, &ifr);
+
+			}
+		}
+
+	}
+	ifs.close();
+	*/
+    struct ifaddrs *ifaddr, *ifa;
+    int family, s, n;
+    char host[NI_MAXHOST];
+
+    if (getifaddrs(&ifaddr) == -1) {
+        syslog(LOG_ERR, "Can't loop through local interfaces: getifaddrs");
+        return 0;
+    }
+
+    /* Walk through linked list, maintaining head pointer so we
+       can free list later */
+
+    for (ifa = ifaddr, n = 0; ifa != NULL; ifa = ifa->ifa_next, n++) {
+        if (ifa->ifa_addr == NULL) {
+            freeifaddrs(ifaddr);
+            continue;
+        }
+        family = ifa->ifa_addr->sa_family;
+
+        /* Display interface name and family (including symbolic
+           form of the latter for the common families) */
+
+        if (Debug) {
+        	syslog(LOG_DEBUG, "Interface %-8s %s (%d)", ifa->ifa_name,
+               (family == AF_PACKET) ? "AF_PACKET" :
+               (family == AF_INET) ? "AF_INET" :
+               (family == AF_INET6) ? "AF_INET6" : "???", family);
+        }
+        LocalInterfaces.insert(ifa->ifa_name);
+        /* For an AF_INET* interface address, display the address */
+
+        if (family == AF_INET || family == AF_INET6) {
+            s = getnameinfo(ifa->ifa_addr,
+                (family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6),
+                host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+            if (s != 0) {
+                syslog(LOG_ERR, "getnameinfo() failed: %s\n", gai_strerror(s));
+                freeifaddrs(ifaddr);
+                return 0;
+            }
+
+            if(Debug) {
+            	syslog (LOG_DEBUG, "Interface %s with IP address: %s", ifa->ifa_name, host);
+            }
+            LocalIpAddresses.insert(host);
+        }
+    }
+
+    freeifaddrs(ifaddr);
+	return 0;
+}
+
 std::string HostCache::MacLookup (const std::string inIpAddress, const int retries) {
 	// TODO: we should cache ARP table and only refresh it if a MAC lookup fails
 	std::ifstream ifs("/proc/net/arp");
@@ -293,7 +383,9 @@ std::string HostCache::MacLookup (const std::string inIpAddress, const int retri
 	}
 	ifs.close();
 	if (retries > 0) {
-		syslog(LOG_DEBUG, "Additional ARP lookup for %s", inIpAddress.c_str());
+		if (Debug) {
+			syslog(LOG_DEBUG, "Additional ARP lookup for %s", inIpAddress.c_str());
+		}
 		if (SendUdpPing (inIpAddress, 1900)) {
 			usleep(5000);
 			return MacLookup (inIpAddress, retries - 1);
@@ -356,29 +448,95 @@ bool HostCache::ExportDeviceProfileMatches(const std::string filename, bool deta
 	return true;
 }
 
-uint32_t HostCache::RestApiCall (const std::string api, const json &j, const std::string ClientCertFingerprint) {
+uint32_t HostCache::RestApiCall (const std::string api, const json &j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile) {
+
     auto r = cpr::Post(
-    	cpr::Url{"https://api.noddos.io" + api},
-    	cpr::Header{{"Content-Type", "application/json"},{"X-Fingerprint", ClientCertFingerprint}},
+    	cpr::Url{"https://api.noddos.io/" + api},
+		cpr::Header{{"Content-Type", "application/json"},{"X-Fingerprint", "1234"}},
 		cpr::Body{j.dump()}
     );
+    long response_code = r.status_code;
 
-    return r.status_code;
+
+	/*
+
+	std::string url = "https://api.noddos.io/" + api;
+	struct curl_slist *hlist = NULL;
+	hlist = curl_slist_append(hlist, "Content-Type: application/json");
+
+	std::string body = j.dump();
+	char buf[strlen(body.c_str())+1];
+	strcpy(buf, body.c_str());
+	if (Debug) {
+		syslog (LOG_DEBUG, "Uploading %lu bytes of data to %s", strlen(buf), url.c_str());
+	}
+    std::string response_string;
+    std::string header_string;
+    long response_code;
+    double elapsed;
+	auto curl = curl_easy_init();
+	if (curl) {
+		curl_easy_setopt(curl, CURLOPT_URL, url);
+		// curl_easy_setopt(curl, CURLOPT_SSLCERTTYPE, "PEM");
+		curl_easy_setopt(curl, CURLOPT_SSLCERT, ClientApiCertFile.c_str());
+		curl_easy_setopt(curl, CURLOPT_SSLKEY, ClientApiKeyFile.c_str());
+		curl_easy_setopt(curl, CURLOPT_SSL_CIPHER_LIST, "ECDHE-RSA-AES256-GCM-SHA384");
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, buf);
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, (curl_off_t) strlen(buf));
+		curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
+	    curl_easy_setopt(curl, CURLOPT_USERAGENT, "noddos/1.0.0");
+	    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, hlist);
+	    curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 0L);
+	    curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
+	    curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, (long) 2000);
+	    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlwriteFunction);
+	    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_string);
+	    curl_easy_setopt(curl, CURLOPT_HEADERDATA, &header_string);
+
+	    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+	    curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &elapsed);
+
+
+	    curl_easy_perform(curl);
+	    curl_easy_cleanup(curl);
+	    curl = NULL;
+	    if (Debug) {
+	    		syslog (LOG_DEBUG, "Upload resulted in %lu status, data %s", response_code, response_string.c_str());
+	    	}
+	}
+	*/
+    if (Debug) {
+    	std::string file = api;
+    	std::replace( file.begin(), file.end(), '/', '-');
+    	std::time_t t = std::time(nullptr);
+    	std::tm tm = *std::localtime(&t);
+    	char buf[20];
+    	strftime(buf,18,"%Y%m%d-%H%M%S",&tm);
+    	std::string filename = "/tmp/" + file + "-" + buf;
+    	std::ofstream ofs(filename);
+    	if (not ofs.is_open()) {
+    		syslog(LOG_WARNING, "Couldn't open %s", filename.c_str());
+    	}
+    	ofs << std::setw(4) << j << std::endl;
+    	ofs.close();
+    }
+    return (uint32_t) response_code;
 }
 
-uint32_t HostCache::UploadDeviceStats(const std::string ClientCertFingerprint) {
+uint32_t HostCache::UploadDeviceStats(const std::string ClientApiCertFile, const std::string ClientApiKeyFile) {
 	uint32_t uploads = 0;
 	json j;
 	for (auto it : hC) {
-		if ( (not isWhitelisted(*(it.second))) && not it.second->isMatched()) {
+		if ( (not isWhitelisted(*(it.second))) && not it.second->isMatched() && not it.second->UploadsDisabled()) {
 			json h;
-			it.second->DeviceStats(h, 604800, false, false);
-			uploads++;
-			j.push_back(h);
+			if (it.second->DeviceStats(h, 604800, false, false)) {
+				uploads++;
+				j.push_back(h);
+			}
 		}
 	}
 	if (uploads > 0) {
-		auto r = RestApiCall ("/v1/uploaddevices", j, ClientCertFingerprint);
+		auto r = RestApiCall ("v1/uploaddevices", j, ClientApiCertFile, ClientApiKeyFile);
 		syslog(LOG_INFO, "Called v1/uploaddevices API with status_code %u", r);
 	} else {
 		syslog(LOG_INFO, "Not calling v1/uploaddevices API as there is no data to report");
@@ -386,19 +544,20 @@ uint32_t HostCache::UploadDeviceStats(const std::string ClientCertFingerprint) {
 	return uploads;
 }
 
-bool HostCache::UploadTrafficStats(const time_t interval, const std::string ClientCertFingerprint) {
+bool HostCache::UploadTrafficStats(const time_t interval, const std::string ClientCertFile, const std::string ClientApiKeyFile) {
 	uint32_t uploads = 0;
 	json j;
 	for (auto it : hC) {
 		if ( (not isWhitelisted(*(it.second))) && it.second->isMatched()) {
 			json h;
-			it.second->TrafficStats(h, interval, false);
-			uploads++;
-			j.push_back(h);
+			if (it.second->TrafficStats(h, interval, LocalIpAddresses, false)) {
+				uploads++;
+				j.push_back(h);
+			}
 		}
 	}
 	if (uploads > 0) {
-		auto r = RestApiCall ("/v1/uploadstats", j, ClientCertFingerprint);
+		auto r = RestApiCall ("v1/uploadstats", j, ClientCertFile, ClientApiKeyFile);
 		syslog(LOG_INFO, "Called v1/uploadstats API with status_code %u", r);
 	} else {
 		syslog(LOG_INFO, "Not calling v1/uploadstats API as there is no data to report");
@@ -407,7 +566,10 @@ bool HostCache::UploadTrafficStats(const time_t interval, const std::string Clie
 }
 
 bool HostCache::ImportDeviceProfileMatches(const std::string filename) {
-	syslog(LOG_DEBUG, "Opening & reading %s", filename.c_str());
+	if (Debug) {
+		syslog(LOG_DEBUG, "Opening & reading %s", filename.c_str());
+	}
+
 	std::ifstream ifs(filename);
 	if (not ifs.is_open()) {
 		syslog(LOG_WARNING, "Couldn't open %s", filename.c_str());
@@ -451,7 +613,9 @@ bool HostCache::ImportDeviceInfo (json &j) {
 	if (MacAddress != j["MacAddress"].get<std::string>()) {
 		return false;
     }
-	syslog(LOG_DEBUG, "Importing Device Profile for UUID %s with MacAddress %s", DeviceProfileUuid.c_str(), MacAddress.c_str());
+	if (Debug) {
+		syslog(LOG_DEBUG, "Importing Device Profile for UUID %s with MacAddress %s", DeviceProfileUuid.c_str(), MacAddress.c_str());
+	}
 
 	auto hit = hC.find(MacAddress);
 	if (hit != hC.end()) {
@@ -468,7 +632,9 @@ bool HostCache::ImportDeviceInfo (json &j) {
 	return true;
 }
 uint32_t HostCache::DeviceProfiles_load(const std::string filename) {
-	syslog(LOG_DEBUG, "Opening & reading %s", filename.c_str());
+	if (Debug) {
+		syslog(LOG_DEBUG, "Opening & reading %s", filename.c_str());
+	}
 	// Read the DeviceProfiles file
 	std::ifstream ifs(filename);
 	if (not ifs.is_open()) {
@@ -484,19 +650,23 @@ uint32_t HostCache::DeviceProfiles_load(const std::string filename) {
 	// for (json::iterator it = j.begin(); it != j.end(); ++it) {
 	for (auto it = j.begin(); it != j.end(); ++it) {
 	  std::string uuid = (*it)["DeviceProfileUuid"].get<std::string>();
-	  dpMap[uuid] = std::make_shared<DeviceProfile>(*it);
+	  dpMap[uuid] = std::make_shared<DeviceProfile>(*it, Debug);
 	  uuids.insert (uuid);
 	}
 	ifs.close();
 
 	for (auto &kv : dpMap) {
 		if (uuids.find(kv.first) == uuids.end()) {
-			syslog(LOG_DEBUG, "Profile no longer in DeviceProfiles file: %s", kv.first.c_str());
+			if (Debug) {
+				syslog(LOG_DEBUG, "Profile no longer in DeviceProfiles file: %s", kv.first.c_str());
+			}
 			dpMap.erase(kv.first);
 		}
 	}
 	auto s = uuids.size();
-	syslog(LOG_DEBUG, "Profiles imported %lu", s);
+	if (Debug) {
+		syslog(LOG_DEBUG, "Profiles imported %lu", s);
+	}
 	return s;
 }
 

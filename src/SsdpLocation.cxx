@@ -14,7 +14,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
- * SsdpLocation.cpp
+ * SsdpLocation.cxx
  *
  *  Created on: Mar 19, 2017
  *      Author: steven

@@ -41,12 +41,14 @@ private:
 	int socket_fd;
 	time_t Expiration;
 	HostCache &hCache;
+	bool Debug;
 
 	std::regex ssdp_rx;
 
 
 public:
-	SsdpServer(HostCache &inhCache, uint32_t inExpiration, std::string inIpAddress = ""): hCache{inhCache}, Expiration{inExpiration}, IpAddress{inIpAddress} {
+	SsdpServer(HostCache &inhCache, const uint32_t inExpiration, const std::string inIpAddress = "", const bool inDebug = false):
+		hCache{inhCache}, Expiration{inExpiration}, IpAddress{inIpAddress}, Debug{inDebug} {
 		ssdp_rx = std::regex(R"delim(^(SERVER|LOCATION|NT|USN|USER-AGENT): (.*)$)delim",
 				std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
 
@@ -56,7 +58,9 @@ public:
 	}
 	virtual ~SsdpServer() {
 		Close();
-		syslog (LOG_DEBUG, "Destroying SsdpServer instance");
+		if(Debug) {
+			syslog (LOG_DEBUG, "Destroying SsdpServer instance");
+		}
 	}
 
 	bool ParseSsdpMessage (std::shared_ptr<SsdpHost> host, const char * msgbuf, const int nbytes);

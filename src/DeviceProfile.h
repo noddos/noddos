@@ -45,9 +45,10 @@ private:
 	std::vector<std::shared_ptr<Identifier>> Identifiers;
 	bool UploadStats;
 	bool Valid;
+	bool Debug;
 
 public:
-	DeviceProfile(const json &j) {
+	DeviceProfile(const json &j, const bool inDebug = false): Debug{inDebug} {
 		LastUpdated = 0;
 		UploadStats = false;
 		Valid = false;
@@ -69,6 +70,7 @@ public:
 	std::string Uuid_get () const { return DeviceProfileUuid; }
 	time_t LastUpdated_get ()  const { return LastUpdated; }
 	bool isValid() const { return Valid; }
+	bool UploadStats_get() const { return UploadStats; }
 
 	const std::vector<std::shared_ptr<Identifier>> & Identifiers_get() const { return Identifiers; }
 	bool from_json(const json &j) {

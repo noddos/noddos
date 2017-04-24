@@ -27,15 +27,16 @@
 #include <syslog.h>
 
 #include "cpr/cpr.h"
-
+#include <curl/curl.h>
 
 
 #include "noddos.h"
 #include "SsdpHost.h"
 
+
 class SsdpLocation {
 public:
-	static bool Get(SsdpHost &s, int32_t timeout = 2000) {
+	static bool Get(SsdpHost &s, const int32_t timeout = 2000, const bool inDebug = false) {
 		auto friendlyname_rx = std::regex(R"delim(\<friendlyname\>(.*?)\<\/friendlyname\>)delim",
 		    	std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
 		auto manufacturer_rx = std::regex(R"delim(<manufacturer\>(.*?)\<\/manufacturer\>)delim",
@@ -52,28 +53,58 @@ public:
 				std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
 
 		auto response = cpr::Get(cpr::Url{s.Location},cpr::Timeout{timeout});
-		if (response.elapsed > 2000) {
+	    /*
+	    std::string response_string;
+	    std::string header_string;
+	    long response_code;
+	    double elapsed;
+		auto curl = curl_easy_init();
+		if (curl) {
+			curl_easy_setopt(curl, CURLOPT_URL, s.Location.c_str());
+		    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
+		    curl_easy_setopt(curl, CURLOPT_USERAGENT, "noddos/1.0.0");
+		    curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 0L);
+		    curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 0L);
+		    curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, (long) timeout);
+		    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlwriteFunction);
+		    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_string);
+
+		    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+		    curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &elapsed);
+
+
+		    curl_easy_perform(curl);
+		    curl_easy_cleanup(curl);
+		    curl = NULL;
+		}
+		if (elapsed > (timeout / 1000)) {
 			syslog(LOG_WARNING, "Ssdp info time-out after %d ms for %s", timeout, s.Location.c_str());
 			return false;
 		}
+		*/
+		std::string response_string = response.text;
 
-		syslog(LOG_DEBUG, "%s", response.text.c_str());
+		if(inDebug) {
+			syslog(LOG_DEBUG, "%s", response_string.c_str());
+		}
 
 		std::smatch m;
-		if (std::regex_search(response.text, m, friendlyname_rx))
+		if (std::regex_search(response_string, m, friendlyname_rx))
 			s.FriendlyName = m.str(1);
-		if (std::regex_search(response.text, m, manufacturer_rx))
+		if (std::regex_search(response_string, m, manufacturer_rx))
 			s.Manufacturer = m.str(1);
-		if (std::regex_search(response.text, m, manufacturerurl_rx))
+		if (std::regex_search(response_string, m, manufacturerurl_rx))
 			s.ManufacturerUrl = m.str(1);
-		if (std::regex_search(response.text, m, modelname_rx))
+		if (std::regex_search(response_string, m, modelname_rx))
 			s.ModelName = m.str(1);
-		if (std::regex_search(response.text, m, modelurl_rx))
+		if (std::regex_search(response_string, m, modelurl_rx))
 			s.ModelUrl = m.str(1);
-		if (std::regex_search(response.text, m, serialnumber_rx))
+		if (std::regex_search(response_string, m, serialnumber_rx))
 			s.SerialNumber = m.str(1);
 		return true;
 	}
 };
+
+
 
 #endif /* SSDPLOCATION_H_ */

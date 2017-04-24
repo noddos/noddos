@@ -53,12 +53,16 @@ bool SsdpServer::ProcessEvent (struct epoll_event &event) {
 			auto sHost = std::make_shared<SsdpHost>();
 			struct sockaddr_in  *addr_in_ptr = (struct sockaddr_in *) &addr;
 			sHost->IpAddress = inet_ntoa(addr_in_ptr->sin_addr);
-			syslog(LOG_DEBUG, "Received multicast packet from %s with %d bytes", sHost->IpAddress.c_str(), nbytes);
+			if(Debug) {
+				syslog(LOG_DEBUG, "Received multicast packet from %s with %d bytes", sHost->IpAddress.c_str(), nbytes);
+			}
 
 			if (ParseSsdpMessage(sHost, msgbuf, nbytes)) {
 				hCache.AddSsdpInfo(sHost);
 			} else {
-				syslog(LOG_DEBUG, "Didn't parse SSDP packet");
+				if(Debug) {
+					syslog(LOG_DEBUG, "Didn't parse SSDP packet");
+				}
             }
 		} else {
 			syslog(LOG_WARNING, "Unknown address family: %u", addr.sa_family);
@@ -84,13 +88,17 @@ bool SsdpServer::ParseSsdpMessage (std::shared_ptr<SsdpHost> host, const char * 
 		if (msgbuf[pos] == '\r') {
 			 if (line != "") {
 				 std::smatch m;
-				 syslog(LOG_DEBUG, "Line %s", line.c_str());
+				 if(Debug) {
+					 syslog(LOG_DEBUG, "Line %s", line.c_str());
+				 }
 				 std::regex_search(line, m, ssdp_rx);
 				 if (not m.empty()) {
 					 std::string header = m.str(1);
 					 std::transform(header.begin(), header.end(), header.begin(), std::ptr_fun<int, int>(std::toupper));
 					 std::string value = m.str(2);
-					 syslog(LOG_DEBUG, "Matched SSDP regex %s %s", header.c_str(), value.c_str());
+					 if(Debug) {
+						 syslog(LOG_DEBUG, "Matched SSDP regex %s %s", header.c_str(), value.c_str());
+					 }
 					 if (header == "SERVER") {
 						 host->Server = value;
 				 	 }
@@ -118,7 +126,9 @@ bool SsdpServer::ParseSsdpMessage (std::shared_ptr<SsdpHost> host, const char * 
 
 int SsdpServer::Open (std::string input, uint32_t inExpiration) {
 	IpAddress = input;
-	syslog(LOG_DEBUG, "Opening SsdpServer socket");
+	if(Debug) {
+		syslog(LOG_DEBUG, "Opening SsdpServer socket");
+	}
 	if ((socket_fd=socket(AF_INET,SOCK_DGRAM,0)) < 0) {
 		syslog(LOG_CRIT, "socket");
 		perror("socket");

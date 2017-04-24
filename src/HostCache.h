@@ -33,24 +33,36 @@
 #include "DeviceProfile.h"
 #include "Config.h"
 
+#include "noddos.h"
+
 class HostCache {
 private:
 	std::map<std::string, std::shared_ptr<Host>> hC; 	// map from Mac to Host
 	std::map<std::string, std::string> Ip2MacMap; 	// map from IP to MaC
 	DeviceProfileMap dpMap;
-	std::regex arp_rx;
+	std::regex arp_rx, dev_rx;
 	std::unordered_set<std::string> WhitelistedNodes;
+	bool Debug;
 	// cpr::Session apiSession;
+	std::unordered_set<std::string> LocalInterfaces;
+	std::unordered_set<std::string> LocalIpAddresses;
+
 
 
 
 public:
-	HostCache() {
-        arp_rx = std::regex(R"delim(^(\d\S+)\s+?\S+?\s+?\S+?\s+?\s+?(\S+)\s+?\S+?\W+?\w+?$)delim",
+	HostCache(bool inDebug = false): Debug{inDebug} {
+		dev_rx = std::regex(R"delim(^([^:]?):)delim",
+				std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
+
+		arp_rx = std::regex(R"delim(^(\d\S+)\s+?\S+?\s+?\S+?\s+?\s+?(\S+)\s+?\S+?\W+?\w+?$)delim",
         	std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
+		getInterfaceIpAddresses();
 	}
 	virtual ~HostCache() {
-		syslog (LOG_DEBUG, "Destroying HostCache instance");
+		if (Debug) {
+			syslog (LOG_DEBUG, "Destroying HostCache instance");
+		}
 	}
 
 	uint32_t DeviceProfiles_load(const std::string filename);
@@ -79,16 +91,18 @@ public:
 	std::string MacLookup (const std::string inIpAddress, const int retries = 1);
 	std::string MacLookup (const std::string inIpAddress, std::string inInterface, const int retries = 1);
 	bool SendUdpPing (const std::string DstIpAddress, const uint16_t DstPort);
+	uint32_t getInterfaceIpAddresses();
 
-	uint32_t RestApiCall (const std::string api, const json &j, const std::string ClientCertFingerprint);
+	uint32_t RestApiCall (const std::string api, const json &j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile);
 	bool ExportDeviceProfileMatches(const std::string filename, const bool detailed = false);
-	uint32_t UploadDeviceStats(const std::string ClientCertFingerprint);
-	bool UploadTrafficStats(const time_t interval, const std::string ClientCertFingerprint);
+	uint32_t UploadDeviceStats(const std::string ClientApiCertFile, const std::string ClientApiKeyFile);
+	bool UploadTrafficStats(const time_t interval, const std::string ClientApiCertFile, const std::string ClientApiKeyFile);
 	bool ImportDeviceProfileMatches(const std::string filename);
 	bool ImportDeviceInfo (json &j);
 
 	uint32_t HostCount() { return hC.size(); }
 	uint32_t HostDnsQueryCount (std::string IpAddress);
+	bool Debug_get() { return Debug; }
 };
 
 #endif /* HOSTCACHE_H_ */

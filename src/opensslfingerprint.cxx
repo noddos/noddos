@@ -36,7 +36,7 @@
 #include <openssl/bio.h>
 
 
-std::string getCertFingerprint(std::string certfile) {
+std::string getCertFingerprint(const std::string certfile, const bool Debug = false) {
 
 	// checks file
 	struct stat sb;
@@ -94,14 +94,6 @@ std::string getCertFingerprint(std::string certfile) {
 		return "";
 	};
 
-    printf("name:      %s\n",    x->name);
-    printf("serial:    ");
-    printf("%02X", x->cert_info->serialNumber->data[0]);
-    for(int pos = 1; pos < x->cert_info->serialNumber->length; pos++) {
-        printf(":%02X", x->cert_info->serialNumber->data[pos]);
-    }
-    printf("\n");
-
 	// calculate fingerprint
 	const EVP_MD * digest = EVP_get_digestbyname("sha1");
 
@@ -116,11 +108,9 @@ std::string getCertFingerprint(std::string certfile) {
     }
 	snprintf(&fpbuf[57], 3, "%02x", md[19]);
 
-    printf("Fingerprint: ");
-	for(int pos = 0; pos < 19; pos++) {
-	    printf("%02x:", md[pos]);
-    }
-    printf("%02x\n", md[19]);
+	if (Debug) {
+		syslog (LOG_DEBUG, "Cert: %s, fingerprint: %s", x->name, fpbuf);
+	}
 
 	std::string fp = fpbuf;
 	// frees memory
@@ -129,3 +119,9 @@ std::string getCertFingerprint(std::string certfile) {
 
 	return fp;
 }
+
+size_t curlwriteFunction(void *ptr, size_t size, size_t nmemb, std::string* data) {
+    data->append((char*) ptr, size * nmemb);
+    return size * nmemb;
+}
+

@@ -48,7 +48,9 @@ uint32_t DnsLogEntry::Prune(bool Force) {
 	for (auto i = Ips.begin(); i != Ips.end(); ++i) {
 		if (Force || now > i->second ) {
 			Ips.erase(i);
-			syslog(LOG_DEBUG, "Pruning %s from %s", i->first.c_str(), Fqdn.c_str());
+			if(Debug) {
+				syslog(LOG_DEBUG, "Pruning %s from %s", i->first.c_str(), Fqdn.c_str());
+			}
 			deletecount++;
 		}
     }
@@ -72,13 +74,17 @@ bool DnsLogEntry::Ips_set(const std::string i, uint32_t inExpirationSeconds) {
 
 	auto it = Ips.find(i);
 	if (it == Ips.end()) {
-		syslog(LOG_DEBUG, "Adding %s with expiration %lu for %s", i.c_str(), exp, Fqdn.c_str());
+		if(Debug) {
+			syslog(LOG_DEBUG, "Adding %s with expiration %lu for %s", i.c_str(), exp, Fqdn.c_str());
+		}
 		Ips[i] = exp;
 	} else {
 		if (it->second == exp) {
 			return false;
 		}
-		syslog(LOG_DEBUG, "Updating expiration for %s %s", i.c_str(), Fqdn.c_str());
+		if(Debug) {
+			syslog(LOG_DEBUG, "Updating expiration for %s %s", i.c_str(), Fqdn.c_str());
+		}
 		Ips[i] = exp;
 	}
 	return true;

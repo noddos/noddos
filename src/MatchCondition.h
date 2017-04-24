@@ -30,10 +30,13 @@ struct MatchCondition {
 public:
 	std::string Key;
 	std::string Value;
+	bool Debug;
 
-	MatchCondition(const std::string inKey, const std::string inValue): Key{inKey}, Value{inValue} {}
+	MatchCondition(const std::string inKey, const std::string inValue, const bool inDebug): Key{inKey}, Value{inValue}, Debug{inDebug} {}
 	~MatchCondition() {
-		syslog (LOG_DEBUG, "Destroying MatchCondition instance");
+		if(Debug) {
+			syslog (LOG_DEBUG, "Destroying MatchCondition instance");
+		}
 	}
 };
 
@@ -41,8 +44,9 @@ class ContainCondition {
 public:
 	std::string Key;
 	std::unordered_set<std::string> Values;
+	bool Debug;
 
-	ContainCondition(const std::string inKey, const json j): Key{inKey} {
+	ContainCondition(const std::string inKey, const json j, const bool inDebug): Key{inKey}, Debug{inDebug} {
 		for (auto &it: j) {
 			if (it.is_string()) {
 				std::string v = it.get<std::string>();
@@ -61,7 +65,9 @@ public:
 		return true;
 	}
 	~ContainCondition() {
-		syslog (LOG_DEBUG, "Destroying ContainCondition instance");
+		if(Debug) {
+			syslog (LOG_DEBUG, "Destroying ContainCondition instance");
+		}
 	}
 };
 #endif /* MATCHCONDITION_H_ */
