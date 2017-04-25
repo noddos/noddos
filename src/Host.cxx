@@ -24,8 +24,14 @@
 #include <ctime>
 #include <string>
 #include <forward_list>
+#include <map>
+#include <unordered_set>
+
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include <syslog.h>
+
 
 // #include <curl/curl.h>
 // #include "log/Log.h"
@@ -54,10 +60,13 @@ bool Host::Match(const DeviceProfileMap& dpMap) {
 	ConfidenceLevel bestmatch = ConfidenceLevel::None;
 	std::string matcheduuid = "";
 	for (auto &kv : dpMap) {
-		syslog(LOG_DEBUG, "Evaluating host %s against device profile %s", MacAddress.c_str(), kv.first.c_str());
+		if(Debug) {
+			syslog(LOG_DEBUG, "Evaluating host %s against device profile %s", MacAddress.c_str(), kv.first.c_str());
+		}
 		auto &dp = *(kv.second);
 		auto match = Match(dp);
 		if (match > bestmatch) {
+			UploadStats = kv.second->UploadStats_get();
 			bestmatch = match;
 			matcheduuid = kv.first;
 			matchtime = time(nullptr);
@@ -76,36 +85,52 @@ ConfidenceLevel Host::Match(const DeviceProfile& dp) {
 	ConfidenceLevel bestmatch = ConfidenceLevel::None;
 	auto v = dp.Identifiers_get();
 	for (auto& i : v) {
-		syslog (LOG_DEBUG, "Testing identifier");
+		if(Debug) {
+			syslog (LOG_DEBUG, "Testing identifier");
+		}
 		auto match = Match(*i);
 		if (match >= ConfidenceLevel::High) {
-			syslog(LOG_DEBUG, "Host %s matched with high confidence", MacAddress.c_str());
+			if(Debug) {
+				syslog(LOG_DEBUG, "Host %s matched with high confidence", MacAddress.c_str());
+			}
 			return match;
         }
 		if 	(match > bestmatch) {
 			bestmatch = match;
         }
 	}
-	syslog(LOG_DEBUG, "Host %s match level %d", MacAddress.c_str(), static_cast<int>(bestmatch));
+	if(Debug) {
+		syslog(LOG_DEBUG, "Host %s match level %d", MacAddress.c_str(), static_cast<int>(bestmatch));
+	}
 	return bestmatch;
 }
 
 ConfidenceLevel Host::Match(const Identifier& i) {
 	for (auto& mc : i.MatchConditions_get()) {
-		syslog (LOG_DEBUG, "Testing match condition %s", (*mc).Key.c_str());
+		if(Debug) {
+			syslog (LOG_DEBUG, "Testing match condition %s", (*mc).Key.c_str());
+		}
 		if(not Match (*mc)) {
-			syslog (LOG_DEBUG, "Host %s did not match condition %s", MacAddress.c_str(), (*mc).Key.c_str());
+			if(Debug) {
+				syslog (LOG_DEBUG, "Host %s did not match condition %s", MacAddress.c_str(), (*mc).Key.c_str());
+			}
 			return ConfidenceLevel::None;
 		}
 	}
 	for (auto& cc : i.ContainConditions_get()) {
-		syslog (LOG_DEBUG, "Testing contain condition %s", (*cc).Key.c_str());
+		if(Debug) {
+			syslog (LOG_DEBUG, "Testing contain condition %s", (*cc).Key.c_str());
+		}
 		if(not Match (*cc)) {
-			syslog (LOG_DEBUG, "Host %s did not contain condition %s", MacAddress.c_str(), (*cc).Key.c_str());
+			if(Debug) {
+				syslog (LOG_DEBUG, "Host %s did not contain condition %s", MacAddress.c_str(), (*cc).Key.c_str());
+			}
 			return ConfidenceLevel::None;
 		}
 	}
-	syslog(LOG_DEBUG, "Host %s matched MustMatch and/or MustContain conditions", MacAddress.c_str());
+	if(Debug) {
+		syslog(LOG_DEBUG, "Host %s matched MustMatch and/or MustContain conditions", MacAddress.c_str());
+	}
 	return i.IdentifyConfidenceLevel_get();
 }
 
@@ -152,10 +177,14 @@ bool Host::Match(const MatchCondition& mc) {
 		startpos = 0;
 	}
 	if (value.compare(startpos, mcvalue.length() - startpos, mcvalue) == 0) {
-		syslog(LOG_DEBUG, "Host %s matched MustMatch condition", MacAddress.c_str());
+		if(Debug) {
+			syslog(LOG_DEBUG, "Host %s matched MustMatch condition", MacAddress.c_str());
+		}
 		return true;
     }
-	syslog (LOG_DEBUG, "Host %s did not match condition %s with value %s from position %lu", value.c_str(), mc.Key.c_str(), mcvalue.c_str(), startpos);
+	if(Debug) {
+		syslog (LOG_DEBUG, "Host %s did not match condition %s with value %s from position %lu", value.c_str(), mc.Key.c_str(), mcvalue.c_str(), startpos);
+	}
 	return false;
 }
 
@@ -164,21 +193,29 @@ bool Host::Match(const ContainCondition& cc) {
 	if(cc.Key == "DnsQueries") {
 		for (auto fqdn: cc.Values) {
 			if (DnsCache.find(fqdn) != DnsCache.end()) {
-				syslog(LOG_DEBUG, "Found DnsQuery for %s from host %s", fqdn.c_str(), MacAddress.c_str());
+				if(Debug) {
+					syslog(LOG_DEBUG, "Found DnsQuery for %s from host %s", fqdn.c_str(), MacAddress.c_str());
+				}
 			} else {
-				syslog(LOG_DEBUG, "Didn't find DnsQuery for %s from host %s", fqdn.c_str(), MacAddress.c_str());
+				if(Debug) {
+					syslog(LOG_DEBUG, "Didn't find DnsQuery for %s from host %s", fqdn.c_str(), MacAddress.c_str());
+				}
 				return false;
 			}
 		}
 	} else {
-		syslog(LOG_DEBUG, "Unsupported MustContain key %s", cc.Key.c_str());
+		if(Debug) {
+			syslog(LOG_DEBUG, "Unsupported MustContain key %s", cc.Key.c_str());
+		}
 		return false;
 	}
-	syslog(LOG_DEBUG, "Host %s matched MustContain condition", MacAddress.c_str());
+	if(Debug) {
+		syslog(LOG_DEBUG, "Host %s matched MustContain condition", MacAddress.c_str());
+	}
 	return true;
 }
 
-bool Host::DeviceStats(json& j, uint32_t time_interval, bool force, bool detailed) {
+bool Host::DeviceStats(json& j, const uint32_t time_interval, bool force, bool detailed) {
 	// Don't report info if device has been matched
 	// or if device hasn't been modified since last reporting run
 	if (not force && (isMatched() || LastModified < (time(nullptr) - time_interval))) {
@@ -198,7 +235,7 @@ bool Host::DeviceStats(json& j, uint32_t time_interval, bool force, bool detaile
 	j["SsdpServer"] = Ssdp.Server;
 	j["SsdpLocation"] = Ssdp.Location;
 
-	std::string fqdns;
+	std::string fqdns = "";
 	for (auto &dq: DnsCache) {
 		if (detailed) {
 			dq.second->DnsStats(j, time_interval);
@@ -206,45 +243,67 @@ bool Host::DeviceStats(json& j, uint32_t time_interval, bool force, bool detaile
 			fqdns += dq.second->Fqdn_get() + " ";
         }
 	}
-	if (not detailed) {
+	if (not detailed && not fqdns.empty()) {
 		j["DnsQueries"] = fqdns;
     }
 
 	return true;
 }
 
-bool Host::TrafficStats(json& j, const uint32_t time_interval, bool force) {
+bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportRfc1918, const std::unordered_set<std::string> &LocalIps, bool force) {
 	if (not isMatched()) {
 		return false;
 	}
-	if (not force && LastSeen < (time(nullptr) - time_interval)) {
+	if (not force && LastSeen < (time(nullptr) - interval)) {
 		return false;
 	}
-	bool hasdata = false;
-	std::unordered_set<std::string> allIps;
-	std::unordered_set<std::string> allFqdns;
-	j = { {"DeviceProfileUuid", Uuid } };
-	j["DnsQueries"] = json::array();
+	// This holds reverse lookup table from an IP address to one or more FQDNs.
+	std::map<std::string,std::shared_ptr<std::unordered_set<std::string>>> allIps;
 	for (auto &dq: DnsCache) {
-		j["DnsQueries"].push_back(dq.first);
-		hasdata = true;
 		dq.second->Ips_get(allIps);
 	}
 
-	j["TrafficStats"] = json::array();
+	std::unordered_set<std::string> endpoints;
 	for (auto &fc: FlowCache) {
 		std::string ip = fc.first;
-		for (auto &fe : *(fc.second)) {
-			if(fe->Fresh(time_interval)) {
-				if (allIps.find(ip) == allIps.end()) {
-					j["TrafficStats"].push_back(ip);
-					allIps.insert(ip);
-					hasdata = true;
+		if (ReportRfc1918 || not inRfc1918(ip)) {
+			for (auto &fe : *(fc.second)) {
+				if(fe->Fresh(interval)) {
+					auto it = allIps.find(ip);
+					if (it == allIps.end()) {
+						endpoints.insert(ip);
+					} else {
+						for (auto &fqdn: *(it->second)) {
+							endpoints.insert(fqdn);
+						}
+					}
 				}
 			}
 		}
 	}
-	return hasdata;
+	if (endpoints.size() > 0) {
+		j = { {"DeviceProfileUuid", Uuid } };
+		j["TrafficStats"] = endpoints;
+		return true;
+	}
+	return false;
+}
+
+bool Host::inRfc1918(const std::string ip ) {
+	uint32_t Rfc1918_10start = ntohl(10);
+	uint32_t Rfc1918_10end = ntohl(4294967050);
+	uint32_t Rfc1918_172start = ntohl(4268);
+	uint32_t Rfc1918_172end = ntohl(4294907820);
+	uint32_t Rfc1918_192start = ntohl(43200);
+	uint32_t Rfc1918_192end = ntohl(4294944960);
+	struct sockaddr_in sa;
+	char str[INET_ADDRSTRLEN];
+	inet_pton(AF_INET, ip.c_str(), &(sa.sin_addr));
+	uint32_t ip_int = ntohl(sa.sin_addr.s_addr);
+	return
+		(Rfc1918_10start <= ip_int && ip_int <= Rfc1918_10end) ||
+		(Rfc1918_172start <= ip_int && ip_int <= Rfc1918_172end) ||
+		(Rfc1918_192start <= ip_int && ip_int <= Rfc1918_192end);
 }
 
 void Host::ExportDeviceInfo (json &j, bool detailed) {
@@ -266,9 +325,18 @@ void Host::ExportDeviceInfo (json &j, bool detailed) {
  *  Returns true if flow was added, false if existing flow was updated
  */
 bool Host::FlowEntry_set(const uint16_t inSrcPort, const std::string &inDstIp, const uint16_t inDstPort, const uint8_t inProtocol, const uint32_t inExpiration) {
-	iCache::LastSeen = iCache::LastModified = time(nullptr);
+	iCache::LastSeen = time(nullptr);
+	if (inDstIp == "239.255.255.250") {
+		if(Debug) {
+			syslog(LOG_DEBUG, "Ignoring flow to 239.255.255.0");
+		}
+		return false;
+	}
 	auto f = std::make_shared<FlowEntry>();
-	syslog(LOG_DEBUG, "Creating new Flow Entry for src port %u, dest ip %s, dest port %u, protocol %u", inSrcPort, inDstIp.c_str(), inDstPort, inProtocol);
+	if(Debug) {
+		syslog(LOG_DEBUG, "Creating new Flow Entry for src port %u, dest ip %s, dest port %u, protocol %u", inSrcPort, inDstIp.c_str(), inDstPort, inProtocol);
+	}
+	iCache::LastModified = time(nullptr);
 	f->SrcPort = inSrcPort;
 	f->DstPort = inDstPort;
 	f->Protocol = inProtocol;
@@ -277,20 +345,26 @@ bool Host::FlowEntry_set(const uint16_t inSrcPort, const std::string &inDstIp, c
 	if (FlowCache.find(inDstIp) == FlowCache.end()) {
 		FlowCache[inDstIp] = std::make_shared<FlowEntryList>();
 		FlowCache[inDstIp]->push_back(f);
-		syslog(LOG_DEBUG, "Adding to FlowCache with destination %s : %u Protocol %u", inDstIp.c_str(), inDstPort, inProtocol);
+		if(Debug) {
+			syslog(LOG_DEBUG, "Adding to FlowCache with destination %s : %u Protocol %u", inDstIp.c_str(), inDstPort, inProtocol);
+		}
 		return true;
 	}
 	// Create or update existing flow to destination IP
 	for(FlowEntryList::iterator existingflow = FlowCache[inDstIp]->begin(); existingflow != FlowCache[inDstIp]->end(); ++existingflow) {
 		// Update existing flow it it matches incoming flow (ignoring Expiration)
 		if (**existingflow == *f) {
-			syslog(LOG_DEBUG, "Updating expiration of existing FlowEntry in FlowCache for destination %s", inDstIp.c_str());
+			if(Debug) {
+				syslog(LOG_DEBUG, "Updating expiration of existing FlowEntry in FlowCache for destination %s", inDstIp.c_str());
+			}
 			(*existingflow)->Expiration_set(inExpiration);
 			return false;
 		}
 	}
 	// This flow doesn't match any of the existing flows
-	syslog(LOG_DEBUG, "Adding FlowEntry to FlowCache for destination %s", inDstIp.c_str());
+	if(Debug) {
+		syslog(LOG_DEBUG, "Adding FlowEntry to FlowCache for destination %s", inDstIp.c_str());
+	}
 	FlowCache[inDstIp]->push_back(f);
 	return true;
 }
@@ -306,7 +380,9 @@ bool Host::DnsLogEntry_set(const std::string inFqdn, const std::string inIpAddre
 	if(DnsCache.find(inFqdn) == DnsCache.end()) {
 		DnsCache[inFqdn] = std::make_shared<DnsLogEntry>(inFqdn);
 		newentry = true;
-		syslog(LOG_DEBUG, "Creating DnsLogEntry for %s", inFqdn.c_str());
+		if(Debug) {
+			syslog(LOG_DEBUG, "Creating DnsLogEntry for %s", inFqdn.c_str());
+		}
 	}
 
 	DnsCache[inFqdn]->Ips_set(inIpAddress, inExpiration);
@@ -352,9 +428,18 @@ bool Host::SsdpInfo_set(const std::shared_ptr<SsdpHost> insHost) {
 	return true;
 }
 
+bool Host::UploadsDisabled() {
+	if (not isMatched()) {
+		return true;
+	}
+	return not UploadStats;
+}
+
 uint32_t Host::Prune (bool Force) {
 	bool pruned = false;
-	syslog(LOG_DEBUG, "Pruning host %s", MacAddress.c_str());
+	if(Debug) {
+		syslog(LOG_DEBUG, "Pruning host %s", MacAddress.c_str());
+	}
 	uint32_t pruned_flowentries = 0;
 	uint32_t pruned_flows = 0;
 	// FlowCache is a map, so iterate over it
@@ -389,7 +474,9 @@ uint32_t Host::Prune (bool Force) {
 
 	}
 	uint32_t pruned_dnsqueries = 0;
-	syslog (LOG_DEBUG, "Pruned %u Flow Entries and %u flows", pruned_flowentries, pruned_flows);
+	if(Debug) {
+		syslog (LOG_DEBUG, "Pruned %u Flow Entries and %u flows", pruned_flowentries, pruned_flows);
+	}
 	for(auto const& dc: DnsCache) {
 		if (Force || dc.second->isExpired()) {
 			DnsCache.erase(dc.first);
@@ -397,7 +484,9 @@ uint32_t Host::Prune (bool Force) {
 			pruned = true;
 		}
 	}
-	syslog (LOG_DEBUG, "Pruned %u DNS queries", pruned_dnsqueries);
+	if(Debug) {
+		syslog (LOG_DEBUG, "Pruned %u DNS queries", pruned_dnsqueries);
+	}
 	return pruned;
 }
 

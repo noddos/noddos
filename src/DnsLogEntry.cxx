@@ -16,9 +16,10 @@
 
  */
 #include <string>
-#include <forward_list>
 #include <cstring>
 #include <syslog.h>
+#include <forward_list>
+
 
 #include <json.hpp>
 using json = nlohmann::json;
@@ -48,7 +49,9 @@ uint32_t DnsLogEntry::Prune(bool Force) {
 	for (auto i = Ips.begin(); i != Ips.end(); ++i) {
 		if (Force || now > i->second ) {
 			Ips.erase(i);
-			syslog(LOG_DEBUG, "Pruning %s from %s", i->first.c_str(), Fqdn.c_str());
+			if(Debug) {
+				syslog(LOG_DEBUG, "Pruning %s from %s", i->first.c_str(), Fqdn.c_str());
+			}
 			deletecount++;
 		}
     }
@@ -57,10 +60,15 @@ uint32_t DnsLogEntry::Prune(bool Force) {
 
 //! Gets the list of IP addresses for an FQDN
 
-uint32_t DnsLogEntry::Ips_get(std::unordered_set<std::string> &outIps) {
+uint32_t DnsLogEntry::Ips_get(std::map<std::string,std::shared_ptr<std::unordered_set<std::string>>> &outIps) {
 	uint32_t ipcount = 0;
 	for (auto const &i: Ips) {
-		outIps.insert(i.first);
+		ipcount++;
+		if (outIps.find(i.first) == outIps.end()) {
+			outIps[i.first] = std::make_shared<std::unordered_set<std::string>>();
+			// outIps[i.first] = std::make_unique<std::string>();
+		}
+		outIps[i.first]->insert(Fqdn);
 	}
 	return ipcount;
 }
@@ -72,13 +80,17 @@ bool DnsLogEntry::Ips_set(const std::string i, uint32_t inExpirationSeconds) {
 
 	auto it = Ips.find(i);
 	if (it == Ips.end()) {
-		syslog(LOG_DEBUG, "Adding %s with expiration %lu for %s", i.c_str(), exp, Fqdn.c_str());
+		if(Debug) {
+			syslog(LOG_DEBUG, "Adding %s with expiration %lu for %s", i.c_str(), exp, Fqdn.c_str());
+		}
 		Ips[i] = exp;
 	} else {
 		if (it->second == exp) {
 			return false;
 		}
-		syslog(LOG_DEBUG, "Updating expiration for %s %s", i.c_str(), Fqdn.c_str());
+		if(Debug) {
+			syslog(LOG_DEBUG, "Updating expiration for %s %s", i.c_str(), Fqdn.c_str());
+		}
 		Ips[i] = exp;
 	}
 	return true;

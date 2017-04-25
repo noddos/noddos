@@ -60,10 +60,9 @@ bool add_epoll_filehandle(int epfd, std::map<int, iDeviceInfoSource *> & epollma
 bool daemonize(Config &inConfig);
 
 int main(int argc, char* argv[]) {
+    bool debug = false;
     bool flowtrack = true;
-	std::string pidfile;
 	std::string configfile;
-	std::string verbose;
 	bool daemon = true;
 	bool prune = true;
 
@@ -72,15 +71,15 @@ int main(int argc, char* argv[]) {
 		cxxopts::Options options("Noddos", "Device-aware firewall");
 
 		options.add_options()
+		  ("d,debug", "Enable debugging, including writing of API calls to files in /tmp")
 	  	  ("n,nodaemon", "Don't run as daemon, log to stderr")
 	  	  ("p,noprune", "Don't prune host data")
 		  ("f,noflowtrack", "Don't track flows")
-		  ("h,help", "Noddos usage: -n/--nodaemon -p/--pidfile <filename> -f/--flowtrack")
+		  ("h,help", "Noddos usage: -d/--debug -n/--nodaemon -c/--configfile <filename> -f/--noflowtrack")
 		  ("c,configfile", "Configuration file", cxxopts::value<std::string>(configfile)->default_value("/etc/noddos/noddos.conf"))
 	  	  ;
-		// TODO ("v,verbose", "Set verbosity (debug, info, warn, error, critical)", cxxopts::value<std::string>()->default_value("warn"))
 		// ("u,upload", "Upload device data (and network flows is -f is specified) to the cloud")
-	  	//  ("i,ipaddress", "IP address of interface to listen for multicast on", cxxopts::value<std::string>())
+	  	// ("i,ipaddress", "IP address of interface to listen for multicast on", cxxopts::value<std::string>())
 
 
 		options.parse(argc, argv);
@@ -93,12 +92,14 @@ int main(int argc, char* argv[]) {
 		if (options.count("f")) {
 			flowtrack = false;
 		}
-
+		if (options.count("d")) {
+			debug = true;
+		}
 	} catch (const cxxopts::OptionException& e) {
 	    std::cout << "error parsing options: " << e.what() << std::endl;
 	    exit(1);
 	}
-	Config config(configfile);
+	Config config(configfile, debug);
 
 	if (daemon) {
 		openlog(argv[0], LOG_NOWAIT | LOG_PID, LOG_UUCP);
@@ -106,7 +107,7 @@ int main(int argc, char* argv[]) {
 	} else
 		openlog(argv[0], LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
 
-	HostCache hC;
+	HostCache hC(config.Debug);
 
 	hC.DeviceProfiles_load(config.DeviceProfilesFile);
 	hC.ImportDeviceProfileMatches(config.MatchFile);
@@ -130,14 +131,16 @@ int main(int argc, char* argv[]) {
         if (epoll_ctl(epfd, EPOLL_CTL_ADD, event.data.fd, &event) < 0) {
         	syslog(LOG_ERR, "Can't add signal file handle to epoll");
         } else {
-        	syslog(LOG_DEBUG, "Signal file handle %d", sfd);
+        	if (config.Debug) {
+        		syslog(LOG_DEBUG, "Signal file handle %d", sfd);
+        	}
         }
     }
 
 	struct epoll_event event;
 
 
-    DnsmasqLogFile f("/var/log/dnsmasq.log", hC, 86400);
+    DnsmasqLogFile f("/var/log/dnsmasq.log", hC, 86400, config.Debug);
     // add_epoll_filehandle(epfd, epollmap, f);
     event.events = EPOLLIN | EPOLLET;
     event.data.fd = f.GetFileHandle();
@@ -148,7 +151,7 @@ int main(int argc, char* argv[]) {
     }
     epollmap[event.data.fd] = &f;
 
-    SsdpServer s(hC, 86400);
+    SsdpServer s(hC, 86400, "", config.Debug);
     // add_epoll_filehandle(epfd, epollmap, s);
     event.events = EPOLLIN | EPOLLET;
     event.data.fd = s.GetFileHandle();
@@ -174,7 +177,7 @@ int main(int argc, char* argv[]) {
         syslog (LOG_INFO, "Conntrack FD %d", event.data.fd);
     }
 
-    if (config.User != "" || config.Group != "") {
+    if (config.User != "" && config.Group != "") {
     	drop_process_privileges(config);
     }
 	uint32_t NextPrune = time(nullptr) + config.PruneInterval + rand() % 15;
@@ -184,12 +187,16 @@ int main(int argc, char* argv[]) {
 
 	struct epoll_event* epoll_events = static_cast<epoll_event*>(calloc(MAXEPOLLEVENTS, sizeof (epoll_event)));
 	while (true) {
-    	syslog(LOG_DEBUG, "Starting epoll event wait");
+    	if (config.Debug) {
+    		syslog(LOG_DEBUG, "Starting epoll event wait");
+    	}
 		int eCnt = epoll_wait(epfd, epoll_events, MAXEPOLLEVENTS, 60000);
     	if (eCnt < 0) {
     		syslog(LOG_ERR, "Epoll event wait error");
     	}
-    	syslog(LOG_DEBUG, "Received %d events", eCnt);
+    	if (config.Debug) {
+    		syslog(LOG_DEBUG, "Received %d events", eCnt);
+    	}
 		int ev;
     	for (ev = 0; ev< eCnt; ev++) {
 
@@ -198,10 +205,14 @@ int main(int argc, char* argv[]) {
 				syslog(LOG_ERR, "Epoll event error for FD %d", epoll_events[ev].data.fd);
 				close(epoll_events[ev].data.fd);
 			} else {
-				syslog(LOG_DEBUG, "Handling event for FD %d", epoll_events[ev].data.fd);
+				if (config.Debug) {
+					syslog(LOG_DEBUG, "Handling event for FD %d", epoll_events[ev].data.fd);
+				}
 				if (epoll_events[ev].data.fd == sfd) {
 					// Signal received
-					syslog(LOG_DEBUG, "Processing signal event");
+					if (config.Debug) {
+						syslog(LOG_DEBUG, "Processing signal event");
+					}
 					struct signalfd_siginfo si;
  					auto res = read (sfd, &si, sizeof(si));
 					if (res < 0) {
@@ -224,10 +235,10 @@ int main(int argc, char* argv[]) {
 						syslog(LOG_INFO, "Processing signal event SIGUSR2");
 						hC.Match();
 						if (config.DeviceReportInterval) {
-							hC.UploadDeviceStats(config.ClientCertFingerprint);
+							hC.UploadDeviceStats(config.ClientApiCertFile, config.ClientApiKeyFile);
 						}
 						if (flowtrack && config.TrafficReportInterval) {
-							hC.UploadTrafficStats(config.TrafficReportInterval, config.ClientCertFingerprint);
+							hC.UploadTrafficStats(config.TrafficReportInterval, config.ReportTrafficToRfc1918, config.ClientApiCertFile, config.ClientApiKeyFile);
 						}
 						hC.ExportDeviceProfileMatches(config.DumpFile, true);
 						NextDeviceUpload = time(nullptr) + config.DeviceReportInterval;
@@ -241,20 +252,26 @@ int main(int argc, char* argv[]) {
 				}
 				auto t = time(nullptr);
 				if (t > NextDeviceUpload) {
-					syslog(LOG_DEBUG, "Starting matching");
+					if (config.Debug) {
+						syslog(LOG_DEBUG, "Starting matching");
+					}
 					hC.Match();
 					if (config.DeviceReportInterval) {
-						hC.UploadDeviceStats(config.ClientCertFingerprint);
+						hC.UploadDeviceStats(config.ClientApiCertFile, config.ClientApiKeyFile);
 					}
 					NextDeviceUpload = t + config.DeviceReportInterval;
 				}
 				if (t > NextTrafficUpload && flowtrack && config.TrafficReportInterval) {
-					syslog(LOG_DEBUG, "Starting traffic upload");
-					hC.UploadTrafficStats(config.TrafficReportInterval, config.ClientCertFingerprint);
+					if (config.Debug) {
+						syslog(LOG_DEBUG, "Starting traffic upload");
+					}
+					hC.UploadTrafficStats(config.TrafficReportInterval, config.ReportTrafficToRfc1918, config.ClientApiCertFile, config.ClientApiKeyFile);
 					NextTrafficUpload = t + config.TrafficReportInterval;
 				}
 				if (prune && t > NextPrune) {
-					syslog(LOG_DEBUG, "Starting prune");
+					if (config.Debug) {
+						syslog(LOG_DEBUG, "Starting prune");
+					}
 					hC.Prune();
 					NextPrune = t + config.PruneInterval;
 				}
@@ -269,6 +286,7 @@ exitprog:
 	s.Close();
 	if (flowtrack && t_ptr != nullptr) {
 		t_ptr->Close();
+		delete t_ptr;
 	}
 	close (epfd);
 	close (sfd);

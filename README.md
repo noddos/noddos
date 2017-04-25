@@ -20,15 +20,69 @@ The 'getdeviceprofiles.sh' script is used to securely download the list of Devic
 Prerequisites
 - Linux v2.6.13 or later (as inotify support is needed)
 - dnsmasq
-- libopenssl
+- openssl command-line tool
+- libssl
 - libcurl 
 - libnetfilter_conntrack
 - wget (preferred because of conditional GET support) or curl
 - ca-certificates 
 - gzip or bzip2 or brotli (latter is preferred due to superior compression rate)
 
-Noddos leverages dnsmasq logs. The following changes are required to make dnsmasq log the right data to the right place: 
+### Compile noddos yourself
+    # install development packages for libcurl, libopenssl and libnetfilter_conntrack
+    sudo apt install libssl-dev
+    sudo apt install libnetfilter-conntrack-dev
+    sudo apt install libcurl4-openssl-dev
 
+    # Install openssl 
+    sudo apt install openssl
+    sudo apt install libcurl3
+    sudo apt install brotli
+    sudo apt install wget
+    sudo apt install ssl
+    sudo apt install libnetfilter-conntrack3
+    sudo apt install ca-certificates
+
+    sudo adduser --system --home /var/lib/noddos --shell /bin/false \
+         --disabled-login --disabled-password\
+         --quiet  --group noddos
+    sudo mkdir /etc/noddos
+    sudo cp noddos.conf-sample /etc/noddos.conf
+    sudo cp noddosconfig.pem /etc/noddos
+
+    openssl req -x509 -nodes -subj '/CN=noddosapiclient' -newkey rsa:2048 -days 3650 \
+         -keyout /etc/noddos/noddosapiclient.key -out /etc/noddos/noddosapiclient.pem
+
+    ### edit /etc/noddos.conf, for one to whitelist the IP addresses of the interfaces of your router
+    sudo chown -R root:root /etc/noddos
+    chgrp noddos /etc/noddos/noddosapiclient.key
+    chmod 640 /etc/noddos/noddosapiclient.key
+
+    # Directory where DeviceProfiles.json will be downloaded to
+    mkdir /var/lib/noddos
+    chown noddos:noddos /var/lib/noddos
+
+    git clone https://github.com/noddos/noddos
+    cd noddos/src
+    cmake .
+    make
+    make test
+
+    install noddos -o 0 -g 0 -s noddos /usr/sbin 
+    install noddos -o 0 -g 0 ../tools/getdeviceprofiles.sh /usr/sbin 
+ 
+    # Install a cronjob to do this frequently (please pick a randon time of day instead of 3:23am), ie
+    23 */3 * * * /usr/sbin/getdeviceprofiles.sh
+
+    # Noddos needs to be started as root as it will need to get Linux
+    # firewall connection state changes. It will drop to an unprivileged
+    # user/group after that has been set up.
+    sudo noddos 
+
+Noddos leverages dnsmasq logs. Look at what is installed on your router to make sure installing dnsmasq doesn't interfere with any other installed DNS or DHCP servers. The following changes are required to install dnsmasq and make dnsmasq log the right data to the right place: 
+
+    sudo apt install dnsmasq
+    
     cat >>/etc/dnsmasq.conf <<EOF
     log-queries=extra
     log-dhcp
@@ -53,54 +107,15 @@ Noddos leverages dnsmasq logs. The following changes are required to make dnsmas
     }
     EOF
 
-Set up Noddos 
-
-### Compile noddos yourself
-    # install development packages for libcurl, libopenssl and libnetfilter_conntrack
-    git clone https://github.com/noddos/noddos
-    cd noddos/src
-
-    # Install 3rd party development libraries
-    sudo apt install libssl-dev
-    sudo apt install libnetfilter-conntrack-dev
-    sudo apt install libcurl4-openssl-dev
-
-    # Download Requests library for C++
-    git submodule add https://github.com/whoshuu/cpr.git
-    git submodule update --init --recursive
-    export BUILD_CPR_TESTS=OFF
-    export USE_SYSTEM_GTEST=ON
-    export USE_SYSTEM_CURL=ON
-    cmake .
-    make
-
-    sudo adduser --system --home /var/lib/noddos --shell /bin/false \
-         --disabled-login --disabled-password\
-         --quiet  --group noddos
-    sudo mkdir /etc/noddos
-    sudo cp noddos.conf-sample /etc/noddos.conf
-    sudo cp noddosconfig.pem /etc/noddos
-    ### edit /etc/noddos.conf, for one to whitelist the IP addresses of the interfaces of your router
-    sudo chown -R root:root /etc/noddos
-
-    # getdeviceprofiles.sh needs the certificates of well-known CAs installed to be able to connect to
-    # https://www.noddos.io/
-
-    sudo apt install ca-certificates
-    install noddos -o 0 -g 0 -s noddos /usr/sbin 
-    install noddos -o 0 -g 0 ../tools/getdeviceprofiles.sh /usr/sbin 
-    # Install a cronjob to do this frequently (please pick a randon time of day instead of 3:23am), ie
-    23 */3 * * * /path/to/noddos/tools/getdeviceprofiles.sh
-
-    # Noddos needs to be started as root as it will need to get Linux
-    # firewall connection state changes. It will drop to an unprivileged
-    # user/group after that has been set up.
-    sudo noddos 
 
 ## Command line options
 The following command line options are supported by the Noddos client:
 __-n, --no-daemon__: Don't run as daemon and send log messages to STDERR in addition to syslog
 __-c, --config-file__: Location of configuration default, default /etc/noddos/noddos.conf
+__-p, --no_prune__: Disable pruning of Hosts, DnsQueries, DHCP transactions and flows
+__-f, --no_flowtrack__: Disable tracking IP flows
+__-d, --debug__: Enable extensive logging, save uploaded data to /tmp
+__-h, --help__: Print command line options
 
 ## Configuration file
 The noddos client configuration file (Default: /etc/noddos/noddos.conf) is a JSON file with the configuration settings.
@@ -113,6 +128,10 @@ __MatchFile__: Noddos will write all current matched devices to this file after 
 
 __DumpFile__: Noddos will write all informaiton it has on devices to this file after received a SIGUSR2 signal. Default /var/lib/nodds/DeviceDump.json
 
+__ClientApiCertFile__: certificate for key used to authenticate against Noddos API. Default: /etc/noddos/noddosapiclient.pem
+
+__ClientApiKeyFile__: Key used to authenticate against Noddos API. Default: /etc/noddos/noddosapiclient.key
+
 __SignatureCertFile__: certificate used to validate the digital signature for the DeviceProfiles.json file. This setting is not used by Noddos itself but by the shell script that downloads the DeviceProfiles.json file from the cloud. Default: /etc/noddos/noddossignaturecert.pem
 
 __PidFile__: Location for pidfile of nodlisten daemon.  Default: /var/lib/noddos/noddos.pid
@@ -124,6 +143,8 @@ __WhitelistedMacAddresses__: list of ethernet MAC addresses that that should not
 __WhitelistedIpv4Addresses__: list of IPv4 addresses that that should not have any data uploaded to the cloud. This should contain the loopback address and typically the LAN IP address of the router/home-gateway. Default: empty list of strings
 
 __WhitelistedIpv6Addresses__: list of IPv6 addresses that that should not have any data uploaded to the cloud. This should contain the loopback address and typically the LAN IP address of the router/home-gateway. Default: empty list of strings
+
+__ReportTrafficToRfc1918__: should traffic to RFC1918 IP addresses be uploaded to the traffic stats API or not. There is currently no equivalent for IPv6 addresses. Default: false
 
 __ListenInterfaces__: (not currently implemented) Interfaces on which noddos should listen for SSDP traffic. Mutually exclusive with 'ipaddress'. Default: empty list, causes Noddos to listen on all interfaces and their IP addresses.
 

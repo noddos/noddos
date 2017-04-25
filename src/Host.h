@@ -60,16 +60,21 @@ class Host : public iCache {
     	time_t matchtime;
     	ConfidenceLevel IdentifyConfidenceLevel;
     	ConfidenceLevel EnforceConfidenceLevel;
+    	bool UploadStats;
+    	bool Debug;
 
 	public:
-		Host() {
+		Host(const std::string inMacAddress, const bool inDebug = false): MacAddress{inMacAddress}, Debug{inDebug}  {
 			iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);
+			UploadStats = true;
 			matchtime = 0;
 			IdentifyConfidenceLevel = EnforceConfidenceLevel = ConfidenceLevel::None;
 		}
 
-		Host(const std::string inMacAddress, std::string inUuid = ""): MacAddress{inMacAddress}, Uuid{inUuid} {
+		Host(const std::string inMacAddress, const std::string inUuid = "", const bool inDebug = false):
+				MacAddress{inMacAddress}, Uuid{inUuid}, Debug{inDebug} {
 			iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);
+			UploadStats = true;
 			matchtime = 0;
 			IdentifyConfidenceLevel = EnforceConfidenceLevel = ConfidenceLevel::None;
 		}
@@ -93,14 +98,16 @@ class Host : public iCache {
 		bool SsdpInfo_set(const std::shared_ptr<SsdpHost> insHost);
 
 		bool isMatched () { return Uuid != ""; }
+		bool UploadsDisabled ();
 		std::string Uuid_get () { return Uuid; }
 		std::string MacAddress_get () { return MacAddress; }
 		std::string Ipv4Address_get () { return Ipv4Address; }
 		std::string Ipv6Address_get () { return Ipv6Address; }
 
 		void ExportDeviceInfo (json &j, bool detailed = false);
-		bool DeviceStats(json& j, uint32_t interval, bool force = false, bool detailed = false);
-		bool TrafficStats(json& j, uint32_t interval, bool force = false);
+		bool DeviceStats(json& j, const uint32_t interval, bool force = false, bool detailed = false);
+		bool TrafficStats(json& j, const uint32_t interval, const bool ReportRfc1918, const std::unordered_set<std::string> & LocalIps, bool force = false);
+		bool inRfc1918(const std::string ip );
 
 	    // iCache interface methods.
 	    time_t Expiration_set (time_t inExpiration = HOSTDEFAULTEXPIRATION) {

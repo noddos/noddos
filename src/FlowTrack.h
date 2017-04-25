@@ -59,8 +59,7 @@ private:
     const Config &config;
 
 public:
-	FlowTrack(HostCache & inhC, const Config &inConfig):
-			hC{inhC}, config{inConfig} {
+	FlowTrack(HostCache & inhC, Config &inConfig): hC{inhC}, config{inConfig} {
 		h = nullptr;
 		Open("", 0);
 	}
@@ -69,7 +68,9 @@ public:
 		input = "";
 		inExpiration = 0;
 
-		syslog (LOG_DEBUG, "Opening NFCT");
+		if (config.Debug) {
+			syslog (LOG_DEBUG, "Opening NFCT");
+		}
 
         h = nfct_open(CONNTRACK, NF_NETLINK_CONNTRACK_NEW |
                                  NF_NETLINK_CONNTRACK_UPDATE);
@@ -145,7 +146,9 @@ public:
 
 	virtual ~FlowTrack() {
 		Close();
-		syslog (LOG_DEBUG, "Destroying FlowTrack instance");
+		if (config.Debug) {
+			syslog (LOG_DEBUG, "Destroying FlowTrack instance");
+		}
 	}
 	// iDeviceInfoSource interface methods
 	virtual bool Close () {
@@ -153,7 +156,9 @@ public:
 			syslog(LOG_WARNING, "Closing closed conntrack handler");
 			return -1;
 		}
-		syslog(LOG_DEBUG, "Closing conntrack handler");
+		if (config.Debug) {
+			syslog(LOG_DEBUG, "Closing conntrack handler");
+		}
 		return nfct_close(h);
 	}
 
@@ -168,7 +173,9 @@ public:
 		auto rawtime = time (nullptr);
 		struct tm * timeinfo = localtime (&rawtime);
 		strftime (buf, 20, "%x %X", timeinfo);
-		syslog(LOG_DEBUG, "Conntrack event read at %s with status %d", buf, rt);
+		if (config.Debug) {
+			syslog(LOG_DEBUG, "Conntrack event read at %s with status %d", buf, rt);
+		}
         return true;
 	}
 };

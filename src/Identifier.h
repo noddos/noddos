@@ -41,9 +41,10 @@ private:
 	ConfidenceLevel EnforceConfidenceLevel;
 	std::vector<std::shared_ptr<MatchCondition>> MatchConditions;
 	std::vector<std::shared_ptr<ContainCondition>> ContainConditions;
+	bool Debug;
 
 public:
-	Identifier(json &j) {
+	Identifier(json &j, const bool inDebug = false): Debug{inDebug} {
 		if (j.find("IdentifyConfidenceLevel") == j.end()) {
 			syslog(LOG_INFO, "No IdentifyConfidenceLevel set, defaulting to `Low'");
 			IdentifyConfidenceLevel = ConfidenceLevel::Low;
@@ -54,8 +55,7 @@ public:
 			} else {
 				// TODO *sigh* surely there is a better way!
 				std::string cl = j["IdentifyConfidenceLevel"].get<std::string>();
-				for(unsigned int i = 0; i < cl.length(); ++i)
-				    cl[i] = tolower(cl[i]);
+				std::transform(cl.begin(), cl.end(), cl.begin(), ::tolower);
 
 				if(cl == "low")
 					IdentifyConfidenceLevel = ConfidenceLevel::Low;
@@ -75,8 +75,7 @@ public:
 			} else {
 				// TODO *sigh* surely there must be a better way!
 				std::string cl = j["EnforceConfidenceLevel"].get<std::string>();
-				for(unsigned int i = 0; i < cl.length(); ++i)
-				    cl[i] = tolower(cl[i]);
+				std::transform(cl.begin(), cl.end(), cl.begin(), ::tolower);
 				EnforceConfidenceLevel = ConfidenceLevel::None;
 				if(cl == "low") {
 					EnforceConfidenceLevel = ConfidenceLevel::Low;
@@ -96,8 +95,10 @@ public:
 				syslog(LOG_ERR, "MustMatch condition is not a JSON Object");
 			} else {
 				for (json::iterator it = j["MustMatch"].begin(); it != j["MustMatch"].end(); ++it ) {
-					syslog (LOG_DEBUG, "Adding MatchCondition %s", it.key().c_str());
-					auto mc = std::make_shared<MatchCondition>(it.key(), it.value());
+					if(Debug) {
+						syslog (LOG_DEBUG, "Adding MatchCondition %s", it.key().c_str());
+					}
+					auto mc = std::make_shared<MatchCondition>(it.key(), it.value(), Debug);
 					MatchConditions.push_back(mc);
 				}
 			}
@@ -107,9 +108,11 @@ public:
 				syslog(LOG_ERR, "MustContain condition is not a JSON Object");
 			} else {
 				for (json::iterator it = j["MustContain"].begin(); it != j["MustContain"].end(); ++it) {
-					syslog (LOG_DEBUG, "Adding ContainCondition %s", it.key().c_str());
+					if(Debug) {
+						syslog (LOG_DEBUG, "Adding ContainCondition %s", it.key().c_str());
+					}
 					if (it.value().is_array()) {
-						auto cc = std::make_shared<ContainCondition>(it.key(), it.value());
+						auto cc = std::make_shared<ContainCondition>(it.key(), it.value(), Debug);
 						ContainConditions.push_back(cc);
 					}
 				}
@@ -117,7 +120,9 @@ public:
 		}
 	}
 	~Identifier() {
-		syslog (LOG_DEBUG, "Destroying Identifier instance");
+		if(Debug) {
+			syslog (LOG_DEBUG, "Destroying Identifier instance");
+		}
 	};
 	ConfidenceLevel IdentifyConfidenceLevel_get () const { return IdentifyConfidenceLevel; }
 	const std::vector<std::shared_ptr<MatchCondition>>& MatchConditions_get() const { return MatchConditions; }

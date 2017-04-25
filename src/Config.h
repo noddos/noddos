@@ -35,8 +35,8 @@
 #include <json.hpp>
 using nlohmann::json;
 
-// From opensslfingerprint.cxx
-std::string getCertFingerprint(std::string certfile);
+// From opensslfingerprint.cxx (valgrind claims there is a memory leak)
+// std::string getCertFingerprint(const std::string certfile, const bool Debug = false);
 
 enum UploadMode {Anonymous, Account};
 
@@ -46,8 +46,9 @@ public:
 	std::string DeviceProfilesFile = "/var/lib/noddos/DeviceProfiles.json";
 	std::string MatchFile = "/etc/noddos/DeviceMatches.json";
 	std::string DumpFile = "/var/lib/noddos/DeviceDump.json";
-	std::string ClientCertFile = "/etc/noddos/noddosclientcert.pem";
-	std::string ClientCertFingerprint = "";
+	std::string ClientApiCertFile = "/etc/noddos/noddosapiclient.pem";
+	std::string ClientApiKeyFile = "/etc/noddos/noddosapiclient.key";
+	// std::string ClientApiCertFingerprint = "";
 	std::string SignatureCertFile = "/etc/noddos/noddossignature.pem";
 	std::string PidFile = "/var/lib/noddos/noddos.pid";
 	std::string DnsmasqLogFile = "/var/log/dnsmasq.log";
@@ -60,20 +61,26 @@ public:
 	std::unordered_set<std::string> ListenInterfaces;
 	std::time_t TrafficReportInterval = 3600; // Value in seconds, use 0 if no traffic stats should be uploaded
 	std::time_t DeviceReportInterval = 14400; // Value in seconds, use 0 if no device stats should be uploaded
+	bool ReportTrafficToRfc1918 = false;
 	std::time_t PruneInterval = 3600;
 	std::time_t ExpireDnsQuery = 86400;
 	std::time_t ExpireHost = 604800;
 	UploadMode uMode = Anonymous;
+	bool Debug;
 	static const std::string ApiFqdn;
 
-	Config(std::string inConfigFile) {
+	Config(std::string inConfigFile, bool inDebug = false): Debug{inDebug} {
 		Load(inConfigFile);
 	}
 	~Config() {
-		syslog (LOG_DEBUG, "Destroying Config instance");
+		if (Debug) {
+			syslog (LOG_DEBUG, "Destroying Config instance");
+		}
 	}
 	bool Load(std::string inConfigFile) {
-		syslog(LOG_DEBUG, "Opening & reading config file %s", inConfigFile.c_str());
+		if (Debug) {
+			syslog(LOG_DEBUG, "Opening & reading config file %s", inConfigFile.c_str());
+		}
 		bool configfailure=false;
 
 		std::ifstream ifs(inConfigFile);
@@ -84,7 +91,8 @@ public:
 		std::string newDeviceProfilesFile = DeviceProfilesFile;
 		std::string newMatchFile = DeviceProfilesFile;
 		std::string newDumpFile = DumpFile;
-		std::string newClientCertFile = ClientCertFile;
+		std::string newClientApiCertFile = ClientApiCertFile;
+		std::string newClientApiKeyFile = ClientApiKeyFile;
 		std::string newSignatureCertFile = SignatureCertFile;
 		std::string newPidFile = PidFile;
 		std::string newDnsmasqLogFile = DnsmasqLogFile;
@@ -97,6 +105,7 @@ public:
 		std::unordered_set<std::string> newListenInterfaces = ListenInterfaces;
 		time_t newTrafficReportInterval = TrafficReportInterval;
 		time_t newDeviceReportInterval = DeviceReportInterval;
+		bool newReportTrafficToRfc1918 = ReportTrafficToRfc1918;
 		time_t newPruneInterval = PruneInterval;
 		time_t newExpireDnsQuery = ExpireDnsQuery;
 		time_t newExpireHost = ExpireHost;
@@ -106,50 +115,79 @@ public:
 		ifs >> j;
 		ifs.close();
 		try {
-			if (j.count("DeviceProfilesFile"))
+			if (j.count("DeviceProfilesFile")) {
 				newDeviceProfilesFile = j["DeviceProfilesFile"].get<std::string>();
-			if (j.count("MatchFile"))
+			}
+			if (j.count("MatchFile")) {
 				newMatchFile = j["MatchFile"].get<std::string>();
-			if (j.count("DumpFile"))
+			}
+			if (j.count("DumpFile")) {
 				newDumpFile = j["DumpFile"].get<std::string>();
-			if (j.count("ClientCertFile"))
-				newClientCertFile = j["ClientCertFile"].get<std::string>();
-			if (j.count("SignatureCertFile"))
+			}
+			if (j.count("ClientApiCertFile")) {
+				newClientApiCertFile = j["ClientApiCertFile"].get<std::string>();
+			}
+			if (j.count("ClientApiKeyFile")) {
+				newClientApiCertFile = j["ClientApiKeyFile"].get<std::string>();
+			}
+			if (j.count("SignatureCertFile")) {
 				newSignatureCertFile = j["SignatureCertFile"].get<std::string>();
-			if (j.count("PidFile"))
+			}
+			if (j.count("PidFile")) {
 				newPidFile = j["PidFile"].get<std::string>();
-			if (j.count("DnsmasqLogFile"))
+			}
+			if (j.count("DnsmasqLogFile")) {
 				newDnsmasqLogFile = j["DnsmasqLogFile"].get<std::string>();
-			if (j.count("User"))
+			}
+			if (j.count("User")) {
 				newUser = j["User"].get<std::string>();
-			if (j.count("Group"))
+			}
+			if (j.count("Group")) {
 				newGroup = j["Group"].get<std::string>();
-			if (j.count("WhitelistedIpv4Addresses"))
-				newWhitelistedIpv4Addresses= j["WhitelistedIpv4Addresses"].get<std::unordered_set<std::string>>();
-			if (j.count("WhitelistedIpv6Addresses"))
-				newWhitelistedIpv6Addresses= j["WhitelistedIpv6Addresses"].get<std::unordered_set<std::string>>();
-			if (j.count("WhitelistedMacAddresses"))
-				newWhitelistedMacAddresses= j["WhitelistedMacAddresses"].get<std::unordered_set<std::string>>();
-			if (j.count("ListenIpAddresses"))
-				newListenIpAddresses= j["ListenIpAddresses"].get<std::unordered_set<std::string>>();
-			if (j.count("ListenInterfaces"))
-				newListenInterfaces= j["ListenInterfaces"].get<std::unordered_set<std::string>>();
-			if (j.count("TrafficReportInterval"))
+			}
+			if (j.count("WhitelistedIpv4Addresses")) {
+				newWhitelistedIpv4Addresses = j["WhitelistedIpv4Addresses"].get<std::unordered_set<std::string>>();
+			}
+			if (j.count("WhitelistedIpv6Addresses")) {
+				newWhitelistedIpv6Addresses = j["WhitelistedIpv6Addresses"].get<std::unordered_set<std::string>>();
+			}
+			if (j.count("WhitelistedMacAddresses")) {
+				newWhitelistedMacAddresses = j["WhitelistedMacAddresses"].get<std::unordered_set<std::string>>();
+			}
+			// FIXME: ListenIpAddresses not currently implemented (for multicast joins)
+			if (j.count("ListenIpAddresses")) {
+				newListenIpAddresses = j["ListenIpAddresses"].get<std::unordered_set<std::string>>();
+			}
+			// FIXME: ListenInterfaces not currently implemented (for multicast joins)
+			if (j.count("ListenInterfaces")) {
+				newListenInterfaces = j["ListenInterfaces"].get<std::unordered_set<std::string>>();
+			}
+			if (j.count("TrafficReportInterval")) {
 				newTrafficReportInterval= j["TrafficReportInterval"].get<uint32_t>();
-			if (j.count("DeviceReportInterval"))
+			}
+			if (j.count("DeviceReportInterval")) {
 				newDeviceReportInterval= j["DeviceReportInterval"].get<uint32_t>();
-			if (j.count("PruneInterval"))
+			}
+			if (j.count("ReportTrafficToRfc1918")) {
+				newReportTrafficToRfc1918 = j["ReportTrafficToRfc1918"].get<bool>();
+			}
+			if (j.count("PruneInterval")) {
 				newPruneInterval= j["PruneInterval"].get<uint32_t>();
-			if (j.count("ExpireDnsQuery"))
+			}
+			if (j.count("ExpireDnsQuery")) {
 				newExpireDnsQuery= j["ExpireDnsQuery"].get<uint32_t>();
-			if (j.count("ExpireHost"))
+			}
+			if (j.count("ExpireHost")) {
 				newExpireHost= j["ExpireHost"].get<uint32_t>();
+			}
+			// FIXME: upload mode not currently implemented
 			if (j.count("UploadMode")) {
 				auto v = j["UploadMode"].get<std::string>();
-				if (v == "Account")
+				if (v == "Account") {
 					newuMode = Account;
-				else if (v == "Anonymous")
+				} else if (v == "Anonymous") {
 					newuMode = Anonymous;
+				}
 			}
 		}
 		catch (...) {
@@ -159,9 +197,12 @@ public:
 		DeviceProfilesFile = newDeviceProfilesFile;
 		MatchFile = newMatchFile;
 		DumpFile = newDumpFile;
-		ClientCertFile = newClientCertFile;
-		ClientCertFingerprint = getCertFingerprint(ClientCertFile);
-		syslog (LOG_DEBUG, "Certificate fingerprint %s", ClientCertFingerprint.c_str());
+		ClientApiCertFile = newClientApiCertFile;
+		ClientApiKeyFile = newClientApiKeyFile;
+		// ClientApiCertFingerprint = getCertFingerprint(ClientApiCertFile, Debug);
+		// if (Debug) {
+		//	syslog (LOG_DEBUG, "Certificate fingerprint %s", ClientApiCertFingerprint.c_str());
+		// }
 		SignatureCertFile = newSignatureCertFile;
 		PidFile = newPidFile;
 		DnsmasqLogFile = newDnsmasqLogFile;

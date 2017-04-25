@@ -21,8 +21,13 @@
 
 
 #include <iostream>
+#include <fstream>
+#include <sstream>
 
 #include <syslog.h>
+
+#include <json.hpp>
+using json = nlohmann::json;
 
 #include "noddos.h"
 #include "HostCache.h"
@@ -33,7 +38,7 @@
 int main () {
 
 	openlog("Host_test", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
-	HostCache hC;
+	HostCache hC(true);
 	// hC.DeviceProfiles_load(deviceprofilesfile);
 	hC.AddByMac ("00:00:00:00:00:03", "192.168.1.99");
 
@@ -44,20 +49,28 @@ int main () {
 		testfailure = true;
 		std::cout << "Mac lookup failure for 192.168.1.99 resulting in: " << s << std::endl;
 	}
-	if ((s = hC.MacLookup("192.168.1.1",1)) != "f4:f2:6d:70:77:7c") {
-		testfailure = true;
-		std::cout << "Mac lookup failure for 192.168.1.1 resulting in: " << s << std::endl;
-	}
+	// Test only makes sense on local LAN, not in CI
+	// if ((s = hC.MacLookup("192.168.1.1",1)) != "f4:f2:6d:70:77:7c") {
+	//	testfailure = true;
+	//	std::cout << "Mac lookup failure for 192.168.1.1 resulting in: " << s << std::endl;
+	// }
 	if ((s = hC.MacLookup("99.99.99.99",1)) != "") {
 		testfailure = true;
 		std::cout << "Mac lookup failure for 99.99.99.99 resulting in: " << s << std::endl;
 	}
-	if ((s = hC.MacLookup("192.168.1.240", "enp0s31f6")) == "00:01:2e:6f:e0:f3") {
-		std::cout << "IOCTL lookup for 192.168.1.240: " << s << std::endl;
-	} else {
-		std::cout << "Mac lookup failure for 192.168.1.240 resulting in: " << s << std::endl;
-		testfailure = true;
-	}
+	// Test only makes sense on local LAN, not in CI
+	// if ((s = hC.MacLookup("192.168.1.240", "enp0s31f6")) == "00:01:2e:6f:e0:f3") {
+	//	std::cout << "IOCTL lookup for 192.168.1.240: " << s << std::endl;
+	//} else {
+	//	std::cout << "Mac lookup failure for 192.168.1.240 resulting in: " << s << std::endl;
+	//	testfailure = true;
+	//}
+    std::ifstream ifs("tests/v1-uploadstats");
+    std::stringstream body;
+    body << ifs.rdbuf();
+    ifs.close();
+    auto j = json::parse(body);
+    hC.RestApiCall("v1/uploadstats", j, "tests/noddosapiclient.pem", "tests/noddosapiclient.key");
 	if (testfailure) {
 		exit(1);
     }
