@@ -19,4 +19,5 @@ script:
   - cd src
   - cmake .
   - make 
+  - DnsmasqLogFile_test
   - make test
