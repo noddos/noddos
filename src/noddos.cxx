@@ -95,7 +95,6 @@ int main(int argc, char* argv[]) {
 		if (options.count("d")) {
 			debug = true;
 		}
-
 	} catch (const cxxopts::OptionException& e) {
 	    std::cout << "error parsing options: " << e.what() << std::endl;
 	    exit(1);

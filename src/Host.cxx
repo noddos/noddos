@@ -250,7 +250,6 @@ bool Host::DeviceStats(json& j, const uint32_t time_interval, bool force, bool d
 	return true;
 }
 
-
 bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportRfc1918, const std::unordered_set<std::string> &LocalIps, bool force) {
 	if (not isMatched()) {
 		return false;
