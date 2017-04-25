@@ -64,6 +64,10 @@ Set up Noddos
 
     # Install openssl 
     sudo apt install openssl
+    sudo apt install libcurl
+    sudo apt install ssl
+    sudo apt install libnetfilter-conntrack
+    sudo apt install ca-certificates
 
     sudo adduser --system --home /var/lib/noddos --shell /bin/false \
          --disabled-login --disabled-password\
@@ -80,23 +84,19 @@ Set up Noddos
     chgrp noddos /etc/noddos/noddosapiclient.key
     chmod 640 /etc/noddos/noddosapiclient.key
 
-    # getdeviceprofiles.sh needs the certificates of well-known CAs installed to be able to connect to
-    # https://www.noddos.io/
-
     # Directory where DeviceProfiles.json will be downloaded to
     mkdir /var/lib/noddos
     chown noddos:noddos /var/lib/noddos
 
-    sudo apt install ca-certificates
-    install noddos -o 0 -g 0 -s noddos /usr/sbin 
-    install noddos -o 0 -g 0 ../tools/getdeviceprofiles.sh /usr/sbin 
- 
     git clone https://github.com/noddos/noddos
     cd noddos/src
     cmake .
     make
     make test
 
+    install noddos -o 0 -g 0 -s noddos /usr/sbin 
+    install noddos -o 0 -g 0 ../tools/getdeviceprofiles.sh /usr/sbin 
+ 
     # Install a cronjob to do this frequently (please pick a randon time of day instead of 3:23am), ie
     23 */3 * * * /usr/sbin/getdeviceprofiles.sh
 

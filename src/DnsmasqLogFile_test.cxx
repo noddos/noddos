@@ -40,6 +40,8 @@ int main () {
 	hc.AddByMac ("00:00:00:00:00:05", "192.168.1.241");
 	hc.AddByMac ("00:00:00:00:00:05", "192.168.1.251");
 	hc.AddByMac ("00:00:00:00:00:05", "192.168.1.234");
+	hc.AddByMac ("00:00:00:00:00:07", "192.168.1.240");
+
 
 	DnsmasqLogFile d ("tests/dnsmasqdnsdata.log", hc, 86400);
 	auto lp = d.LinesParsed();
@@ -48,7 +50,7 @@ int main () {
     }
 
 	auto c = hc.HostCount();
-	if (c != 8) {
+	if (c != 9) {
 	    std::cout << "Hosts found: " << c << std::endl;
 		testfail = true;
     }
