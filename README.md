@@ -17,7 +17,7 @@ The 'getdeviceprofiles.sh' script is used to securely download the list of Devic
 
 ## Installation
 
-Prerequisites
+### Prerequisites
 - Linux v2.6.13 or later (as inotify support is needed)
 - dnsmasq
 - openssl command-line tool
@@ -34,6 +34,13 @@ Prerequisites
     sudo apt install libnetfilter-conntrack-dev
     sudo apt install libcurl4-openssl-dev
 
+    git clone https://github.com/noddos/noddos
+    cd noddos/src
+    cmake .
+    make
+    make test
+
+### Install noddos
     # Install openssl 
     sudo apt install openssl
     sudo apt install libcurl3
@@ -61,12 +68,6 @@ Prerequisites
     # Directory where DeviceProfiles.json will be downloaded to
     mkdir /var/lib/noddos
     chown noddos:noddos /var/lib/noddos
-
-    git clone https://github.com/noddos/noddos
-    cd noddos/src
-    cmake .
-    make
-    make test
 
     install noddos -o 0 -g 0 -s noddos /usr/sbin 
     install noddos -o 0 -g 0 ../tools/getdeviceprofiles.sh /usr/sbin 
@@ -110,12 +111,12 @@ Noddos leverages dnsmasq logs. Look at what is installed on your router to make 
 
 ## Command line options
 The following command line options are supported by the Noddos client:
-__-n, --no-daemon__: Don't run as daemon and send log messages to STDERR in addition to syslog
-__-c, --config-file__: Location of configuration default, default /etc/noddos/noddos.conf
-__-p, --no_prune__: Disable pruning of Hosts, DnsQueries, DHCP transactions and flows
-__-f, --no_flowtrack__: Disable tracking IP flows
-__-d, --debug__: Enable extensive logging, save uploaded data to /tmp
-__-h, --help__: Print command line options
+* __-n, --no-daemon__: Don't run as daemon and send log messages to STDERR in addition to syslog
+* __-c, --config-file__: Location of configuration default, default /etc/noddos/noddos.conf
+* __-p, --no_prune__: Disable pruning of Hosts, DnsQueries, DHCP transactions and flows
+* __-f, --no_flowtrack__: Disable tracking IP flows
+* __-d, --debug__: Enable extensive logging, save uploaded data to /tmp
+* __-h, --help__: Print command line options
 
 ## Configuration file
 The noddos client configuration file (Default: /etc/noddos/noddos.conf) is a JSON file with the configuration settings.
