@@ -20,41 +20,13 @@ The 'getdeviceprofiles.sh' script is used to securely download the list of Devic
 Prerequisites
 - Linux v2.6.13 or later (as inotify support is needed)
 - dnsmasq
-- openssl
-- libopenssl
+- openssl command-line tool
+- libssl
 - libcurl 
 - libnetfilter_conntrack
 - wget (preferred because of conditional GET support) or curl
 - ca-certificates 
 - gzip or bzip2 or brotli (latter is preferred due to superior compression rate)
-
-Noddos leverages dnsmasq logs. The following changes are required to make dnsmasq log the right data to the right place: 
-
-    cat >>/etc/dnsmasq.conf <<EOF
-    log-queries=extra
-    log-dhcp
-    EOF
-
-    sed -i 's|procd_set_param command $PROG -C $CONFIGFILE -k -x /var/run/dnsmasq/dnsmasq.pid|procd_set_param command $PROG -C $CONFIGFILE --log-facility /var/log/dnsmasq.log -k -x /var/run/dnsmasq/dnsmasq.pid|' /etc/init.d/dnsmasq
-
-    cat >/etc/logrotate.d/dnsmasq <<EOF
-    /var/log/dnsmasq.log
-    {
-        rotate 7
-        daily
-        su root syslog
-        size 10M
-        missingok
-        notifempty
-        #nodelaycompress
-        compress
-        postrotate
-        /usr/bin/killall -SIGUSR2 dnsmasq
-        endscript
-    }
-    EOF
-
-Set up Noddos 
 
 ### Compile noddos yourself
     # install development packages for libcurl, libopenssl and libnetfilter_conntrack
@@ -64,9 +36,11 @@ Set up Noddos
 
     # Install openssl 
     sudo apt install openssl
-    sudo apt install libcurl
+    sudo apt install libcurl3
+    sudo apt install brotli
+    sudo apt install wget
     sudo apt install ssl
-    sudo apt install libnetfilter-conntrack
+    sudo apt install libnetfilter-conntrack3
     sudo apt install ca-certificates
 
     sudo adduser --system --home /var/lib/noddos --shell /bin/false \
@@ -104,6 +78,35 @@ Set up Noddos
     # firewall connection state changes. It will drop to an unprivileged
     # user/group after that has been set up.
     sudo noddos 
+
+Noddos leverages dnsmasq logs. Look at what is installed on your router to make sure installing dnsmasq doesn't interfere with any other installed DNS or DHCP servers. The following changes are required to install dnsmasq and make dnsmasq log the right data to the right place: 
+
+    sudo apt install dnsmasq
+    
+    cat >>/etc/dnsmasq.conf <<EOF
+    log-queries=extra
+    log-dhcp
+    EOF
+
+    sed -i 's|procd_set_param command $PROG -C $CONFIGFILE -k -x /var/run/dnsmasq/dnsmasq.pid|procd_set_param command $PROG -C $CONFIGFILE --log-facility /var/log/dnsmasq.log -k -x /var/run/dnsmasq/dnsmasq.pid|' /etc/init.d/dnsmasq
+
+    cat >/etc/logrotate.d/dnsmasq <<EOF
+    /var/log/dnsmasq.log
+    {
+        rotate 7
+        daily
+        su root syslog
+        size 10M
+        missingok
+        notifempty
+        #nodelaycompress
+        compress
+        postrotate
+        /usr/bin/killall -SIGUSR2 dnsmasq
+        endscript
+    }
+    EOF
+
 
 ## Command line options
 The following command line options are supported by the Noddos client:
