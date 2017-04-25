@@ -27,7 +27,7 @@
 #include "HostCache.h"
 
 int main () {
-	openlog("Host_test", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
+	openlog("DnsmasqLogFile_test", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
 	bool testfail = false;
 	HostCache hc(true);
 	// To test we have to add dummy Host entries to make sure
