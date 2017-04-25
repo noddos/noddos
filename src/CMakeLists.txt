@@ -15,9 +15,6 @@
 
 cmake_minimum_required (VERSION 2.6)
 
-add_subdirectory(cpr)
-
-
 project (Noddos CXX)
 
 set(CMAKE_CXX_STANDARD 11)
@@ -47,21 +44,19 @@ add_executable(noddos noddos.cxx DnsLogEntry.cxx DnsmasqLogFile.cxx Host.cxx
     opensslfingerprint.cxx)
 target_link_libraries(noddos /usr/lib/x86_64-linux-gnu/libnetfilter_conntrack.so
     ssl crypto curl)
-include_directories(${CPR_INCLUDE_DIRS})
-target_link_libraries(noddos ${CPR_LIBRARIES})
 
 enable_testing()
 
 add_test (Host Host_test)
 add_executable(Host_test Host_test.cxx DnsLogEntry.cxx DnsmasqLogFile.cxx
     Host.cxx HostCache SsdpServer.cxx SsdpLocation.cxx opensslfingerprint.cxx)
-target_link_libraries(Host_test curl ssl crypto ${CPR_LIBRARIES})
+target_link_libraries(Host_test curl ssl crypto)
 
 add_test (HostCache Host_test)
 add_executable(HostCache_test HostCache_test.cxx DnsLogEntry.cxx
     DnsmasqLogFile.cxx Host.cxx HostCache SsdpServer.cxx SsdpLocation.cxx
     opensslfingerprint.cxx)
-target_link_libraries(HostCache_test curl ssl crypto ${CPR_LIBRARIES})
+target_link_libraries(HostCache_test curl ssl crypto)
 
 
 add_test (DeviceProfile DeviceProfile_test)
@@ -71,13 +66,13 @@ add_test (DnsmasqLogFile DnsmasqLogFile_test HostCache.cxx)
 add_executable(DnsmasqLogFile_test DnsmasqLogFile_test.cxx DnsmasqLogFile.cxx
     HostCache.cxx Host.cxx DnsLogEntry.cxx SsdpServer.cxx SsdpLocation.cxx
     opensslfingerprint.cxx)
-target_link_libraries(DnsmasqLogFile_test curl ssl crypto ${CPR_LIBRARIES})
+target_link_libraries(DnsmasqLogFile_test curl ssl crypto)
 
 add_test (DnsLogEntry DnsLogEntry_test)
 add_executable(DnsLogEntry_test DnsLogEntry_test.cxx DnsmasqLogFile.cxx
     HostCache.cxx Host.cxx DnsLogEntry.cxx SsdpServer.cxx SsdpLocation.cxx
     opensslfingerprint.cxx)
-target_link_libraries(DnsLogEntry_test curl ssl crypto ${CPR_LIBRARIES})
+target_link_libraries(DnsLogEntry_test curl ssl crypto)
 
 add_test (Identifier Identifier_test)
 add_executable(Identifier_test Identifier_test.cxx)
@@ -91,7 +86,7 @@ add_executable(SsdpServer_test SsdpServer_test.cxx DnsmasqLogFile.cxx
     HostCache.cxx Host.cxx DnsLogEntry.cxx SsdpServer.cxx SsdpLocation.cxx
     opensslfingerprint.cxx)
 
-target_link_libraries(SsdpServer_test curl ssl crypto ${CPR_LIBRARIES})
+target_link_libraries(SsdpServer_test curl ssl crypto)
 
 add_test (Noddos noddos_test)
 add_executable(noddos_test noddos_test.cxx)
