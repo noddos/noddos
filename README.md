@@ -58,22 +58,9 @@ Set up Noddos
 
 ### Compile noddos yourself
     # install development packages for libcurl, libopenssl and libnetfilter_conntrack
-    git clone https://github.com/noddos/noddos
-    cd noddos/src
-
-    # Install 3rd party development libraries
     sudo apt install libssl-dev
     sudo apt install libnetfilter-conntrack-dev
     sudo apt install libcurl4-openssl-dev
-
-    # Download Requests library for C++
-    git submodule add https://github.com/whoshuu/cpr.git
-    git submodule update --init --recursive
-    export BUILD_CPR_TESTS=OFF
-    export USE_SYSTEM_GTEST=ON
-    export USE_SYSTEM_CURL=ON
-    cmake .
-    make
 
     # Install openssl 
     sudo apt install openssl
@@ -103,6 +90,13 @@ Set up Noddos
     sudo apt install ca-certificates
     install noddos -o 0 -g 0 -s noddos /usr/sbin 
     install noddos -o 0 -g 0 ../tools/getdeviceprofiles.sh /usr/sbin 
+ 
+    git clone https://github.com/noddos/noddos
+    cd noddos/src
+    cmake .
+    make
+    make test
+
     # Install a cronjob to do this frequently (please pick a randon time of day instead of 3:23am), ie
     23 */3 * * * /usr/sbin/getdeviceprofiles.sh
 
