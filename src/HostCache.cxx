@@ -150,8 +150,9 @@ bool HostCache::AddByMac (const std::string inMacAddress, const std::string inIp
 }
 
 bool HostCache::AddFlow (const std::string srcip, const uint16_t srcport, const std::string dstip, const uint16_t dstport, const uint8_t protocol, const uint32_t expiration) {
-	if (WhitelistedNodes.find(srcip) != WhitelistedNodes.end())
-			return false;
+	if (WhitelistedNodes.find(srcip) != WhitelistedNodes.end()) {
+		return false;
+	}
 
 	std::shared_ptr<Host> h = FindOrCreateHostByIp(srcip);
 	if (h) {
@@ -734,7 +735,7 @@ uint32_t HostCache::DeviceProfiles_load(const std::string filename) {
 uint32_t HostCache::Whitelists_set (const std::unordered_set<std::string>& inIpv4Addresses,
 		const std::unordered_set<std::string>& inIpv6Addresses,
 		const std::unordered_set<std::string>& inMacAddresses) {
-	WhitelistedNodes.empty();
+	WhitelistedNodes.clear();
 	WhitelistedNodes.insert(inIpv4Addresses.begin(), inIpv4Addresses.end());
 	WhitelistedNodes.insert(inIpv6Addresses.begin(), inIpv6Addresses.end());
 	WhitelistedNodes.insert(inMacAddresses.begin(), inMacAddresses.end());

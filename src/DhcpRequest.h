@@ -47,24 +47,26 @@ public:
     uint32_t Prune (bool Force = false) { return 0; }
 
 	void operator = (const DhcpRequest &rhs) {
-		std::string lhsMac = MacAddress;
-		std::transform(lhsMac.begin(), lhsMac.end(), lhsMac.begin(), ::tolower);
 		std::string rhsMac = rhs.MacAddress;
 		std::transform(rhsMac.begin(), rhsMac.end(), rhsMac.begin(), ::tolower);
 		DhcpHostname = rhs.DhcpHostname;
 		DhcpVendor = rhs.DhcpVendor;
 		Hostname = rhs.Hostname;
-		lhsMac= rhsMac;
+		MacAddress = rhsMac;
 		IpAddress = rhs.IpAddress;
 		iCache::LastModified = time(nullptr);
 		iCache::LastSeen = time(nullptr);
 		iCache::FirstSeen = time(nullptr);
 	}
     bool operator == (const DhcpRequest &rhs) const {
+		std::string lhsMac = MacAddress;
+		std::transform(lhsMac.begin(), lhsMac.end(), lhsMac.begin(), ::tolower);
+		std::string rhsMac = rhs.MacAddress;
+		std::transform(rhsMac.begin(), rhsMac.end(), rhsMac.begin(), ::tolower);
 		return DhcpHostname == rhs.DhcpHostname &&
 			DhcpVendor == rhs.DhcpVendor &&
 			Hostname == rhs.Hostname &&
-			MacAddress == rhs.MacAddress &&
+			lhsMac == rhsMac &&
 			IpAddress == rhs.IpAddress;
 	}
 };

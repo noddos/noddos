@@ -187,10 +187,12 @@ uint32_t DnsmasqLogFile::PruneDhcpRequestMap (bool Force) {
 bool DnsmasqLogFile::ParseDnsLine (const std::string line) {
 	std::smatch m;
 
-	if (not std::regex_search(line, m, dns_rx))
+	if (not std::regex_search(line, m, dns_rx)) {
 		return false;
-	if(m.empty())
+	}
+	if(m.empty()) {
 		return false;
+	}
 
 	uint64_t querynumber = std::stoll(m.str(1));
 	auto clientip = m.str(2);

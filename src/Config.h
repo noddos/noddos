@@ -215,6 +215,7 @@ public:
 		ListenInterfaces = newListenInterfaces;
 		TrafficReportInterval = newTrafficReportInterval;
 		DeviceReportInterval = newDeviceReportInterval;
+		ReportTrafficToRfc1918 = newReportTrafficToRfc1918;
 		PruneInterval = newPruneInterval;
 		ExpireDnsQuery = newExpireDnsQuery;
 		ExpireHost = newExpireHost;

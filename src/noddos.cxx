@@ -319,7 +319,6 @@ bool drop_process_privileges(Config &inConfig) {
     if (sysconf(_SC_GETGR_R_SIZE_MAX) > bufsize) {
     	bufsize = sysconf(_SC_GETGR_R_SIZE_MAX);
     }
-    char buf[bufsize];
 
     struct passwd *accountresult;
     struct passwd accountdetails;
@@ -328,6 +327,7 @@ bool drop_process_privileges(Config &inConfig) {
 		syslog(LOG_ERR, "Can't change user to %s as root privileges were previously dropped", inConfig.User.c_str());
 	} else {
 		int s;
+		char buf[bufsize];
 		if ((s = getpwnam_r(inConfig.User.c_str(), &accountdetails, buf, bufsize, &accountresult)) != 0) {
 		    if (accountresult == NULL) {
 		        if (s == 0) {

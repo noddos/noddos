@@ -189,7 +189,6 @@ bool Host::Match(const MatchCondition& mc) {
 }
 
 bool Host::Match(const ContainCondition& cc) {
-	bool matched = true;
 	if(cc.Key == "DnsQueries") {
 		for (auto fqdn: cc.Values) {
 			if (DnsCache.find(fqdn) != DnsCache.end()) {
@@ -415,8 +414,9 @@ bool Host::Dhcp_set (const std::string IpAddress, const std::string MacAddress, 
 
 bool Host::SsdpInfo_set(const std::shared_ptr<SsdpHost> insHost) {
 	iCache::LastSeen = time(nullptr);
-	if (Ssdp == *insHost)
+	if (Ssdp == *insHost) {
 		return false;
+	}
 
 	iCache::LastModified = iCache::LastSeen;
 	Ssdp = *insHost;

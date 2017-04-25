@@ -34,14 +34,13 @@
 #include "HostCache.h"
 
 int netfilter_cb2(const struct nlmsghdr *nlh, enum nf_conntrack_msg_type type, struct nf_conntrack *ct, void *data) {
-	HostCache & hC = * (HostCache *) data;
+	HostCache & hC = *(static_cast<HostCache *>(data));
 	// TODO: parse protocols other than TCP and UDP, i.e. ICMP
 	static const auto ct_rx = std::regex(R"delim(^\s+?\[(\w+?)\]\s+?(\w+?)\s+?(\d+?)\s+?(\d+?)\s+?(\S+?)?\s*src=(\S+?)\s+?dst=(\S+?)\s+?sport=(\d+?)\s+?dport=(\d+?)\s+?(\[(\w+?)\])?.+(\[(\w+)\])?$)delim",
 	        	std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
 
 	char buf[1024];
     nfct_snprintf(buf, sizeof(buf), ct, type, NFCT_O_PLAIN, NFCT_OF_TIME);
-    //printf("%s\n", buf);
     std::string line = buf;
 	std::smatch m;
 	if (std::regex_search(line, m, ct_rx)) {
@@ -72,7 +71,7 @@ int netfilter_cb2(const struct nlmsghdr *nlh, enum nf_conntrack_msg_type type, s
 }
 
 int netfilter_cb(enum nf_conntrack_msg_type type, struct nf_conntrack *ct, void *data) {
-	HostCache & hC = * (HostCache *) data;
+	HostCache & hC = *(static_cast<HostCache *>(data));
 	// TODO: parse protocols other than TCP and UDP, i.e. ICMP
 	static const auto ct_rx = std::regex(R"delim(^\s+?\[(\w+?)\]\s+?(\w+?)\s+?(\d+?)\s+?(\d+?)\s+?(\S+?)?\s*src=(\S+?)\s+?dst=(\S+?)\s+?sport=(\d+?)\s+?dport=(\d+?)\s+?(\[(\w+?)\])?.+(\[(\w+)\])?$)delim",
 	        	std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
