@@ -239,7 +239,7 @@ int main(int argc, char* argv[]) {
 							hC.UploadDeviceStats(config.ClientApiCertFile, config.ClientApiKeyFile);
 						}
 						if (flowtrack && config.TrafficReportInterval) {
-							hC.UploadTrafficStats(config.TrafficReportInterval, config.ClientApiCertFile, config.ClientApiKeyFile);
+							hC.UploadTrafficStats(config.TrafficReportInterval, config.ReportTrafficToRfc1918, config.ClientApiCertFile, config.ClientApiKeyFile);
 						}
 						hC.ExportDeviceProfileMatches(config.DumpFile, true);
 						NextDeviceUpload = time(nullptr) + config.DeviceReportInterval;
@@ -266,7 +266,7 @@ int main(int argc, char* argv[]) {
 					if (config.Debug) {
 						syslog(LOG_DEBUG, "Starting traffic upload");
 					}
-					hC.UploadTrafficStats(config.TrafficReportInterval, config.ClientApiCertFile, config.ClientApiKeyFile);
+					hC.UploadTrafficStats(config.TrafficReportInterval, config.ReportTrafficToRfc1918, config.ClientApiCertFile, config.ClientApiKeyFile);
 					NextTrafficUpload = t + config.TrafficReportInterval;
 				}
 				if (prune && t > NextPrune) {
@@ -287,6 +287,7 @@ exitprog:
 	s.Close();
 	if (flowtrack && t_ptr != nullptr) {
 		t_ptr->Close();
+		delete t_ptr;
 	}
 	close (epfd);
 	close (sfd);

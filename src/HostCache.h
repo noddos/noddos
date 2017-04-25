@@ -27,7 +27,7 @@
 #include <memory>
 #include <unordered_set>
 
-#include "cpr/cpr.h"
+// #include "cpr/cpr.h"
 
 #include "Host.h"
 #include "DeviceProfile.h"
@@ -96,7 +96,7 @@ public:
 	uint32_t RestApiCall (const std::string api, const json &j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile);
 	bool ExportDeviceProfileMatches(const std::string filename, const bool detailed = false);
 	uint32_t UploadDeviceStats(const std::string ClientApiCertFile, const std::string ClientApiKeyFile);
-	bool UploadTrafficStats(const time_t interval, const std::string ClientApiCertFile, const std::string ClientApiKeyFile);
+	bool UploadTrafficStats(const time_t interval, const bool ReportRfc1918, const std::string ClientApiCertFile, const std::string ClientApiKeyFile);
 	bool ImportDeviceProfileMatches(const std::string filename);
 	bool ImportDeviceInfo (json &j);
 

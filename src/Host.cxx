@@ -24,8 +24,14 @@
 #include <ctime>
 #include <string>
 #include <forward_list>
+#include <map>
+#include <unordered_set>
+
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include <syslog.h>
+
 
 // #include <curl/curl.h>
 // #include "log/Log.h"
@@ -245,52 +251,60 @@ bool Host::DeviceStats(json& j, const uint32_t time_interval, bool force, bool d
 }
 
 
-bool Host::TrafficStats(json& j, const uint32_t interval, const std::unordered_set<std::string> &LocalIps, bool force) {
+bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportRfc1918, const std::unordered_set<std::string> &LocalIps, bool force) {
 	if (not isMatched()) {
 		return false;
 	}
 	if (not force && LastSeen < (time(nullptr) - interval)) {
 		return false;
 	}
-	bool hasdnsdata = false;
-	std::unordered_set<std::string> allIps;
-	std::unordered_set<std::string> allFqdns;
-	j = { {"DeviceProfileUuid", Uuid } };
-	json d = json::array();
+	// This holds reverse lookup table from an IP address to one or more FQDNs.
+	std::map<std::string,std::shared_ptr<std::unordered_set<std::string>>> allIps;
 	for (auto &dq: DnsCache) {
-		if (dq.second->Fresh(interval)) {
-			d.push_back(dq.first);
-			hasdnsdata = true;
-		}
 		dq.second->Ips_get(allIps);
 	}
-	if (hasdnsdata && d.size() > 0) {
-		j["DnsQueries"] = d;
-	}
-	/* FIXME: logic here is flawed
-	   We want to build a reverse lookup table of all DnsQueries of the host
-	   For each traffic flow, we then want to do a reverse lookup to find the FQDN and include the FQDN in the traffic stats
-	   If the reverse lookup resolves in more than one FQDN then we want to include each fo the FQDNs in the Traffic Stats
-	*/
 
-	bool hastrafficdata = false;
-	json t = json::array();
+	std::unordered_set<std::string> endpoints;
 	for (auto &fc: FlowCache) {
 		std::string ip = fc.first;
-		for (auto &fe : *(fc.second)) {
-			if(fe->Fresh(interval) && (LocalIps.find(ip) == LocalIps.end())) {
-				if (allIps.find(ip) == allIps.end()) {
-					t.push_back(ip);
-					allIps.insert(ip);
-					hastrafficdata = true;
+		if (ReportRfc1918 || not inRfc1918(ip)) {
+			for (auto &fe : *(fc.second)) {
+				if(fe->Fresh(interval)) {
+					auto it = allIps.find(ip);
+					if (it == allIps.end()) {
+						endpoints.insert(ip);
+					} else {
+						for (auto &fqdn: *(it->second)) {
+							endpoints.insert(fqdn);
+						}
+					}
 				}
 			}
 		}
 	}
-	if (hastrafficdata && j.size() > 0) {
-		j["TrafficStats"] = t;
+	if (endpoints.size() > 0) {
+		j = { {"DeviceProfileUuid", Uuid } };
+		j["TrafficStats"] = endpoints;
+		return true;
 	}
-	return hasdnsdata || hastrafficdata;
+	return false;
+}
+
+bool Host::inRfc1918(const std::string ip ) {
+	uint32_t Rfc1918_10start = ntohl(10);
+	uint32_t Rfc1918_10end = ntohl(4294967050);
+	uint32_t Rfc1918_172start = ntohl(4268);
+	uint32_t Rfc1918_172end = ntohl(4294907820);
+	uint32_t Rfc1918_192start = ntohl(43200);
+	uint32_t Rfc1918_192end = ntohl(4294944960);
+	struct sockaddr_in sa;
+	char str[INET_ADDRSTRLEN];
+	inet_pton(AF_INET, ip.c_str(), &(sa.sin_addr));
+	uint32_t ip_int = ntohl(sa.sin_addr.s_addr);
+	return
+		(Rfc1918_10start <= ip_int && ip_int <= Rfc1918_10end) ||
+		(Rfc1918_172start <= ip_int && ip_int <= Rfc1918_172end) ||
+		(Rfc1918_192start <= ip_int && ip_int <= Rfc1918_192end);
 }
 
 void Host::ExportDeviceInfo (json &j, bool detailed) {

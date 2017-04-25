@@ -36,6 +36,7 @@
 #include <openssl/bio.h>
 
 
+// BUG: valgrind says there is a memory leak here.
 std::string getCertFingerprint(const std::string certfile, const bool Debug = false) {
 
 	// checks file

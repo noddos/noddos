@@ -516,6 +516,10 @@ uint32_t HostCache::RestApiCall (const std::string api, const json &j, const std
 		if(ret) {
 			syslog (LOG_ERR, "Curl setopt CURLOPT_HTTPHEADER returned %d", ret);
 		}
+		// ret = curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0);
+		// if(ret) {
+		// 	syslog (LOG_ERR, "Curl setopt CURLOPT_WRITEFUNCTION returned %d", ret);
+		// }
 		ret = curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 0L);
 		if(ret) {
 			syslog (LOG_ERR, "Curl setopt CURLOPT_MAXREDIRS returned %d", ret);
@@ -524,6 +528,10 @@ uint32_t HostCache::RestApiCall (const std::string api, const json &j, const std
 		if(ret) {
 			syslog (LOG_ERR, "Curl setopt CURLOPT_TCP_KEEPALIVE returned %d", ret);
 		}
+		// ret = curl_easy_setopt(curl, CURLOPT_TCP_FASTOPEN, 1L);
+		// if(ret) {
+		// 	syslog (LOG_ERR, "Curl setopt CURLOPT_WRITEFUNCTION returned %d", ret);
+		// }
 		ret = curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, (long) 2000);
 		if(ret) {
 			syslog (LOG_ERR, "Curl setopt CURLOPT_TIMEOUT_MS returned %d", ret);
@@ -550,6 +558,7 @@ uint32_t HostCache::RestApiCall (const std::string api, const json &j, const std
 
 
 	    curl_easy_perform(curl);
+	    curl_slist_free_all(hlist);
 	    curl_easy_cleanup(curl);
 	    curl = NULL;
 	    if (Debug) {
@@ -596,13 +605,13 @@ uint32_t HostCache::UploadDeviceStats(const std::string ClientApiCertFile, const
 	return uploads;
 }
 
-bool HostCache::UploadTrafficStats(const time_t interval, const std::string ClientCertFile, const std::string ClientApiKeyFile) {
+bool HostCache::UploadTrafficStats(const time_t interval, const bool ReportRfc1918, const std::string ClientCertFile, const std::string ClientApiKeyFile) {
 	uint32_t uploads = 0;
 	json j;
 	for (auto it : hC) {
 		if ( (not isWhitelisted(*(it.second))) && it.second->isMatched()) {
 			json h;
-			if (it.second->TrafficStats(h, interval, LocalIpAddresses, false)) {
+			if (it.second->TrafficStats(h, interval, ReportRfc1918, LocalIpAddresses, false)) {
 				uploads++;
 				j.push_back(h);
 			}

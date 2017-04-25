@@ -28,6 +28,8 @@
 #include <ctime>
 #include <vector>
 #include <unordered_set>
+#include <memory>
+
 
 #include <json.hpp>
 using json = nlohmann::json;
@@ -49,7 +51,7 @@ class DnsLogEntry : public iCache {
         	Fqdn{inFqdn}, Ips{inIps}, Debug{inDebug}
         	{ Expiration_set(); iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr); };
 
-        uint32_t Ips_get(std::unordered_set<std::string> &outIps);
+        uint32_t Ips_get(std::map<std::string,std::shared_ptr<std::unordered_set<std::string>>> &outIps);
         bool Ips_set(const std::string i, uint32_t exp = DNSLOGENTRYDEFAULTEXPIRATION);
 
         std::string Fqdn_get() { return this->Fqdn; }

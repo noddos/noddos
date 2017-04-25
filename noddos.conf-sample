@@ -18,6 +18,7 @@
     ],
     "WhitelistedIpv6Addresses": [],
     "WhitelistedMacAddresses": [  "18:22:7e:d2:7b:00", "ec:9b:f3:e4:23:e5" ],
+    "ReportTrafficToRfc1918": false,
     "ListenIpAddresses": [],
     "ListenInterfaces": [],
     "TrafficReportInterval": 3600,

@@ -16,9 +16,10 @@
 
  */
 #include <string>
-#include <forward_list>
 #include <cstring>
 #include <syslog.h>
+#include <forward_list>
+
 
 #include <json.hpp>
 using json = nlohmann::json;
@@ -59,10 +60,15 @@ uint32_t DnsLogEntry::Prune(bool Force) {
 
 //! Gets the list of IP addresses for an FQDN
 
-uint32_t DnsLogEntry::Ips_get(std::unordered_set<std::string> &outIps) {
+uint32_t DnsLogEntry::Ips_get(std::map<std::string,std::shared_ptr<std::unordered_set<std::string>>> &outIps) {
 	uint32_t ipcount = 0;
 	for (auto const &i: Ips) {
-		outIps.insert(i.first);
+		ipcount++;
+		if (outIps.find(i.first) == outIps.end()) {
+			outIps[i.first] = std::make_shared<std::unordered_set<std::string>>();
+			// outIps[i.first] = std::make_unique<std::string>();
+		}
+		outIps[i.first]->insert(Fqdn);
 	}
 	return ipcount;
 }

@@ -43,6 +43,7 @@ int main () {
 	hC.AddByMac ("00:00:00:00:00:05", "192.168.1.241");
 	hC.AddByMac ("00:00:00:00:00:05", "192.168.1.251");
 	hC.AddByMac ("00:00:00:00:00:06", "192.168.1.234");
+	hC.AddByMac ("00:00:00:00:00:07", "192.168.1.240");
 
 	auto sh = std::make_shared<SsdpHost>();
 	sh->IpAddress = "192.168.1.234";
@@ -75,6 +76,47 @@ int main () {
 	auto res4 = hC.MatchByIpAddress("192.168.1.251");
 	std::cout << "Host with DhcpHostname " << dr->DhcpHostname << " and DnsQuery for " << "api.amazon.com" << " matched " << res4 << " times" << std::endl;
 
+	bool testfailed = false;
+	auto h = Host("01:01:01:01:01:01", true);
+	if (h.inRfc1918("11.0.0.0")) {
+		std::cout << "11.0.0.0 is not RFC1918" << std::endl;
+		testfailed = true;
+	}
+	if (h.inRfc1918("9.255.255.255")) {
+		std::cout << "9.255.255.255 is not RFC1918" << std::endl;
+		testfailed = true;
+	}
+	if (h.inRfc1918("172.15.255.255")) {
+		std::cout << "172.15.255 is not RFC1918" << std::endl;
+		testfailed = true;
+	}
+	if (h.inRfc1918("172.24.0.0")) {
+		std::cout << "172.24.0.0 is not RFC1918" << std::endl;
+		testfailed = true;
+	}
+	if (h.inRfc1918("192.167.255.255")) {
+		std::cout << "192.167.255.255 is not RFC1918" << std::endl;
+		testfailed = true;
+	}
+	if (h.inRfc1918("192.169.0.0")) {
+		std::cout << "192.169.0.0 is not RFC1918" << std::endl;
+		testfailed = true;
+	}
+	if (not h.inRfc1918("192.168.1.1")) {
+		std::cout << "192.168.1.1 is RFC1918" << std::endl;
+		testfailed = true;
+	}
+	if (not h.inRfc1918("172.20.1.1")) {
+		std::cout << "172.20.1.1 is RFC1918" << std::endl;
+		testfailed = true;
+	}
+	if (not h.inRfc1918("10.255.1.1")) {
+		std::cout << "10.255.1.1 is RFC1918" << std::endl;
+		testfailed = true;
+	}
+	if (testfailed) {
+		exit(1);
+	}
 	return 0;
 }
 

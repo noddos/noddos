@@ -106,7 +106,8 @@ class Host : public iCache {
 
 		void ExportDeviceInfo (json &j, bool detailed = false);
 		bool DeviceStats(json& j, const uint32_t interval, bool force = false, bool detailed = false);
-		bool TrafficStats(json& j, const uint32_t interval, const std::unordered_set<std::string> & LocalIps, bool force = false);
+		bool TrafficStats(json& j, const uint32_t interval, const bool ReportRfc1918, const std::unordered_set<std::string> & LocalIps, bool force = false);
+		bool inRfc1918(const std::string ip );
 
 	    // iCache interface methods.
 	    time_t Expiration_set (time_t inExpiration = HOSTDEFAULTEXPIRATION) {
