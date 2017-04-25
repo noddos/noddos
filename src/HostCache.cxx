@@ -163,8 +163,9 @@ bool HostCache::AddFlow (const std::string srcip, const uint16_t srcport, const 
 }
 
 bool HostCache::AddDnsQueryIp (const std::string clientip, const std::string fqdn, const std::string ip, const uint32_t expire) {
-	if (WhitelistedNodes.find(clientip) != WhitelistedNodes.end())
+	if (WhitelistedNodes.find(clientip) != WhitelistedNodes.end()) {
 		return false;
+	}
 
 	std::shared_ptr<Host> h = FindOrCreateHostByIp(clientip);
 	if (h) {
