@@ -197,9 +197,6 @@ Apr  1 06:36:34 dnsmasq[1690]: 29041 192.168.1.99/57415 forwarded fw-update.smar
 Apr  1 06:47:16 dnsmasq[1690]: 29314 192.168.1.235/47609 query[A] api.amazon.co.uk from 192.168.1.235
 Apr  1 06:47:16 dnsmasq[1690]: 29314 192.168.1.235/47609 forwarded api.amazon.co.uk to 74.40.74.40
 Apr  1 06:47:16 dnsmasq[1690]: 29314 192.168.1.235/47609 reply api.amazon.co.uk is 54.239.33.207
-Apr  1 06:47:26 dnsmasq[1690]: 29320 192.168.1.238/63253 query[A] isatap.vf-pt.internal.vodafone.com from 192.168.1.238
-Apr  1 06:47:26 dnsmasq[1690]: 29320 192.168.1.238/63253 forwarded isatap.vf-pt.internal.vodafone.com to 74.40.74.40
-Apr  1 06:47:26 dnsmasq[1690]: 29320 192.168.1.238/63253 reply isatap.vf-pt.internal.vodafone.com is NXDOMAIN
 Apr  1 06:47:27 dnsmasq[1690]: 29333 192.168.1.235/61000 query[A] andr-785f3ec7eb-cbc62794911ff31b-a93c5fcf2ef7a8b7c6-990162.na.api.amazonvideo.com from 192.168.1.235
 Apr  1 06:47:27 dnsmasq[1690]: 29333 192.168.1.235/61000 forwarded andr-785f3ec7eb-cbc62794911ff31b-a93c5fcf2ef7a8b7c6-990162.na.api.amazonvideo.com to 8.8.8.8
 Apr  1 06:47:27 dnsmasq[1690]: 29333 192.168.1.235/61000 reply andr-785f3ec7eb-cbc62794911ff31b-a93c5fcf2ef7a8b7c6-990162.na.api.amazonvideo.com is <CNAME>

@@ -47,7 +47,7 @@ int main () {
 
 	DnsmasqLogFile d ("tests/dnsmasqdnsdata.log", hc, 86400);
 	auto lp = d.LinesParsed();
-	if (lp != 216) {
+	if (lp != 214) {
 		testfail = true;
     }
 
