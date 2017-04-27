@@ -286,7 +286,8 @@ exitprog:
 	s.Close();
 	if (flowtrack && t_ptr != nullptr) {
 		t_ptr->Close();
-		delete t_ptr;
+		// Is this crashing when noddos exits?
+		// delete t_ptr;
 	}
 	close (epfd);
 	close (sfd);

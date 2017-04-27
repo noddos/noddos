@@ -5,9 +5,9 @@
 
 # Noddos - A device-aware firewall
 
-The Noddos client monitors network traffic in the home- or enterprise network, identifies with IOT devices are present and dynamically applies device-specific ACLs to the traffic of the IOT devices to stop a device from sending rogue traffic, for example when being used in a DDOS attack. The ACLs are downloaded from the cloud and are generated based on traffic stats uploaded anonymously by the Noddos client. You can install the Noddos client on Linux-based (DIY) routers and firewalls and real soon now on Home Gateways running OpenWRT. For more information see the [NoDDos website](https://www.noddos.io/). 
+The Noddos client monitors network traffic in the home- or enterprise network, identifies with IOT devices are present and dynamically applies device-specific ACLs to the traffic of the IOT devices to stop a device from sending rogue traffic, for example when being used in a DDOS attack. The ACLs are downloaded from the cloud and are generated based on traffic stats uploaded anonymously by the Noddos client. You can install the Noddos client on Linux-based (DIY) routers and firewalls and real soon now on Home Gateways running Lede. For more information see the [NoDDos website](https://www.noddos.io/). 
 
-The current focus of Noddos is on building the database of device profiles by getting the client distributed. The implementation of the firewall functionality will start once the collection functionality is up and running and available in the C++ client on OpenWRT routers.
+The current focus of Noddos is on building the database of device profiles by getting the client distributed. The implementation of the firewall functionality will start once the collection functionality is up and running and available in the C++ client on Lede routers.
 
 ## Client Overview
 
@@ -173,9 +173,9 @@ __SIGTERM1__: Writes DeviceMatches.json file.
 
 __SIGTERM2__: Runs matching alogirithm, writes Devicedump.json and uploads (if not disabled) device info and traffic stats to the cloud.
 
-## Installation on OpenWRT
+## Installation on [Lede](https://lede-project.org/)
 (TODO: to be updated for C++ client)
-The Noddos client can be installed on OpenWRT but keep in mind that:
+The Noddos client can be installed on routers running LEDE but keep in mind that:
 - You also need to install the Dnsmasq DHCP/DNS server
-- You will need SSH access to your Home Gateway as there is no OpenWRT package for the NoDDos client
+- You will need SSH access to your Home Gateway as there is no LEDE package for the NoDDos client at this time
 
