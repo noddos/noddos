@@ -180,8 +180,9 @@ bool HostCache::AddDhcpRequest (const std::shared_ptr<DhcpRequest> inDhcpRequest
 		return false;
 
 	}
-	if (isWhitelisted(inDhcpRequest_sptr->IpAddress) || isWhitelisted(inDhcpRequest_sptr->MacAddress))
+	if (isWhitelisted(inDhcpRequest_sptr->IpAddress) || isWhitelisted(inDhcpRequest_sptr->MacAddress)) {
 		return false;
+    }
 
 	std::shared_ptr<Host> h;
 	if (inDhcpRequest_sptr->MacAddress != "") {
