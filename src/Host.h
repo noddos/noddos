@@ -98,7 +98,7 @@ class Host : public iCache {
 		bool SsdpInfo_set(const std::shared_ptr<SsdpHost> insHost);
 
 		bool isMatched () { return Uuid != ""; }
-		bool UploadsDisabled ();
+		bool UploadsEnabled ();
 		std::string Uuid_get () { return Uuid; }
 		std::string MacAddress_get () { return MacAddress; }
 		std::string Ipv4Address_get () { return Ipv4Address; }

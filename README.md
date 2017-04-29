@@ -174,8 +174,72 @@ __SIGTERM1__: Writes DeviceMatches.json file.
 __SIGTERM2__: Runs matching alogirithm, writes Devicedump.json and uploads (if not disabled) device info and traffic stats to the cloud.
 
 ## Installation on [Lede](https://lede-project.org/)
-(TODO: to be updated for C++ client)
-The Noddos client can be installed on routers running LEDE but keep in mind that:
-- You also need to install the Dnsmasq DHCP/DNS server
-- You will need SSH access to your Home Gateway as there is no LEDE package for the NoDDos client at this time
+Noddos is now up and running under Lede installed on a TPLink Archer C7v2 HGW. Pending an ipkg available for installation, here are detailed installation instructions. You will need a HGW running Lede 17.07.1 with SSH access. This process will replace the default DHCP and DNS servers with dnsmasq so do make sure you backup your current Lede settings.
 
+mkdir ~/src
+cd ~/src
+git clone https://github.com/noddos/noddos.git
+mv noddos/Makefile-LEDE noddos/Makefile
+mkdir lede
+cd lede
+
+# Follow the instructions on the [Lede SDK page](https://lede-project.org/docs/guide-developer/compile_packages_for_lede_with_the_sdk?s[]=sdk) and download the SDK for your router platform. In my case, I'm using the SDK for ar71xx
+# Change the URL below to match your router platform. The SDK is at the bottom of the platform download page under Supplementary Files
+wget https://downloads.lede-project.org/releases/17.01.1/targets/ar71xx/generic/lede-sdk-17.01.1-ar71xx-generic_gcc-5.4.0_musl-1.1.16.Linux-x86_64.tar.xz
+tar xf lede-sdk-17.01.1-ar71xx-generic_gcc-5.4.0_musl-1.1.16.Linux-x86_64.tar.xz
+cd lede-sdk-17.01.1-ar71xx-generic_gcc-5.4.0_musl-1.1.16.Linux-x86_64/
+
+# change the path to the location where you cloned noddos to, in this example ~/src
+echo "src-link custom ~/src/ >>feeds.conf.default
+
+# Select Global Build Settings and press enter, in the submenu deselect/exclude the following options:
+# "Select all target specific packages by default"
+# "Select all kernel module packages by default"
+# "Select all userspace packages by default"
+# "Cryptographically sign package lists" 
+# Select the Save menu option, save to '.config' and then select 'Exit' and again 'Exit'
+make menuconfig
+
+./scripts/feeds update -a
+./scripts/feeds install noddos
+
+# Enable building of the noddos package, go to "Network" menu, have noddos build as module ('M')
+# Select the Save menu option, save to '.config' and then select 'Exit' and again 'Exit'
+make menuconfig
+
+make -j5 V=s
+
+# After the build is done, copy the binary to your HGW (assuming the default 192.168.1.1 IP address)
+# change the build directory to match your HGW platform
+# The TP-Link Archer C7 v2 has a mips_24kc architecture
+scp build_dir/target-mips_24kc_musl-1.1.16/noddos/noddos root@192.168.1.1:
+scp ~/src/noddos/tools/getdeviceprofiles.sh ~/src/noddos/noddosconfig.pem \
+    ~/src/noddos/noddos.conf-sample-lede root@192.168.1.1:
+
+ssh root@192.168.1.1
+
+mkdir /var/lib/noddos /etc/noddos
+install noddos /usr/sbin
+install getdeviceprofiles.sh /usr/sbin
+install noddosconfig.pem /etc/noddos
+install noddos.conf-sample-lede /etc/noddos
+mv /etc/noddos/noddos.conf-sample-lede /etc/noddos/noddos.conf
+
+opkg install libopenssl
+opkg install libnetfilter-conntrack
+opkg install libcurl
+opkg install libstdcpp
+opkg install dnsmasq
+
+
+#in DNS / DHCP Luci UI, enable Log queries (Write received DNS requests
+# to the log)
+
+# Now we need to edit the dnsmasq start up script to make sure it starts
+# with the parameters that noddos neds
+
+vi /etc/init.d/dnsmasq
+# add line 18: LOGFILE="/tmp/dnsmasq.log"
+# append to line 578: $LOGFILE
+# add line 683: xappend "--log-dhcp"
+# modify line 766: add $LOGFILE to procd_add_jail_mount_rw command

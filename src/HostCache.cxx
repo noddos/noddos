@@ -50,7 +50,6 @@
 #include <json.hpp>
 using nlohmann::json;
 
-// #include "cpr/cpr.h"
 #include <curl/curl.h>
 
 #include "HostCache.h"
@@ -294,27 +293,6 @@ std::string HostCache::MacLookup (const std::string inIpAddress, std::string inI
 }
 
 uint32_t HostCache::getInterfaceIpAddresses() {
-	/*
-
-	int fd = socket(AF_INET, SOCK_DGRAM, 0);
-
-	std::ifstream ifs("/proc/net/dev");
-	std::string line;
-	while (std::getline(ifs, line)) {
-		std::smatch m;
-		if(std::regex_search(line, m, dev_rx)) {
-			std::string interface = m.str(1);
-			struct ifreq ifr;
-			// ifr.ifr_addr.sa_family = AF_INET;
-			// strncpy(ifr.ifr_name, interface.c_str(), IFNAMSIZ-1);
-			ioctl(fd, SIOCGIFADDR, &ifr);
-
-			}
-		}
-
-	}
-	ifs.close();
-	*/
     struct ifaddrs *ifaddr, *ifa;
     int family, s, n;
     char host[NI_MAXHOST];
@@ -324,8 +302,8 @@ uint32_t HostCache::getInterfaceIpAddresses() {
         return 0;
     }
 
-    /* Walk through linked list, maintaining head pointer so we
-       can free list later */
+    // Walk through linked list, maintaining head pointer so we
+    // can free list later
 
     for (ifa = ifaddr, n = 0; ifa != NULL; ifa = ifa->ifa_next, n++) {
         if (ifa->ifa_addr == NULL) {
@@ -334,8 +312,8 @@ uint32_t HostCache::getInterfaceIpAddresses() {
         }
         family = ifa->ifa_addr->sa_family;
 
-        /* Display interface name and family (including symbolic
-           form of the latter for the common families) */
+        // Display interface name and family (including symbolic
+        //   form of the latter for the common families)
 
         if (Debug) {
         	syslog(LOG_DEBUG, "Interface %-8s %s (%d)", ifa->ifa_name,
@@ -344,7 +322,7 @@ uint32_t HostCache::getInterfaceIpAddresses() {
                (family == AF_INET6) ? "AF_INET6" : "???", family);
         }
         LocalInterfaces.insert(ifa->ifa_name);
-        /* For an AF_INET* interface address, display the address */
+        // For an AF_INET* interface address, display the address
 
         if (family == AF_INET || family == AF_INET6) {
             s = getnameinfo(ifa->ifa_addr,
@@ -451,14 +429,6 @@ bool HostCache::ExportDeviceProfileMatches(const std::string filename, bool deta
 }
 
 uint32_t HostCache::RestApiCall (const std::string api, const json &j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile) {
-	/*
-    auto r = cpr::Post(
-    	cpr::Url{"https://api.noddos.io/" + api},
-		cpr::Header{{"Content-Type", "application/json"},{"X-Fingerprint", "1234"}},
-		cpr::Body{j.dump()}
-    );
-    long response_code = r.status_code;
-	*/
 	std::string url = "https://api.noddos.io/" + api;
 
 	std::string body = j.dump();
@@ -590,8 +560,10 @@ uint32_t HostCache::UploadDeviceStats(const std::string ClientApiCertFile, const
 	uint32_t uploads = 0;
 	json j;
 	for (auto it : hC) {
-		if ( (not isWhitelisted(*(it.second))) && not it.second->isMatched() && not it.second->UploadsDisabled()) {
-			json h;
+		// FIXME
+		// if ( (not isWhitelisted(*(it.second))) && not it.second->isMatched() && it.second->UploadsEnabled()) {
+		if ( (not isWhitelisted(*(it.second))) && not it.second->isMatched()) {
+		json h;
 			if (it.second->DeviceStats(h, 604800, false, false)) {
 				uploads++;
 				j.push_back(h);

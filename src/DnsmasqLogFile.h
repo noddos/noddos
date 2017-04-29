@@ -73,7 +73,7 @@ private:
     bool Debug;
 
     void load_regexes() {
-		dns_rx = std::regex(R"delim(dnsmasq\[\d+?\]: (\d+?) (\d+?\.\d+?\.\d+?\.\d+?)\/\d+? (\D\S*?) (\S+?) (is|from) (\S+?)$)delim",
+		dns_rx = std::regex(R"delim(dnsmasq\[\d+?\]: (\d+?) ([abcdef\d\.\:]+?)\/\d+? (\D\S*?) (\S+?) (is|from) (\S+?)$)delim",
    			std::regex_constants::ECMAScript | std::regex_constants::icase);
         dhcp_rx = std::regex(R"delim(dnsmasq-dhcp\[\d+?\]: (\d+?) (.*)$)delim",
        		std::regex_constants::ECMAScript | std::regex_constants::icase);
