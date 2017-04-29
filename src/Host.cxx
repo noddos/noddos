@@ -428,11 +428,8 @@ bool Host::SsdpInfo_set(const std::shared_ptr<SsdpHost> insHost) {
 	return true;
 }
 
-bool Host::UploadsDisabled() {
-	if (not isMatched()) {
-		return true;
-	}
-	return not UploadStats;
+bool Host::UploadsEnabled() {
+	return UploadStats;
 }
 
 uint32_t Host::Prune (bool Force) {

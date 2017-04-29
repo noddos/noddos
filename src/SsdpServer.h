@@ -47,7 +47,7 @@ private:
 
 
 public:
-	SsdpServer(HostCache &inhCache, const uint32_t inExpiration, const std::string inIpAddress = "", const bool inDebug = false):
+	SsdpServer(HostCache &inhCache, const time_t inExpiration, const std::string inIpAddress = "", const bool inDebug = false):
 		hCache{inhCache}, Expiration{inExpiration}, IpAddress{inIpAddress}, Debug{inDebug} {
 		ssdp_rx = std::regex(R"delim(^(SERVER|LOCATION|NT|USN|USER-AGENT): (.*)$)delim",
 				std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
