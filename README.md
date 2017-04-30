@@ -13,7 +13,7 @@ The current focus of Noddos is on building the database of device profiles by ge
 
 Noddos runs as a daemon to listen to DHCP, DNS and SSDP traffic on the home network. It reads DHCP and DNS data from the dnsmasq daemon that should be configured to log extended DNS and DHCP data. If incoming SSDP data has a 'Location' header than nodlisten will call the URL contained in the header to collect additional device information. Using the Linux Netfilter functionality, it tracks network flows in real time. Noddos reads the DeviceProfiles file that specifies the matching conditions and traffic filtering rules. Every hour, Noddos matches discovered devices with the device profile database to identify known devices. Noddos can be configured upload traffic statistics for identified devices and device attributes for devices it not yet has been able to match to a device profile. There is a configuration file that can be used to specify a.o. whether traffic and device statistics should be uploaded and whether or not they should be uploaded anonymously. The Noddos process should be started at boot time.
 
-The 'getdeviceprofiles.sh' script is used to securely download the list of Device Profiles over HTTPS from the Noddos web site, check the digital signature of the file using a Noddos certificate and makes the file available to the Noddos client. It needs access to the public cert that was used to sign the file. This script should be called at least once per day from cron. 
+The 'getnoddosdeviceprofiles' script is used to securely download the list of Device Profiles over HTTPS from the Noddos web site, check the digital signature of the file using a Noddos certificate and makes the file available to the Noddos client. It needs access to the public cert that was used to sign the file. This script should be called at least once per day from cron. 
 
 ## Installation
 
@@ -55,7 +55,7 @@ The 'getdeviceprofiles.sh' script is used to securely download the list of Devic
          --quiet  --group noddos
     sudo mkdir /etc/noddos
     sudo cp noddos.conf-sample /etc/noddos.conf
-    sudo cp noddosconfig.pem /etc/noddos
+    sudo cp files/noddosconfig.pem /etc/noddos
 
     openssl req -x509 -nodes -subj '/CN=noddosapiclient' -newkey rsa:2048 -days 3650 \
          -keyout /etc/noddos/noddosapiclient.key -out /etc/noddos/noddosapiclient.pem

@@ -98,7 +98,7 @@ fi
 
 if [ ! -d "$OUTDIR/tmp" ] 
 then
-    mkdir $OUTDIR/tmp
+    mkdir -p $OUTDIR/tmp
     if [ $? -gt 0 ]
     then
         print "Couldn't create tmp dir in $OUTDIR"

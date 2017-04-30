@@ -11,13 +11,9 @@
     "Group": "noddos",
     "WhitelistedIpv4Addresses": [
         "127.0.0.1", 
-        "192.168.1.240",
-        "192.168.1.11",
-        "192.168.1.232",
-        "192.168.1.98"
     ],
     "WhitelistedIpv6Addresses": [],
-    "WhitelistedMacAddresses": [  "18:22:7e:d2:7b:00", "ec:9b:f3:e4:23:e5" ],
+    "WhitelistedMacAddresses": [  "18:22:7e:d2:7b:00" ],
     "ReportTrafficToRfc1918": false,
     "ListenIpAddresses": [],
     "ListenInterfaces": [],
