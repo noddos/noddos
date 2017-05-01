@@ -339,7 +339,7 @@ bool Host::FlowEntry_set(const uint16_t inSrcPort, const std::string &inDstIp, c
 	f->SrcPort = inSrcPort;
 	f->DstPort = inDstPort;
 	f->Protocol = inProtocol;
-	f->Expiration_set();
+	f->Expiration_set(inExpiration);
 	// Is there already at least one flow from the Host to the destination IP?
 	if (FlowCache.find(inDstIp) == FlowCache.end()) {
 		FlowCache[inDstIp] = std::make_shared<FlowEntryList>();
@@ -451,6 +451,9 @@ uint32_t Host::Prune (bool Force) {
 		auto it = fel.begin();
 		while (it != fel.end()) {
 			if (Force || (*it)->isExpired()) {
+				if (Debug) {
+					syslog(LOG_DEBUG, "Pruning FlowEntry to %s for DstPort %u with expiration %ld while now is %ld", fc->first.c_str(), (*it)->DstPort, (*it)->Expiration_get (), time(nullptr));
+				}
 				// Remove element from list
 				it = fel.erase(it);
 				pruned_flowentries++;
@@ -461,7 +464,9 @@ uint32_t Host::Prune (bool Force) {
 		}
 		// If the list of Flow Entry pointers is empty, delete it
 		if (Force || fel.empty()) {
-			// delete(&fel);
+			if (Debug) {
+				syslog(LOG_DEBUG, "Pruning FlowEntryList for %s as it is now empty", fc->first.c_str());
+			}
 			fc = FlowCache.erase(fc);
 			pruned = true;
 			pruned_flows++;
@@ -470,12 +475,16 @@ uint32_t Host::Prune (bool Force) {
 		}
 
 	}
-	uint32_t pruned_dnsqueries = 0;
 	if(Debug) {
 		syslog (LOG_DEBUG, "Pruned %u Flow Entries and %u flows", pruned_flowentries, pruned_flows);
 	}
+
+	uint32_t pruned_dnsqueries = 0;
 	for(auto const& dc: DnsCache) {
 		if (Force || dc.second->isExpired()) {
+			if (Debug) {
+				syslog(LOG_DEBUG, "Pruning DNS for %s with expiration %ld while now is %ld", dc.first.c_str(), dc.second->Expiration_get (), time(nullptr));
+			}
 			DnsCache.erase(dc.first);
 			pruned_dnsqueries++;
 			pruned = true;

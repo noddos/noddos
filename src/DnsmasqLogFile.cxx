@@ -175,7 +175,8 @@ uint32_t DnsmasqLogFile::PruneDhcpRequestMap (bool Force) {
 		auto & dRequest = erasediter->second;
 		if (erasediter->second != nullptr && (Force || dRequest->isExpired())) {
 			if(Debug) {
-				syslog (LOG_DEBUG, "PruneDhcpRequestMap: Erasing DHCP with querynumber %lu", erasediter->first);
+				syslog (LOG_DEBUG, "PruneDhcpRequestMap: Erasing DHCP with querynumber %lu as expiration is %ld and now is %ld",
+						erasediter->first, dRequest->Expiration_get(), time(nullptr));
 			}
 			DhcpRequestMap.erase(erasediter->first);
 			deletecount++;
@@ -250,6 +251,9 @@ uint32_t DnsmasqLogFile::PruneDnsQueryMap (bool Force) {
 		auto d = erasediter->second;
 		if (Force || d->isExpired()) {
 			// delete d;
+			if (Debug) {
+				syslog(LOG_DEBUG, "Expiring DNS Query with expiration %ld while now is %ld", d->Expiration_get (), time(nullptr));
+			}
 			DnsQueryMap.erase(erasediter);
 			deletecount++;
 		}

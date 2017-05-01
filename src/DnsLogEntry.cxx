@@ -50,7 +50,7 @@ uint32_t DnsLogEntry::Prune(bool Force) {
 		if (Force || now > i->second ) {
 			Ips.erase(i);
 			if(Debug) {
-				syslog(LOG_DEBUG, "Pruning %s from %s", i->first.c_str(), Fqdn.c_str());
+				syslog(LOG_DEBUG, "Pruning DnsLogEntry for IP %s from %s", i->first.c_str(), Fqdn.c_str());
 			}
 			deletecount++;
 		}

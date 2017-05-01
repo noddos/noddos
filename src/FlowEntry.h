@@ -23,17 +23,20 @@
 #ifndef FLOWENTRY_H_
 #define FLOWENTRY_H_
 
-#define FLOWDEFAULTEXPIRATION 86400
+
 
 #include "iCache.h"
+#include "noddos.h"
 
 class FlowEntry : public iCache {
 public:
 	uint16_t DstPort;
 	uint16_t SrcPort;
 	uint8_t Protocol;
-	FlowEntry(): SrcPort{0}, DstPort{0}, Protocol{0} {};
-	FlowEntry(uint16_t inSrcPort, uint16_t inDstPort, uint8_t inProtocol): SrcPort{inSrcPort}, DstPort{inDstPort}, Protocol{inProtocol} {};
+	FlowEntry(): SrcPort{0}, DstPort{0}, Protocol{0}
+		{ Expiration_set(); iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);};
+	FlowEntry(uint16_t inSrcPort, uint16_t inDstPort, uint8_t inProtocol): SrcPort{inSrcPort}, DstPort{inDstPort}, Protocol{inProtocol}
+		{ Expiration_set(); iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);};
 	bool operator == (const FlowEntry &rhs) const {
 		return DstPort == rhs.DstPort &&
 				SrcPort == rhs.SrcPort &&
@@ -51,7 +54,7 @@ public:
 	}
     // iCache interface methods.
     time_t Expiration_set (time_t inExpiration = FLOWDEFAULTEXPIRATION) {
-    	return iCache::Expires = time(nullptr) + inExpiration;
+    	return iCache::Expires = (time(nullptr) + inExpiration);
     }
     time_t Expiration_get () { return iCache::Expires; }
     bool isExpired() { return time(nullptr) >= iCache::Expires; }
