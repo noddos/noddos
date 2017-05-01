@@ -43,15 +43,21 @@ private:
 	std::regex arp_rx, dev_rx;
 	std::unordered_set<std::string> WhitelistedNodes;
 	bool Debug;
-	// cpr::Session apiSession;
 	std::unordered_set<std::string> LocalInterfaces;
 	std::unordered_set<std::string> LocalIpAddresses;
+	uint32_t FlowExpiration;
 
 
 
 
 public:
-	HostCache(bool inDebug = false): Debug{inDebug} {
+	HostCache(const uint32_t inFlowExpiration = FLOWDEFAULTEXPIRATION, const bool inDebug = false): Debug{inDebug} {
+		if (inFlowExpiration == 0) {
+			// Stats upload is disabled so we set a reasonable default to expire the flow cache
+			FlowExpiration = FLOWDEFAULTEXPIRATION;
+		} else {
+			FlowExpiration = inFlowExpiration;
+		}
 		dev_rx = std::regex(R"delim(^([^:]?):)delim",
 				std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
 

@@ -23,8 +23,9 @@
 #ifndef NODDOS_H_
 #define NODDOS_H_
 
-enum struct ConfidenceLevel : int { None, none, NONE, Low, low, LOW, Medium, medium, MEDIUM, High, high, HIGH };
+#define FLOWDEFAULTEXPIRATION 14400
 
+enum struct ConfidenceLevel : int { None, none, NONE, Low, low, LOW, Medium, medium, MEDIUM, High, high, HIGH };
 
 size_t curlwriteFunction(void *ptr, size_t size, size_t nmemb, std::string* data);
 

@@ -155,7 +155,7 @@ bool HostCache::AddFlow (const std::string srcip, const uint16_t srcport, const 
 
 	std::shared_ptr<Host> h = FindOrCreateHostByIp(srcip);
 	if (h) {
-		h->FlowEntry_set(srcport, dstip, dstport, protocol, expiration);
+		h->FlowEntry_set(srcport, dstip, dstport, protocol, FlowExpiration);
 		return true;
 	}
 	return false;

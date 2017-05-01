@@ -107,7 +107,7 @@ int main(int argc, char* argv[]) {
 	} else
 		openlog(argv[0], LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
 
-	HostCache hC(config.Debug);
+	HostCache hC(config.TrafficReportInterval, config.Debug);
 
 	hC.DeviceProfiles_load(config.DeviceProfilesFile);
 	hC.ImportDeviceProfileMatches(config.MatchFile);
