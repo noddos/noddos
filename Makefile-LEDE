@@ -52,7 +52,7 @@ define Package/noddos
 endef
 
 define Package/noddos/description
-Noddos doscovers what devices you have in your network and tailers the
+Noddos discovers what devices you have in your network and tailers the
 firewall rules based on whitelisted flows for that device. Noddos
 downloads the firewall rules periodically from the cloud. In order to
 support creating these whitelisted flows, noddos can optionally upload

@@ -178,10 +178,13 @@ Noddos is now up and running under Lede installed on a TPLink Archer C7v2 HGW. P
 
     mkdir ~/src
     cd ~/src
+	ROOTDIR=$PWD
     git clone https://github.com/noddos/noddos.git
-    mv noddos/Makefile-LEDE noddos/Makefile
     mkdir lede
     cd lede
+	mkdir -p package/noddos
+    cp ../noddos/Makefile-LEDE package/noddos/Makefile
+	cp -r ../noddos/files package/noddos/
 
     # Follow the instructions on the [Lede SDK page](https://lede-project.org/docs/guide-developer/compile_packages_for_lede_with_the_sdk?s[]=sdk) and download the SDK for your router platform. In my case, I'm using the SDK for ar71xx
     # Change the URL below to match your router platform. The SDK is at the bottom of the platform download page under Supplementary Files
@@ -190,7 +193,7 @@ Noddos is now up and running under Lede installed on a TPLink Archer C7v2 HGW. P
     cd lede-sdk-17.01.1-ar71xx-generic_gcc-5.4.0_musl-1.1.16.Linux-x86_64/
 
     # change the path to the location where you cloned noddos to, in this example ~/src
-    echo "src-link custom ~/src/ >>feeds.conf.default
+    echo "src-link custom $ROOTDIR/lede/package" >>feeds.conf.default
 
     # Select Global Build Settings and press enter, in the submenu deselect/exclude the following options:
     # "Select all target specific packages by default"
