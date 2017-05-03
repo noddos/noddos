@@ -90,4 +90,5 @@ target_link_libraries(SsdpServer_test curl ssl crypto)
 add_test (Noddos noddos_test)
 add_executable(noddos_test noddos_test.cxx)
 
-install(CODE "MESSAGE(\"'make install is so 1990s.\")")
+install(TARGETS noddos RUNTIME DESTINATION usr/sbin)
+
