@@ -45,7 +45,7 @@ define Package/noddos
 	CATEGORY:=Network
 	TITLE:=noddos -- device-aware cloud-powered firewall
 	URL:=https://www.noddos.io/
-	DEPENDS:=+libstdcpp +libc +libnetfilter-conntrack +libcurl +libopenssl +openssl-util +libustream-openssl +ca-bundle +ca-certificates
+	DEPENDS:=+libstdcpp +libc +libnetfilter-conntrack +libcurl +libopenssl +openssl-util +libustream-openssl +ca-bundle +ca-certificates +wget +bzip2
 endef
 
 define Package/noddos/description
