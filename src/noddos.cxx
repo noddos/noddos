@@ -39,7 +39,7 @@
 #include <sys/stat.h>
 #include <stdio.h>
 
-#include "cxxopts.hpp"
+#include <getopt.h>
 
 #include "noddosconfig.h"
 #include "DnsmasqLogFile.h"
@@ -59,46 +59,17 @@ int setup_signal_fd(int sfd);
 bool add_epoll_filehandle(int epfd, std::map<int, iDeviceInfoSource *> & epollmap,  iDeviceInfoSource& i);
 bool daemonize(Config &inConfig);
 
-int main(int argc, char* argv[]) {
+void parse_commandline(int argc, char** argv, bool& debug, bool& flowtrack, std::string& configfile, bool& daemon, bool& prune);
+
+int main(int argc, char** argv) {
     bool debug = false;
     bool flowtrack = true;
-	std::string configfile;
+	std::string configfile = "/etc/noddos/noddos.conf";
 	bool daemon = true;
 	bool prune = true;
 
+	parse_commandline(argc, argv, debug, flowtrack, configfile, daemon, prune);
 
-	try {
-		cxxopts::Options options("Noddos", "Device-aware firewall");
-
-		options.add_options()
-		  ("d,debug", "Enable debugging, including writing of API calls to files in /tmp")
-	  	  ("n,nodaemon", "Don't run as daemon, log to stderr")
-	  	  ("p,noprune", "Don't prune host data")
-		  ("f,noflowtrack", "Don't track flows")
-		  ("h,help", "Noddos usage: -d/--debug -n/--nodaemon -c/--configfile <filename> -f/--noflowtrack")
-		  ("c,configfile", "Configuration file", cxxopts::value<std::string>(configfile)->default_value("/etc/noddos/noddos.conf"))
-	  	  ;
-		// ("u,upload", "Upload device data (and network flows is -f is specified) to the cloud")
-	  	// ("i,ipaddress", "IP address of interface to listen for multicast on", cxxopts::value<std::string>())
-
-
-		options.parse(argc, argv);
-		if (options.count("n")) {
-			daemon = false;
-        }
-		if (options.count("p")) {
-			prune = false;
-		}
-		if (options.count("f")) {
-			flowtrack = false;
-		}
-		if (options.count("d")) {
-			debug = true;
-		}
-	} catch (const cxxopts::OptionException& e) {
-	    std::cout << "error parsing options: " << e.what() << std::endl;
-	    exit(1);
-	}
 	Config config(configfile, debug);
 
 	if (daemon) {
@@ -204,6 +175,19 @@ int main(int argc, char* argv[]) {
                     (not epoll_events[ev].events & EPOLLIN)) {
 				syslog(LOG_ERR, "Epoll event error for FD %d", epoll_events[ev].data.fd);
 				close(epoll_events[ev].data.fd);
+				epollmap.erase(epoll_events[ev].data.fd);
+				if (t_ptr != nullptr && epoll_events[ev].data.fd == t_ptr->GetFileHandle() && geteuid() == 0) {
+					t_ptr->Open();
+			    	event.events = EPOLLIN;
+			    	event.data.fd = t_ptr->GetFileHandle();
+			        if (epoll_ctl(epfd, EPOLL_CTL_ADD, event.data.fd, &event) < 0) {
+			        	syslog(LOG_ERR, "Can't add file handle to epoll");
+			        	return false;
+			        }
+			        epollmap[event.data.fd] = t_ptr;
+			        syslog (LOG_INFO, "Re-opened conntrack with FD %d", event.data.fd);
+
+				}
 			} else {
 				if (config.Debug) {
 					syslog(LOG_DEBUG, "Handling event for FD %d", epoll_events[ev].data.fd);
@@ -457,3 +441,69 @@ bool daemonize (Config &inConfig) {
 
 	return true;
 }
+
+void parse_commandline(int argc, char** argv, bool& debug, bool& flowtrack, std::string& configfile, bool& daemon, bool& prune) {
+	int c;
+	int debug_flag = 0;
+	int daemon_flag = 1;
+	int prune_flag = 1;
+	int flowtrack_flag = 1;
+	int help_flag = 0;
+	while (1) {
+		static struct option long_options[] = {
+	        {"debug",       no_argument,       &debug_flag, 1},
+	        {"nodaemon",    no_argument,       &daemon_flag, 0},
+	        {"noprune",     no_argument,       &prune_flag, 0},
+	        {"noflowtrack", no_argument,       &flowtrack_flag, 0},
+	        {"help",        no_argument,       &help_flag, 0},
+	        {"configfile",  required_argument, 0, 'c'},
+	        {0, 0, 0, 0}
+	    };
+	    /* getopt_long stores the option index here. */
+	    int option_index = 0;
+		c = getopt_long (argc, argv, "dnpfhc:", long_options, &option_index);
+
+		/* Detect the end of the options. */
+	    if (c == -1) {
+	    	break;
+	    }
+		switch (c) {
+	        case 0:
+	            break;
+	        case 'd':
+	        	debug_flag = 1;
+	        	break;
+	        case 'n':
+	        	daemon_flag = 0;
+	        	break;
+	        case 'p':
+	        	prune_flag = 0;
+	        	break;
+	        case 'f':
+	        	flowtrack_flag = 0;
+	        	break;
+	        case 'c':
+	        	configfile = optarg;
+	        	break;
+	        case '?':
+	        	break;
+	        case 'h':
+	        default:
+	        	printf ("Noddos usage: -d/--debug -n/--nodaemon -c/--configfile <filename> -f/--noflowtrack\n");
+	        	exit (0);
+	    }
+    }
+	if (debug_flag == 1) {
+		debug = true;
+	}
+	if (daemon_flag == 0) {
+		daemon = false;
+       }
+	if (prune_flag == 0) {
+		prune = false;
+	}
+	if (flowtrack_flag == 0) {
+		flowtrack = false;
+	}
+}
+

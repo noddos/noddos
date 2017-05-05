@@ -61,9 +61,9 @@ private:
 public:
 	FlowTrack(HostCache & inhC, Config &inConfig): hC{inhC}, config{inConfig} {
 		h = nullptr;
-		Open("", 0);
+		Open();
 	}
-	virtual int Open (std::string input, uint32_t inExpiration) {
+	virtual int Open (std::string input = "", uint32_t inExpiration = 0) {
 		// We don't care about Open parameters in this Class derived from iDeviceInfoSource
 		input = "";
 		inExpiration = 0;
