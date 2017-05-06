@@ -28,11 +28,9 @@ Here are instructions for installing Noddos on Home Gateways running Lede firmwa
 If you have a different router, you can either send me a request to build a package for that router or you can follow the instructions to create your own package. If someone wants a package for a router running OpenWRT then please ping me and I'll attempt to build a package for that firmware.
     
     ssh root@<HGW-IP>
-
-We need to edit the dnsmasq start-up script to make sure it starts with the parameters that noddos needs
-
     vi /etc/init.d/dnsmasq
 
+We need to edit the dnsmasq start-up script to make sure it starts with the parameters that noddos needs
 - (line numbers are based on the file with these modifications being applied)
 - insert after line 602: append_parm "$cfg" "logdhcp" "--log-dhcp"
 - insert after line 670:
@@ -42,7 +40,7 @@ We need to edit the dnsmasq start-up script to make sure it starts with the para
 		xappend "log-facility=$dnsmasqlogfile"
 	}
 
- insert after line 772: procd_add_jail_mount_rw $dnsmasqlogfile
+- insert after line 772: procd_add_jail_mount_rw $dnsmasqlogfile
 
 	 
 After restart, there should be a /tmp/dnsmasq.log file
