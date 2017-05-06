@@ -102,9 +102,8 @@ public:
                 .proto = IPPROTO_UDP,
                 .state = UDP_CONNTRACK_ESTABLISHED
         };
-
-        nfct_filter_add_attr(filter, NFCT_FILTER_L4PROTO_STATE, &filter_proto);
 */
+        nfct_filter_add_attr(filter, NFCT_FILTER_L4PROTO_STATE, &filter_proto);
 
         for (auto it: config.WhitelistedIpv4Addresses) {
         	/* BSF always wants data in host-byte order */
@@ -118,6 +117,12 @@ public:
                 NFCT_FILTER_LOGIC_NEGATIVE);
 
         	nfct_filter_add_attr(filter, NFCT_FILTER_SRC_IPV4, &filter_ipv4);
+
+        	nfct_filter_set_logic(filter,
+        		NFCT_FILTER_DST_IPV4,
+                NFCT_FILTER_LOGIC_NEGATIVE);
+
+        	nfct_filter_add_attr(filter, NFCT_FILTER_DST_IPV4, &filter_ipv4);
         }
 
         // TODO set up filterlist for IPv6 addresses

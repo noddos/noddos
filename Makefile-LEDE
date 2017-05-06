@@ -102,16 +102,22 @@ define Package/noddos/install
 	$(1)/usr/bin/makenoddoscert.sh
 endef
 
-define Package/noddos/postinstall
+define Package/noddos/postinst
 	#!/bin/bash
+	echo "Downloading and validating Device Profiles"
 	$(1)/usr/bin/getnoddosdeviceprofiles -c $(1)/etc/noddos/noddosconfig.pem
 	cd $(1)/etc/noddos
+	# Creating a client certificate
 	$(1)/usr/bin/makenoddoscert.sh
 	if [ -z "$${IPKG_INSTROOT}" ]; then
         echo "Enabling rc.d symlink for noddos"
         cd /etc/rc.d
 		/etc/init.d/noddos enable
 	fi
+	echo "Adding dnsmasq configuration settings for noddos: logdhcp, logqueries, logfile"
+	uci set dhcp.@dnsmasq[0].logqueries="1"
+	uci set dhcp.@dnsmasq[0].logdhcp="1"
+	uci set dhcp.@dnsmasq[0].logfile="/tmp/dnsmasq.log"
 	exit 0
 endef
 
