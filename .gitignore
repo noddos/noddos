@@ -1,5 +1,5 @@
 # Noddos app bits
-noddos
+src/noddos
 *_test
 CTestTestfile.cmake
 CMakeFiles/

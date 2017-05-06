@@ -443,7 +443,6 @@ bool daemonize (Config &inConfig) {
 }
 
 void parse_commandline(int argc, char** argv, bool& debug, bool& flowtrack, std::string& configfile, bool& daemon, bool& prune) {
-	int c;
 	int debug_flag = 0;
 	int daemon_flag = 1;
 	int prune_flag = 1;
@@ -461,7 +460,7 @@ void parse_commandline(int argc, char** argv, bool& debug, bool& flowtrack, std:
 	    };
 	    /* getopt_long stores the option index here. */
 	    int option_index = 0;
-		c = getopt_long (argc, argv, "dnpfhc:", long_options, &option_index);
+		int c = getopt_long (argc, argv, "dnpfhc:", long_options, &option_index);
 
 		/* Detect the end of the options. */
 	    if (c == -1) {
