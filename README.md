@@ -53,14 +53,14 @@ Download the package and install it
 
 Edit /etc/noddos/noddos.conf to add whitelisted hosts. Make sure to include the WAN and LAN IP- or MAC-addresses of your router. You may also want to include addresses of your PCs that you use daily as collecting traffic statistics for them is of no much use with the traffic they generate to so many destinations. You may also want to add the MAC addresses of phones or tablets. For more information, see the section below on the Noddos configuration file.
 
-	/etc/init.d/noddos reload
+	/etc/init.d/noddos start
 
 Optional: remove odhcp so dnsmasq becomes the DHCP server. That enables noddos to read the logs for DHCP transactions. If you use IPv6 from your ISP and have multiple routers that automatically get assigned a prefix from the prefix you get from your ISP then don't perform this step as dnsmasq doesn't support this functionality. If you don't uninstall odhcp then Noddos won't be able to recognize some devices as it won't have access to all the DHCP transaction details
 
 	opkg remove odhcp
 	/etc/init.d/dnsmasq restart
 
-Install a cronjob for user noddos to do this frequently (please pick a randon time of day instead of 3:23am), ie
+Install a cronjob to do this frequently (please pick a randon time of day instead of 3:23am), ie
 	crontab -e -u noddos
     	23 */3 * * * /usr/bin/getnoddosdeviceprofiles
 
@@ -109,9 +109,9 @@ Now we just have to build to package:
 
     make -j5 V=s
 
-Change the build directory to match your HGW platform
+Change the architecture directory and architecture ipkg to match your HGW platform
 
-    scp build_dir/target-mips_24kc_musl-1.1.16/noddos/noddos root@<HGW-IP>:
+    scp bin/packages/arm_cortex-a9_vfpv3/custom/noddos_1_arm_cortex-a9_vfpv3.ipk root@<HGW-IP>:
 
 Follow the installation instructions from this point onwards.
 

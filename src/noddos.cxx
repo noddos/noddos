@@ -111,7 +111,7 @@ int main(int argc, char** argv) {
 	struct epoll_event event;
 
 
-    DnsmasqLogFile f("/var/log/dnsmasq.log", hC, 86400, config.Debug);
+    DnsmasqLogFile f(config.DnsmasqLogFile, hC, 86400, config.Debug);
     // add_epoll_filehandle(epfd, epollmap, f);
     event.events = EPOLLIN | EPOLLET;
     event.data.fd = f.GetFileHandle();
