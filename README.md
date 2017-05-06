@@ -35,10 +35,10 @@ We need to edit the dnsmasq start-up script to make sure it starts with the para
 - insert after line 602: append_parm "$cfg" "logdhcp" "--log-dhcp"
 - insert after line 670:
 
-	config_get dnsmasqlogfile "$cfg" logfile ""
-	[ -n dnsmasqlogfile ] && {
-		xappend "log-facility=$dnsmasqlogfile"
-	}
+	config_get dnsmasqlogfile "$cfg" logfile ""  
+	[ -n dnsmasqlogfile ] && {  
+		xappend "log-facility=$dnsmasqlogfile"  
+	}  
 
 - insert after line 772: procd_add_jail_mount_rw $dnsmasqlogfile
 
