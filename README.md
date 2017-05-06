@@ -33,9 +33,10 @@ We need to edit the dnsmasq start-up script to make sure it starts with the para
 
     vi /etc/init.d/dnsmasq
 
-(line numbers are based on the file with these modifications being applied)
-insert after line 602: append_parm "$cfg" "logdhcp" "--log-dhcp"
-insert after line 670 (without the leading '>'s):
+- (line numbers are based on the file with these modifications being applied)
+- insert after line 602: append_parm "$cfg" "logdhcp" "--log-dhcp"
+- insert after line 670:
+
 	config_get dnsmasqlogfile "$cfg" logfile ""
 	[ -n dnsmasqlogfile ] && {
 		xappend "log-facility=$dnsmasqlogfile"
