@@ -27,7 +27,7 @@ Here are instructions for installing Noddos on Home Gateways running Lede firmwa
 
 If you have a different router, you can either send me a request to build a package for that router or you can follow the instructions to create your own package. If someone wants a package for a router running OpenWRT then please ping me and I'll attempt to build a package for that firmware.
     
-    ssh root@192.168.1.1
+    ssh root@<HGW-IP>
 
 We need to edit the dnsmasq start-up script to make sure it starts with the parameters that noddos needs
 
@@ -104,11 +104,13 @@ Then execute the following commands:
 In the firmware build menu:
 - Enable building of the noddos package, go to "Network" menu, have noddos build as module ('M')
 - Select the Save menu option, save to '.config' and then select 'Exit' and again 'Exit'
+
 Now we just have to build to package:
 
     make -j5 V=s
 
 Change the build directory to match your HGW platform
+
     scp build_dir/target-mips_24kc_musl-1.1.16/noddos/noddos root@<HGW-IP>:
 
 Follow the installation instructions from this point onwards.
