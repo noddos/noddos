@@ -72,6 +72,7 @@ Compilation instructions are available for Home Gateways and regular Linux syste
 
 ### Compilation for a Home Gateway running firmware of the [Lede project](https://lede-project.org/)
 Noddos is now up and running on Lede firmware installed on a a Linksys WRT 1200AC. There is also the package for Asus/Netgear/D-Link/Buffalo routers. If you have a HGW using a differnet platform then you can use these instructions to generate your own package. These instructions are based on the Lede 17.01.1 release.
+
 	mkdir -p noddosbuild/package
 	cd noddosbuild/package
 	git clone https://github.com/noddos/noddos.git
@@ -84,6 +85,8 @@ Download the Lede project SDK v17.01.1 for your platform from [Lede Table of Har
 	cd <SDK-directory-for-your-platform>
     echo "src-link custom $ROOTDIR/package" >>feeds.conf.default
 
+    make menuconfig
+
 In the firmware build menu:
 - Select Global Build Settings and press enter, in the submenu deselect/exclude the following options:
 - "Select all target specific packages by default"
@@ -91,15 +94,17 @@ In the firmware build menu:
 - "Select all userspace packages by default"
 - "Cryptographically sign package lists" 
 - Select the Save menu option, save to '.config' and then select 'Exit' and again 'Exit'
-    make menuconfig
+
+Then execute the following commands:
 
     ./scripts/feeds update -a
     ./scripts/feeds install noddos
+    make menuconfig
 
 In the firmware build menu:
 - Enable building of the noddos package, go to "Network" menu, have noddos build as module ('M')
 - Select the Save menu option, save to '.config' and then select 'Exit' and again 'Exit'
-    make menuconfig
+Now we just have to build to package:
 
     make -j5 V=s
 
