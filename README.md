@@ -24,21 +24,24 @@ The 'getnoddosdeviceprofiles' script is used to securely download the list of De
 Here are instructions for installing Noddos on Home Gateways running Lede firmware. At this time, the following packages are available:
 - Linksys WRT AC series running using the [ARM Cortex A9 vfpv3 package architecture](https://lede-project.org/docs/instructionset/arm_cortex-a9_vfpv3) : [opkg link](placeholder)
 - Various routers from Asus RT-AC56/68/87U, Buffalo, D-Link DIR-885L, Linksys EA6xxx, Netgear R6250/6300/7000/8000/9000 and TPlink Archer C5, C8, C9 using the [arm_cortex_A9 package architecture](https://lede-project.org/docs/instructionset/arm_cortex-a9): [opkg link](placeholder)
+
 If you have a different router, you can either send me a request to build a package for that router or you can follow the instructions to create your own package. If someone wants a package for a router running OpenWRT then please ping me and I'll attempt to build a package for that firmware.
     
     ssh root@192.168.1.1
-We need to edit the dnsmasq start-up script to make sure it starts
-with the parameters that noddos needs
+
+We need to edit the dnsmasq start-up script to make sure it starts with the parameters that noddos needs
 
     vi /etc/init.d/dnsmasq
-		> (line numbers are based on the file with these modifications being applied)
-		> insert after line 602: append_parm "$cfg" "logdhcp" "--log-dhcp"
-		> insert after line 670 (without the leading '>'s):
-		> 	config_get dnsmasqlogfile "$cfg" logfile ""
-		>	[ -n dnsmasqlogfile ] && {
-		>		xappend "log-facility=$dnsmasqlogfile"
-		> 	}
-		> insert after line 772: procd_add_jail_mount_rw $dnsmasqlogfile
+
+(line numbers are based on the file with these modifications being applied)
+insert after line 602: append_parm "$cfg" "logdhcp" "--log-dhcp"
+insert after line 670 (without the leading '>'s):
+	config_get dnsmasqlogfile "$cfg" logfile ""
+	[ -n dnsmasqlogfile ] && {
+		xappend "log-facility=$dnsmasqlogfile"
+	}
+
+ insert after line 772: procd_add_jail_mount_rw $dnsmasqlogfile
 
 	 
 After restart, there should be a /tmp/dnsmasq.log file
