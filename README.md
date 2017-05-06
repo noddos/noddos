@@ -27,8 +27,8 @@ Here are instructions for installing Noddos on Home Gateways running Lede firmwa
 If you have a different router, you can either send me a request to build a package for that router or you can follow the instructions to create your own package. If someone wants a package for a router running OpenWRT then please ping me and I'll attempt to build a package for that firmware.
     
     ssh root@192.168.1.1
-    # We need to edit the dnsmasq start-up script to make sure it starts
-    # with the parameters that noddos needs
+We need to edit the dnsmasq start-up script to make sure it starts
+with the parameters that noddos needs
 
     vi /etc/init.d/dnsmasq
 		> (line numbers are based on the file with these modifications being applied)
@@ -41,10 +41,10 @@ If you have a different router, you can either send me a request to build a pack
 		> insert after line 772: procd_add_jail_mount_rw $dnsmasqlogfile
 
 	 
-	# After restart, there should be a /tmp/dnsmasq.log file
+After restart, there should be a /tmp/dnsmasq.log file
 	service dnsmasq restart
 
-	# download the package and install it
+Download the package and install it
 	wget <package-url>
 	opkg install <package>
 
@@ -75,29 +75,32 @@ Noddos is now up and running on Lede firmware installed on a a Linksys WRT 1200A
 	mv noddos/Makefile-LEDE noddos/Makefile
 	cd ..
 	ROOTDIR=$PWD
-	# Download the Lede project SDK v17.01.1 for your platform from [Lede Table of Hardware](https://lede-project.org/toh/start)
+
+Download the Lede project SDK v17.01.1 for your platform from [Lede Table of Hardware](https://lede-project.org/toh/start)
 	tar xf <SDK-for-your-platform-tarbar>
 	cd <SDK-directory-for-your-platform>
     echo "src-link custom $ROOTDIR/package" >>feeds.conf.default
 
+In the firmware build menu:
+- Select Global Build Settings and press enter, in the submenu deselect/exclude the following options:
+- "Select all target specific packages by default"
+- "Select all kernel module packages by default"
+- "Select all userspace packages by default"
+- "Cryptographically sign package lists" 
+- Select the Save menu option, save to '.config' and then select 'Exit' and again 'Exit'
     make menuconfig
-    # Select Global Build Settings and press enter, in the submenu deselect/exclude the following options:
-    # "Select all target specific packages by default"
-    # "Select all kernel module packages by default"
-    # "Select all userspace packages by default"
-    # "Cryptographically sign package lists" 
-    # Select the Save menu option, save to '.config' and then select 'Exit' and again 'Exit'
 
     ./scripts/feeds update -a
     ./scripts/feeds install noddos
 
+In the firmware build menu:
+- Enable building of the noddos package, go to "Network" menu, have noddos build as module ('M')
+- Select the Save menu option, save to '.config' and then select 'Exit' and again 'Exit'
     make menuconfig
-    # Enable building of the noddos package, go to "Network" menu, have noddos build as module ('M')
-    # Select the Save menu option, save to '.config' and then select 'Exit' and again 'Exit'
 
     make -j5 V=s
 
-    # change the build directory to match your HGW platform
+Change the build directory to match your HGW platform
     scp build_dir/target-mips_24kc_musl-1.1.16/noddos/noddos root@<HGW-IP>:
 
 Follow the installation instructions from this point onwards.
