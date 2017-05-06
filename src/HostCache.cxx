@@ -204,8 +204,9 @@ bool HostCache::AddDhcpRequest (const std::string IpAddress, const std::string M
 		return false;
 
 	}
-	if (isWhitelisted(IpAddress) || isWhitelisted(MacAddress))
+	if (isWhitelisted(IpAddress) || isWhitelisted(MacAddress)) {
 		return false;
+    }
 
 	std::shared_ptr<Host> h;
 	if (MacAddress != "") {

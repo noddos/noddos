@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 #   Copyright 2017 Steven Hessing
 #
@@ -19,7 +19,7 @@ PATH=/usr/bin:/bin
 
 WGET=$(which wget)
 CURL=$(which curl)
-BUNZIP2=$(which bunzip)2
+BUNZIP2=$(which bzip2)
 GUNZIP=$(which gunzip)
 BROTLI=$(which brotli)
 OPENSSL=$(which openssl)
@@ -64,7 +64,7 @@ then
 else
     if [ -x $BUNZIP2 ]
     then
-        UNZIP="$BUNZIP2 --keep"
+        UNZIP="$BUNZIP2 --decompress --keep"
         EXT=.bz2
     else
         if [ -x $GUNZIP ]
@@ -98,7 +98,7 @@ fi
 
 if [ ! -d "$OUTDIR/tmp" ] 
 then
-    mkdir $OUTDIR/tmp
+    mkdir -p $OUTDIR/tmp
     if [ $? -gt 0 ]
     then
         print "Couldn't create tmp dir in $OUTDIR"
@@ -152,8 +152,9 @@ then
     fi
 fi
 
+$OPENSSL x509 -in $CERTFILE -pubkey -noout >noddossigningpubkey.pem
 $OPENSSL dgst -sha256 \
-    -verify  <($OPENSSL x509 -in $CERTFILE  -pubkey -noout) \
+    -verify  noddossigningpubkey.pem \
     -signature DeviceProfiles.json.sha256 DeviceProfiles.json
 
 if [ $? -gt 0 ]
@@ -162,6 +163,8 @@ then
     cd $CWD
     exit
 fi
+
+rm noddossigningpubkey.pem
 
 cp DeviceProfiles.json $OUTDIR
 cd $CWD

@@ -1,4 +1,4 @@
-___Noddos v1.0.0 - 4/16/2017___
+___Noddos v0.1.0 - 4/16/2017___
 
 Initial release of Noddos C++ client for Linux desktop/server distributions. Features:
 * Parsing of dnsmasq log data for DHCP and DNS information

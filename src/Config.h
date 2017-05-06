@@ -69,7 +69,7 @@ public:
 	bool Debug;
 	static const std::string ApiFqdn;
 
-	Config(std::string inConfigFile, bool inDebug = false): Debug{inDebug} {
+	Config(std::string inConfigFile = "/etc/noddos/noddos.conf", bool inDebug = false): Debug{inDebug} {
 		Load(inConfigFile);
 	}
 	~Config() {
