@@ -228,8 +228,9 @@ bool HostCache::AddSsdpInfo (const std::shared_ptr<SsdpHost> sHost) {
 		syslog(LOG_WARNING, "AddSsdpInfo: no IP address provided");
 		return false;
 	}
-	if (WhitelistedNodes.find(sHost->IpAddress) != WhitelistedNodes.end())
+	if (WhitelistedNodes.find(sHost->IpAddress) != WhitelistedNodes.end()) {
 		return false;
+	}
 
 	std::shared_ptr<Host> h = FindOrCreateHostByIp(sHost->IpAddress);
 	if (h) {

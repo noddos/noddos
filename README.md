@@ -44,9 +44,11 @@ We need to edit the dnsmasq start-up script to make sure it starts with the para
 
 	 
 After restart, there should be a /tmp/dnsmasq.log file
+
 	service dnsmasq restart
 
 Download the package and install it
+
 	wget <package-url>
 	opkg install <package>
 
@@ -60,6 +62,7 @@ Optional: remove odhcp so dnsmasq becomes the DHCP server. That enables noddos t
 	/etc/init.d/dnsmasq restart
 
 Install a cronjob to do this frequently (please pick a randon time of day instead of 3:23am), ie
+
 	crontab -e -u noddos
     	23 */3 * * * /usr/bin/getnoddosdeviceprofiles
 
@@ -80,6 +83,7 @@ Noddos is now up and running on Lede firmware installed on a a Linksys WRT 1200A
 	ROOTDIR=$PWD
 
 Download the Lede project SDK v17.01.1 for your platform from [Lede Table of Hardware](https://lede-project.org/toh/start)
+
 	tar xf <SDK-for-your-platform-tarbar>
 	cd <SDK-directory-for-your-platform>
     echo "src-link custom $ROOTDIR/package" >>feeds.conf.default
@@ -119,7 +123,8 @@ Follow the installation instructions from this point onwards.
 Your Linux DIY router should be running a Linux kernel 2.6.13 or newer. These instructions assume you have the development tools such as C++, ld, make, cmake installed.
 
 ### Compile noddos yourself
-    # install development packages for libcurl, libopenssl and libnetfilter_conntrack
+Install development packages for libcurl, libopenssl and libnetfilter_conntrack
+
     sudo apt install libssl-dev
     sudo apt install libnetfilter-conntrack-dev
     sudo apt install libcurl4-openssl-dev
@@ -132,6 +137,7 @@ Your Linux DIY router should be running a Linux kernel 2.6.13 or newer. These in
 
 ### Install noddos
 Install needed apps
+
     sudo apt install openssl ssl libcurl3 brotli wget libnetfilter-conntrack3 ca-certificates
 
     sudo adduser --system --home /var/lib/noddos --shell /bin/false \
@@ -142,11 +148,13 @@ Install needed apps
     sudo cp files/noddosconfig.pem /etc/noddos
 
 Edit /etc/noddos.conf, for one to whitelist the IP addresses of the interfaces of your router
+
     sudo chown -R root:root /etc/noddos
     sudo chgrp noddos /etc/noddos/noddosapiclient.key
     sudo chmod 640 /etc/noddos/noddosapiclient.key
 
 Directory where DeviceProfiles.json will be downloaded to
+
     sudo mkdir /var/lib/noddos
     sudo chown noddos:noddos /var/lib/noddos
 
@@ -160,9 +168,11 @@ Directory where DeviceProfiles.json will be downloaded to
 	/usr/bin/makenoddoscert.sh
 	
 Install a cronjob for user noddos to do this frequently (please pick a randon time of day instead of 3:23am), ie
+
     23 */3 * * * /usr/bin/getnoddosdeviceprofiles
 
 If you want maximum privacy, create a new client cert every 6 hours or so. That does mean that going forward you may not be able to use some newly developed Noddos portal functions. Create a cronjob for root:
+
     23 */6 * * * cd /etc/noddos; /usr/bin/makenoddoscert.sh
 
 Noddos needs to be started as root as it will need to get Linux firewall connection state changes. It will drop to an unprivileged user/group after that has been set up if a user and group has been defined in /etc/noddos/noddos.conf. As there is an issue with errors occassionally occurring when polling a netfilter_conntrack filehandle, it is recommended to not define a user and group so noddos keeps running as root and is able to re-open the netfilter_conntrack connection.
