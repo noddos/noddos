@@ -438,7 +438,7 @@ uint32_t HostCache::RestApiCall (const std::string api, const json &j, const std
 	char buf[strlen(body.c_str())+1];
 	strcpy(buf, body.c_str());
 	if (Debug) {
-		syslog (LOG_DEBUG, "Uploading %lu bytes of data to %s", strlen(buf), url.c_str());
+		syslog (LOG_DEBUG, "Uploading %zu bytes of data to %s", strlen(buf), url.c_str());
 	}
 
 	struct curl_slist *hlist = NULL;
@@ -485,7 +485,7 @@ uint32_t HostCache::RestApiCall (const std::string api, const json &j, const std
 		}
 		ret = curl_easy_setopt(curl, CURLOPT_USERAGENT, "noddos/1.0.0");
 		if(ret) {
-			syslog (LOG_ERR, "Curl setopt CURLOPT_USERAGENT returned %d", ret);
+			syslog (LOG_ERR, "Curl setopt CURLOPT_USERAGENT returned %u", ret);
 		}
 		ret = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, hlist);
 		if(ret) {
@@ -703,7 +703,7 @@ uint32_t HostCache::DeviceProfiles_load(const std::string filename) {
 	}
 	auto s = uuids.size();
 	if (Debug) {
-		syslog(LOG_DEBUG, "Profiles imported %lu", s);
+		syslog(LOG_DEBUG, "Profiles imported %zu", s);
 	}
 	return s;
 }

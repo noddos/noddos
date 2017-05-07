@@ -57,8 +57,8 @@ struct DnsQuery {
  */
 class DnsmasqLogFile : public iDeviceInfoSource, public iCache {
 private:
-	std::map<uint64_t, std::shared_ptr<DnsLogEntry>> DnsQueryMap;
-    std::map<uint64_t, std::shared_ptr<DhcpRequest>> DhcpRequestMap;
+	std::map<unsigned long long, std::shared_ptr<DnsLogEntry>> DnsQueryMap;
+    std::map<unsigned long long, std::shared_ptr<DhcpRequest>> DhcpRequestMap;
 
     FILE *fp = nullptr;
     HostCache &hCache;

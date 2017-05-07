@@ -183,7 +183,7 @@ bool Host::Match(const MatchCondition& mc) {
 		return true;
     }
 	if(Debug) {
-		syslog (LOG_DEBUG, "Host %s did not match condition %s with value %s from position %lu", value.c_str(), mc.Key.c_str(), mcvalue.c_str(), startpos);
+		syslog (LOG_DEBUG, "Host %s did not match condition %s with value %s from position %zu", value.c_str(), mc.Key.c_str(), mcvalue.c_str(), startpos);
 	}
 	return false;
 }
