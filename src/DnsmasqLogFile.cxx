@@ -83,10 +83,10 @@ bool DnsmasqLogFile::ParseDhcpLine (const std::string line) {
     }
 
 
-	uint64_t querynumber = std::stoll(m.str(1));
+	unsigned long long querynumber = std::stoll(m.str(1));
 	auto dhcpmessage = m.str(2);
 	if(Debug) {
-		syslog(LOG_DEBUG, "DHCP logline for query %lu : %s", querynumber, dhcpmessage.c_str());
+		syslog(LOG_DEBUG, "DHCP logline for query %llu : %s", querynumber, dhcpmessage.c_str());
 	}
 
 	bool cachedQuery =  DhcpRequestMap.find(querynumber) != DhcpRequestMap.end();
@@ -97,7 +97,7 @@ bool DnsmasqLogFile::ParseDhcpLine (const std::string line) {
 		if (not cachedQuery) {
 			DhcpRequestMap[querynumber] = std::make_shared<DhcpRequest>();
 			if(Debug) {
-				syslog(LOG_DEBUG, "creating entry in QueryMap for query number %lu", querynumber);
+				syslog(LOG_DEBUG, "creating entry in QueryMap for query number %llu", querynumber);
 			}
 		}
 		DhcpRequestMap[querynumber]->IpAddress = ack_m.str(1);
@@ -122,11 +122,11 @@ bool DnsmasqLogFile::ParseDhcpLine (const std::string line) {
 		);
 		if (DhcpRequestMap.erase(querynumber) < 1) {
 			if(Debug) {
-				syslog (LOG_WARNING, "Erasing of DHCP requestmap entry for %lu failed", querynumber);
+				syslog (LOG_WARNING, "Erasing of DHCP requestmap entry for %llu failed", querynumber);
 			}
 		}
 		if(Debug) {
-			syslog (LOG_DEBUG, "ParseDhcpLine: Erasing DHCP with querynumber %lu", querynumber);
+			syslog (LOG_DEBUG, "ParseDhcpLine: Erasing DHCP with querynumber %llu", querynumber);
 		}
 	} else {
 		std::smatch vendor_m;
@@ -134,7 +134,7 @@ bool DnsmasqLogFile::ParseDhcpLine (const std::string line) {
 			if (not cachedQuery) {
 				DhcpRequestMap[querynumber] = std::make_shared<DhcpRequest>();
 				if(Debug) {
-					syslog(LOG_DEBUG, "creating entry in QueryMap for query number %lu for DHCP vendor rx", querynumber);
+					syslog(LOG_DEBUG, "creating entry in QueryMap for query number %llu for DHCP vendor rx", querynumber);
 				}
 			}
 			DhcpRequestMap[querynumber]->DhcpVendor = vendor_m.str(1);
@@ -147,7 +147,7 @@ bool DnsmasqLogFile::ParseDhcpLine (const std::string line) {
 				if (not cachedQuery) {
 					DhcpRequestMap[querynumber] = std::make_shared<DhcpRequest>();
 					if(Debug) {
-						syslog(LOG_DEBUG, "creating entry in QueryMap for query number %lu for DHCP Client Provided Name ", querynumber);
+						syslog(LOG_DEBUG, "creating entry in QueryMap for query number %llu for DHCP Client Provided Name ", querynumber);
 					}
 				}
 				DhcpRequestMap[querynumber]->Hostname = client_m.str(1);
@@ -175,7 +175,7 @@ uint32_t DnsmasqLogFile::PruneDhcpRequestMap (bool Force) {
 		auto & dRequest = erasediter->second;
 		if (erasediter->second != nullptr && (Force || dRequest->isExpired())) {
 			if(Debug) {
-				syslog (LOG_DEBUG, "PruneDhcpRequestMap: Erasing DHCP with querynumber %lu as expiration is %ld and now is %ld",
+				syslog (LOG_DEBUG, "PruneDhcpRequestMap: Erasing DHCP with querynumber %llu as expiration is %ld and now is %ld",
 						erasediter->first, dRequest->Expiration_get(), time(nullptr));
 			}
 			DhcpRequestMap.erase(erasediter->first);
@@ -195,14 +195,14 @@ bool DnsmasqLogFile::ParseDnsLine (const std::string line) {
 		return false;
 	}
 
-	uint64_t querynumber = std::stoll(m.str(1));
+	unsigned long long querynumber = std::stoll(m.str(1));
 	auto clientip = m.str(2);
 	auto fqdn = m.str(4);
 	std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
 	auto isfrom = m.str(5);
 	auto ip = m.str(6);
 	if(Debug) {
-		syslog(LOG_DEBUG, "dns_rx matched, query number %lu for DNS client ip %s", querynumber, clientip.c_str());
+		syslog(LOG_DEBUG, "dns_rx matched, query number %llu for DNS client ip %s", querynumber, clientip.c_str());
 	}
 
 	std::string queried_fqdn = fqdn;

@@ -227,7 +227,7 @@ int main(int argc, char** argv) {
 						hC.ExportDeviceProfileMatches(config.DumpFile, true);
 						NextDeviceUpload = time(nullptr) + config.DeviceReportInterval;
 					} else  {
-						syslog(LOG_ERR, "Got some unhandled signal: %ld", res);
+						syslog(LOG_ERR, "Got some unhandled signal: %zu", res);
 					}
 					setup_signal_fd(sfd);
 				} else {
