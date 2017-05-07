@@ -61,7 +61,7 @@ public:
 		dev_rx = std::regex(R"delim(^([^:]?):)delim",
 				std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
 
-		arp_rx = std::regex(R"delim(^(\d\S+)\s+?\S+?\s+?\S+?\s+?\s+?(\S+)\s+?\S+?\W+?\w+?$)delim",
+		arp_rx = std::regex(R"delim(^(\d\S+)\s+?\S+?\s+?\S+?\s+?\s+?(\S+)\s+?\S+?\W+?(\S+?)$)delim",
         	std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
 		getInterfaceIpAddresses();
 	}

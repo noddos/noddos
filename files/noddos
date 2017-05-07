@@ -21,7 +21,7 @@ start_service() {
   uci set dhcp.lan.limit='60'
 
   echo "adding multicast router"
-  route add -net 224.0.0.0 netmask 224.0.0.0 dev br-lan
+  route add -net 224.0.0.0 netmask 240.0.0.0 dev br-lan
 
   echo "Adding firewall rule to allow IGMP from LAN"
   #uci set firewall.@rule[2]=rule
