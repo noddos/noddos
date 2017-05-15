@@ -59,9 +59,11 @@ target_link_libraries(HostCache_test curl ssl crypto)
 
 
 add_test (DeviceProfile DeviceProfile_test)
-add_executable(DeviceProfile_test DeviceProfile_test.cxx)
+add_executable(DeviceProfile_test DeviceProfile_test.cxx HostCache.cxx Host.cxx
+	SsdpServer.cxx DnsmasqLogFile.cxx DnsLogEntry.cxx)
+target_link_libraries(DeviceProfile_test curl ssl crypto)
 
-add_test (DnsmasqLogFile DnsmasqLogFile_test HostCache.cxx)
+add_test (DnsmasqLogFile DnsmasqLogFile_test)
 add_executable(DnsmasqLogFile_test DnsmasqLogFile_test.cxx DnsmasqLogFile.cxx
     HostCache.cxx Host.cxx DnsLogEntry.cxx SsdpServer.cxx SsdpLocation.cxx
     opensslfingerprint.cxx)

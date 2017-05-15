@@ -90,7 +90,7 @@ public:
 	bool AddSsdpInfo (const std::shared_ptr<SsdpHost> insHost);
 
 	std::shared_ptr<Host> FindOrCreateHostByIp (const std::string ip, const std::string Uuid = "");
-	std::shared_ptr<Host> FindOrCreateHostByMac (const std::string mac, const std::string Uuid = "");
+	std::shared_ptr<Host> FindOrCreateHostByMac (const std::string mac, const std::string Uuid = "", const std::string inIp = "");
 
 	uint32_t Prune (bool Force = false);
 

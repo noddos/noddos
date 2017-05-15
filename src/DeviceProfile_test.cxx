@@ -28,7 +28,12 @@
 using nlohmann::json;
 
 
+#include "noddos.h"
 #include "DeviceProfile.h"
+#include "HostCache.h"
+#include "DnsmasqLogFile.h"
+
+static std::string deviceprofilesfile = "tests/DeviceProfiles.json";
 
 int main()
 {
@@ -51,5 +56,20 @@ int main()
 	if (invalid) {
 		exit (1);
     }
+	HostCache hc(true);
+	hc.AddByMac ("00:00:00:00:00:01", "192.168.1.232");
+	hc.AddByMac ("00:00:00:00:00:02", "192.168.1.98");
+	hc.AddByMac ("00:00:00:00:00:03", "192.168.1.99");
+	hc.AddByMac ("00:00:00:00:00:04", "192.168.1.235");
+	hc.AddByMac ("00:00:00:00:00:05", "192.168.1.241");
+	hc.AddByMac ("00:00:00:00:00:06", "192.168.1.251");
+	hc.AddByMac ("00:00:00:00:00:07", "192.168.1.234");
+	hc.AddByMac ("00:00:00:00:00:08", "192.168.1.240");
+	hc.AddByMac ("00:00:00:00:00:09", "192.168.1.238");
+	hc.AddByMac ("00:00:00:00:00:10", "192.168.1.234");
+	hc.DeviceProfiles_load(deviceprofilesfile);
+	DnsmasqLogFile d ("tests/dnsmasqdnsdata.log", hc, 86400);
+	hc.Match();
+
 	exit(0);
 }

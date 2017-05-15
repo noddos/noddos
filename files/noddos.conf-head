@@ -1,0 +1,16 @@
+{
+    "DeviceProfilesFile": "/var/lib/noddos/DeviceProfiles.json",
+    "MatchFile": "/etc/noddos/DeviceMatches.json",
+    "DumpFile": "/tmp/DeviceDump.json",
+    "ClientApiCertFile": "/etc/noddos/noddosapiclient.pem",
+    "ClientApiKeyFile": "/etc/noddos/noddosapiclient.key",
+    "SignatureCertFile": "/etc/noddos/noddossignature.pem",
+    "PidFile": "/var/lib/noddos/noddos.pid",
+    "DnsmasqLogFile": "/tmp/dnsmasq.log",
+    "ListenIpAddresses": [],
+    "ListenInterfaces": [],
+    "DeviceReportInterval": 14400,
+    "ExpireDnsQuery": 86400,
+    "ExpireHost": 31536000,
+    "UploadMode": "Anonymous",
+

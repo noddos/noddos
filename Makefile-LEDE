@@ -55,7 +55,7 @@ whitelisted flows, noddos can optionally upload anonimized traffic statistics fo
 endef
 
 define Package/noddos/conffiles
-	noddos.conf
+	noddos.conf-base
 	noddosconfig.pem
 endef
 
@@ -95,17 +95,25 @@ define Package/noddos/install
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/noddos $(1)/usr/sbin/
 	$(INSTALL_BIN) ./tools/getnoddosdeviceprofiles $(1)/usr/bin
 	$(INSTALL_BIN) ./tools/makenoddoscert.sh $(1)/usr/bin
-	$(INSTALL_BIN) ./files/noddos.conf $(1)/etc/noddos
+	$(INSTALL_BIN) ./files/noddos.conf-base $(1)/etc/noddos
 	$(INSTALL_BIN) ./files/noddosconfig.pem $(1)/etc/noddos
-	#$(INSTALL_BIN) ./files/uci/noddos $(1)/etc/config
 	$(INSTALL_BIN) ./files/noddos $(1)/etc/init.d
+    $(INSTALL_BIN) ./files/clientdetails $(1)/www/cgi-bin
+    $(INSTALL_BIN) ./files/noddos.lua $(1)/usr/lib/lua/luci/model/cbi/admin_network
+    $(INSTALL_BIN) ./files/clients.htm $(1)/usr/lib/lua/luci/view/admin_status
+	$(INSTALL_BIN) ./files/dkjson.lua $(1)/usr/lib/lua
 	$(1)/usr/bin/makenoddoscert.sh
 endef
 
 define Package/noddos/postinst
 	#!/bin/bash
-	echo "Downloading and validating Device Profiles"
-	$(1)/usr/bin/getnoddosdeviceprofiles -c $(1)/etc/noddos/noddosconfig.pem
+	#echo "Downloading and validating Device Profiles"
+	#$(1)/usr/bin/getnoddosdeviceprofiles -c $(1)/etc/noddos/noddosconfig.pem
+
+	if [ ! -f /etc/config/noddo]; then
+		echo 'config noddos' >/etc/config/noddos
+		echo '        option upload '1' >>/etc/config/noddos
+	fi
 	cd $(1)/etc/noddos
 	# Creating a client certificate
 	$(1)/usr/bin/makenoddoscert.sh

@@ -93,7 +93,7 @@ bool HostCache::MatchByIpAddress(const std::string inIpAddress) {
 	return false;
 }
 
-std::shared_ptr<Host> HostCache::FindOrCreateHostByMac (const std::string inMac, const std::string Uuid) {
+std::shared_ptr<Host> HostCache::FindOrCreateHostByMac (const std::string inMac, const std::string Uuid, const std::string inIp) {
 	if (WhitelistedNodes.find(inMac) != WhitelistedNodes.end()) {
 		return nullptr;
     }
@@ -108,31 +108,32 @@ std::shared_ptr<Host> HostCache::FindOrCreateHostByMac (const std::string inMac,
 			syslog(LOG_DEBUG, "Adding new Host with MAC address %s", Mac.c_str());
 		}
 		auto h = std::make_shared<Host>(Mac, Uuid, Debug);
+		h->IpAddress_set (inIp);
 		hC[Mac] = h;
 		return h;
 	}
 	return hC[Mac];
 }
 
-std::shared_ptr<Host> HostCache::FindOrCreateHostByIp (const std::string ip, const std::string Uuid) {
-	if (WhitelistedNodes.find(ip) != WhitelistedNodes.end()) {
+std::shared_ptr<Host> HostCache::FindOrCreateHostByIp (const std::string inIp, const std::string Uuid) {
+	if (WhitelistedNodes.find(inIp) != WhitelistedNodes.end()) {
 		return nullptr;
     }
 	std::string MacAddress;
-	auto it = Ip2MacMap.find(ip);
+	auto it = Ip2MacMap.find(inIp);
 	if ( it == Ip2MacMap.end()) {
-		MacAddress = MacLookup(ip);
+		MacAddress = MacLookup(inIp);
 		if (MacAddress == "") {
 			if (Debug) {
-				syslog(LOG_DEBUG, "Couldn't find ARP entry for %s", ip.c_str());
+				syslog(LOG_DEBUG, "Couldn't find ARP entry for %s", inIp.c_str());
 			}
 			return nullptr;
 		}
-		Ip2MacMap[ip] = MacAddress;
+		Ip2MacMap[inIp] = MacAddress;
 	} else {
 		MacAddress = it->second;
 	}
-	return FindOrCreateHostByMac (MacAddress, Uuid);
+	return FindOrCreateHostByMac (MacAddress, Uuid, inIp);
 }
 
 bool HostCache::AddByMac (const std::string inMacAddress, const std::string inIpAddress) {
@@ -186,7 +187,7 @@ bool HostCache::AddDhcpRequest (const std::shared_ptr<DhcpRequest> inDhcpRequest
 
 	std::shared_ptr<Host> h;
 	if (inDhcpRequest_sptr->MacAddress != "") {
-		h = FindOrCreateHostByMac(inDhcpRequest_sptr->MacAddress);
+		h = FindOrCreateHostByMac(inDhcpRequest_sptr->MacAddress, "", inDhcpRequest_sptr->IpAddress);
 	} else {
 		h = FindOrCreateHostByIp(inDhcpRequest_sptr->IpAddress);
 	}
@@ -210,7 +211,7 @@ bool HostCache::AddDhcpRequest (const std::string IpAddress, const std::string M
 
 	std::shared_ptr<Host> h;
 	if (MacAddress != "") {
-		h = FindOrCreateHostByMac(MacAddress);
+		h = FindOrCreateHostByMac(MacAddress, "", IpAddress);
 	} else {
 		h = FindOrCreateHostByIp(IpAddress);
 	}
@@ -528,11 +529,11 @@ uint32_t HostCache::RestApiCall (const std::string api, const json &j, const std
 			// 'always' disabled as this logs to STDOUT, which is normally closed
 			ret = curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 		}
-	    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
-	    curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &elapsed);
 
 
 	    curl_easy_perform(curl);
+	    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+	    curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &elapsed);
 	    curl_slist_free_all(hlist);
 	    curl_easy_cleanup(curl);
 	    curl = NULL;
@@ -654,6 +655,15 @@ bool HostCache::ImportDeviceInfo (json &j) {
 	if (Debug) {
 		syslog(LOG_DEBUG, "Importing Device Profile for UUID %s with MacAddress %s", DeviceProfileUuid.c_str(), MacAddress.c_str());
 	}
+	std::string IpAddress = "";
+	if (j.find("Ipv4Address") == j.end()) {
+		if (j["Ipv4Address"].is_string()) {
+			IpAddress != j["IpAddress"].get<std::string>();
+		}
+	}
+	if (Debug) {
+		syslog(LOG_DEBUG, "Importing Device Profile for UUID %s with MacAddress %s", DeviceProfileUuid.c_str(), MacAddress.c_str());
+	}
 
 	auto hit = hC.find(MacAddress);
 	if (hit != hC.end()) {
@@ -663,12 +673,13 @@ bool HostCache::ImportDeviceInfo (json &j) {
 			return false;
 		}
 	}
-	if (not FindOrCreateHostByMac(MacAddress, DeviceProfileUuid)) {
+	if (not FindOrCreateHostByMac(MacAddress, DeviceProfileUuid, IpAddress)) {
 		syslog(LOG_WARNING, "Failed to create Host with MacAddress %s and uuid %s", MacAddress.c_str(), DeviceProfileUuid.c_str());
 		return false;
 	}
 	return true;
 }
+
 uint32_t HostCache::DeviceProfiles_load(const std::string filename) {
 	if (Debug) {
 		syslog(LOG_DEBUG, "Opening & reading %s", filename.c_str());

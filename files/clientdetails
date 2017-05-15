@@ -1,0 +1,79 @@
+#!/usr/bin/lua
+
+require "nixio.fs"
+
+print ("Content-type: Text/html\n")
+local info = os.getenv("QUERY_STRING")
+if info == nil or info == "" then
+	info = "mac=00:1d:c0:63:4a:a4"
+end 
+
+local params = {}
+local echo = {}
+
+function print_row(key)
+	print ("<tr><th>")
+	print (key)
+	print ("</th><td>")
+	print (device[key])
+	print ("</td></tr>")
+end
+
+for name, value in string.gmatch(info .. '&', '(.-)%=(.-)%&') do
+    value = string.gsub(value , '%+', ' ')
+    value = string.gsub(value , '%%(%x%x)', function(dpc)
+        return string.char(tonumber(dpc,16))
+		end )
+	params[name] = value
+
+    value = string.gsub(value, "%&", "&amp;")
+    value = string.gsub(value, "%<", "&lt;")
+    value = string.gsub(value, '%"', "&quot;")
+    echo[name] = value
+end
+
+device = {}
+profile = {}
+
+if nixio.fs.access("/tmp/DeviceDump.json") then
+        io.input("/tmp/DeviceDump.json")
+        local t = io.read("*all")
+        local json = require "dkjson"
+        local devdump = json.decode(t)
+        for i, v in ipairs(devdump) do
+				if v.MacAddress == params["mac"] then
+                        device = v
+                end
+        end
+        io.input("/var/lib/noddos/DeviceProfiles.json")
+        t = io.read("*all")
+        local temp = json.decode(t)
+        for i, v in ipairs(temp) do
+                if device.DeviceProfileUuid == v.DeviceProfileUuid then
+                        profile = v
+                end
+        end
+end
+pagetop = [[<html><head><title>A Web page in Lua</title></head>
+<body text=blue><h1>Client Details</h1>
+Client Details <br><br>
+]]
+print (pagetop)
+
+if params["mac"] ~= nil then
+	print ("<table>")
+	for i, key in ipairs{"MacAddress", "Ipv4Address", "Ipv6Address", "DeviceProfileUuid","DhcpHostname","DhcpVendor","Hostname", "SsdpFriendlyName","SsdpLocation", "SsdpManufacturer","SsdpModelName","SsdpModelUrl","SsdpSerialNumber","SsdpServer","SsdpUserAgent", "DnsQueries"} do
+		print_row(key)
+	end
+	print ("</table>")
+else 
+	print ("no mac address specified")
+end
+
+pagebase = [[<br><br>
+Client Details page in Lua for
+<a href=http://www.noddos.io>Noddos</a> &copy; 2017
+</body></html>
+]]
+
+print (pagebase)

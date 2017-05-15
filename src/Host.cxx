@@ -1,5 +1,4 @@
 /*
-   Copyright 2017 Steven Hessing
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -164,6 +163,11 @@ bool Host::Match(const MatchCondition& mc) {
 		value = Ssdp.Server;
 	} else if (mc.Key == "SsdpLocation") {
 		value = Ssdp.Location;
+	}
+	if (value == "") {
+		if(Debug) {
+			syslog(LOG_DEBUG, "Host %s has no value for MustMatch condition %s", MacAddress.c_str(), mc.Key.c_str());
+		}
 	}
 	size_t startpos = 0;
 	size_t mcvaluelength = mc.Value.length();

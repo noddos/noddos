@@ -37,7 +37,7 @@ using json = nlohmann::json;
 
 int main () {
 
-	openlog("Host_test", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
+	openlog("HostCache_test", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
 	HostCache hC(true);
 	// hC.DeviceProfiles_load(deviceprofilesfile);
 	hC.AddByMac ("00:00:00:00:00:03", "192.168.1.99");
