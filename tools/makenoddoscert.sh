@@ -15,11 +15,14 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+CURDIR=$CWD
+cd /etc/noddos
+
 openssl req \
     -x509 \
     -newkey rsa:4096 \
     -keyout noddosapiclient.pem \
-    -out noddosapiclient.pem \
+    -out noddosapiclient.key \
     -days 3650 \
     -nodes \
     -subj "/C=US/ST=noddosclientcert/L=Somewhere/O=Noddos/CN=client@noddos.io"  
@@ -28,3 +31,5 @@ fingerprint=$(openssl x509 -noout -in noddosapiclient.pem -fingerprint 2>/dev/nu
      sed 's|SHA1 Fingerprint=||' | tr -d ':')
 
 echo "Certificate fingerprint " $fingerprint
+
+cd $CWD

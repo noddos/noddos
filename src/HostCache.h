@@ -27,8 +27,6 @@
 #include <memory>
 #include <unordered_set>
 
-// #include "cpr/cpr.h"
-
 #include "Host.h"
 #include "DeviceProfile.h"
 #include "Config.h"
@@ -52,6 +50,9 @@ private:
 
 public:
 	HostCache(const uint32_t inFlowExpiration = FLOWDEFAULTEXPIRATION, const bool inDebug = false): Debug{inDebug} {
+		if (Debug) {
+			syslog (LOG_DEBUG, "Initializing HostCache instance");
+		}
 		if (inFlowExpiration == 0) {
 			// Stats upload is disabled so we set a reasonable default to expire the flow cache
 			FlowExpiration = FLOWDEFAULTEXPIRATION;
@@ -72,6 +73,7 @@ public:
 	}
 
 	uint32_t DeviceProfiles_load(const std::string filename);
+	const DeviceProfileMap & DeviceProfiles_getmap() { return dpMap; };
 
 	uint32_t Whitelists_set (const std::unordered_set<std::string>& inIpv4Addresses, const std::unordered_set<std::string>& inIpv6Addresses, const std::unordered_set<std::string>& inMacAddresses);
 	bool isWhitelisted(std::string inAddress) { return (WhitelistedNodes.find(inAddress) != WhitelistedNodes.end()); }
@@ -89,7 +91,9 @@ public:
 	bool AddDhcpRequest (const std::string IpAddress, const std::string MacAddress, const std::string Hostname, const std::string DhcpHostname, const std::string DhcpVendor);
 	bool AddSsdpInfo (const std::shared_ptr<SsdpHost> insHost);
 
+	std::shared_ptr<Host> FindHostByIp (const std::string inIp);
 	std::shared_ptr<Host> FindOrCreateHostByIp (const std::string ip, const std::string Uuid = "");
+	std::shared_ptr<Host> FindHostByMac (const std::string inMac);
 	std::shared_ptr<Host> FindOrCreateHostByMac (const std::string mac, const std::string Uuid = "", const std::string inIp = "");
 
 	uint32_t Prune (bool Force = false);
@@ -100,10 +104,10 @@ public:
 	uint32_t getInterfaceIpAddresses();
 
 	uint32_t RestApiCall (const std::string api, const json &j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile);
-	bool ExportDeviceProfileMatches(const std::string filename, const bool detailed = false);
 	uint32_t UploadDeviceStats(const std::string ClientApiCertFile, const std::string ClientApiKeyFile);
 	bool UploadTrafficStats(const time_t interval, const bool ReportRfc1918, const std::string ClientApiCertFile, const std::string ClientApiKeyFile);
-	bool ImportDeviceProfileMatches(const std::string filename);
+	uint32_t ImportDeviceProfileMatches(const std::string filename);
+	bool ExportDeviceProfileMatches(const std::string filename, const bool detailed = false);
 	bool ImportDeviceInfo (json &j);
 
 	uint32_t HostCount() { return hC.size(); }

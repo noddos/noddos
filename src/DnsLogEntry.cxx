@@ -32,13 +32,12 @@ uint32_t DnsLogEntry::DnsStats (json & j, const uint32_t time_interval) {
 		return dnsentries;
     }
 
-	std::forward_list<std::string> l;
+	j["DnsQueries"][Fqdn] = json::array();
 	for (auto &ip: Ips) {
 		dnsentries++;
-		l.push_front(ip.first);
+		j.push_back(ip.first);
 	}
 
-	j["DnsQueries"][Fqdn] = l;
 	return dnsentries;
 }
 

@@ -35,19 +35,26 @@ using json = nlohmann::json;
 
 // static std::string deviceprofilesfile = "tests/DeviceProfiles.json";
 
+bool do_dpimport_test();
+
 int main () {
+	bool testfailure = false;
 
 	openlog("HostCache_test", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
-	HostCache hC(true);
+
+	if (do_dpimport_test() == false) {
+		std::cout << "Test failure: do_dpimport_test" << std::endl;
+		testfailure = true;
+	}
+	HostCache hC(0,true);
 	// hC.DeviceProfiles_load(deviceprofilesfile);
 	hC.AddByMac ("00:00:00:00:00:03", "192.168.1.99");
 
 	std::string s;
-	bool testfailure = false;
 	auto h = hC.FindOrCreateHostByIp("192.168.1.99");
 	if ((s = h->MacAddress_get()) != "00:00:00:00:00:03") {
 		testfailure = true;
-		std::cout << "Mac lookup failure for 192.168.1.99 resulting in: " << s << std::endl;
+		std::cout << "Test failure: Mac lookup failure for 192.168.1.99 resulting in: " << s << std::endl;
 	}
 	// Test only makes sense on local LAN, not in CI
 	// if ((s = hC.MacLookup("192.168.1.1",1)) != "f4:f2:6d:70:77:7c") {
@@ -56,7 +63,7 @@ int main () {
 	// }
 	if ((s = hC.MacLookup("99.99.99.99",1)) != "") {
 		testfailure = true;
-		std::cout << "Mac lookup failure for 99.99.99.99 resulting in: " << s << std::endl;
+		std::cout << "Test failure: Mac lookup failure for 99.99.99.99 resulting in: " << s << std::endl;
 	}
 	// Test only makes sense on local LAN, not in CI
 	// if ((s = hC.MacLookup("192.168.1.240", "enp0s31f6")) == "00:01:2e:6f:e0:f3") {
@@ -65,15 +72,25 @@ int main () {
 	//	std::cout << "Mac lookup failure for 192.168.1.240 resulting in: " << s << std::endl;
 	//	testfailure = true;
 	//}
-    std::ifstream ifs("tests/v1-uploadstats");
-    std::stringstream body;
-    body << ifs.rdbuf();
-    ifs.close();
-    auto j = json::parse(body);
-    hC.RestApiCall("v1/uploadstats", j, "tests/noddosapiclient.pem", "tests/noddosapiclient.key");
+
 	if (testfailure) {
+		std::cout << "Existing with test failure" << std::endl;
 		exit(1);
     }
+	std::cout << "Tests passed!" << std::endl;
 	exit(0);
 }
+
+bool do_dpimport_test() {
+	HostCache hC(0, true);
+	auto  matches = hC.ImportDeviceProfileMatches("tests/DeviceMatches.json");
+	if (matches != 9) {
+		std::cout << "Test failure: Expected 9 imported device profiles but got " << matches << std::endl;
+		return false;
+	} else {
+		std::cout << "Imported device matches " << matches << std::endl;
+	}
+	return true;
+}
+
 

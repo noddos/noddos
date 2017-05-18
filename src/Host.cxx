@@ -253,7 +253,7 @@ bool Host::DeviceStats(json& j, const uint32_t time_interval, bool force, bool d
 	return true;
 }
 
-bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportRfc1918, const std::unordered_set<std::string> &LocalIps, bool force) {
+bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportPrivateAddresses, const std::unordered_set<std::string> &LocalIps, bool force) {
 	if (not isMatched()) {
 		return false;
 	}
@@ -269,7 +269,7 @@ bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportRfc19
 	std::unordered_set<std::string> endpoints;
 	for (auto &fc: FlowCache) {
 		std::string ip = fc.first;
-		if (ReportRfc1918 || not inRfc1918(ip)) {
+		if (ReportPrivateAddresses || not inPrivateAddressRange(ip)) {
 			for (auto &fe : *(fc.second)) {
 				if(fe->Fresh(interval)) {
 					auto it = allIps.find(ip);
@@ -292,7 +292,14 @@ bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportRfc19
 	return false;
 }
 
-bool Host::inRfc1918(const std::string ip ) {
+bool Host::inPrivateAddressRange(const std::string inIp ) {
+	if (inIp.find(':') != std::string::npos) {
+		// IPv6 address
+		std::string ip = inIp;
+		std::transform(ip.begin(), ip.end(), ip.begin(), ::tolower);
+		return ip.substr(0,2) == "fd";
+	}
+	// IPv4 Address
 	uint32_t Rfc1918_10start = ntohl(10);
 	uint32_t Rfc1918_10end = ntohl(4294967050);
 	uint32_t Rfc1918_172start = ntohl(4268);
@@ -301,8 +308,9 @@ bool Host::inRfc1918(const std::string ip ) {
 	uint32_t Rfc1918_192end = ntohl(4294944960);
 	struct sockaddr_in sa;
 	char str[INET_ADDRSTRLEN];
-	inet_pton(AF_INET, ip.c_str(), &(sa.sin_addr));
+	inet_pton(AF_INET, inIp.c_str(), &(sa.sin_addr));
 	uint32_t ip_int = ntohl(sa.sin_addr.s_addr);
+
 	return
 		(Rfc1918_10start <= ip_int && ip_int <= Rfc1918_10end) ||
 		(Rfc1918_172start <= ip_int && ip_int <= Rfc1918_172end) ||
