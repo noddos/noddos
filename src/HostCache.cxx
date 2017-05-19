@@ -566,10 +566,10 @@ uint32_t HostCache::RestApiCall (const std::string api, const json &j, const std
 		if(ret) {
 			syslog (LOG_ERR, "Curl setopt CURLOPT_TCP_KEEPALIVE returned %d", ret);
 		}
-		ret = curl_easy_setopt(curl, CURLOPT_TCP_FASTOPEN, 1L);
-		if(ret) {
-			syslog (LOG_ERR, "Curl setopt CURLOPT_WRITEFUNCTION returned %d", ret);
-		}
+		// ret = curl_easy_setopt(curl, CURLOPT_TCP_FASTOPEN, 1L);
+		// if(ret) {
+		// 	syslog (LOG_ERR, "Curl setopt CURLOPT_WRITEFUNCTION returned %d", ret);
+		// }
 		ret = curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, (long) 5000);
 		if(ret) {
 			syslog (LOG_ERR, "Curl setopt CURLOPT_TIMEOUT_MS returned %d", ret);
