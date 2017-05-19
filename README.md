@@ -92,6 +92,11 @@ Install a cronjob to have Noddos save the data it has collected so that the Luci
 	crontab -e
 	*/15 * * * * kill -SIGUSR2 $(cat /var/lib/noddos/noddos.pid)
 
+We're telling dnsmasq to create some log files that can pretty big so we want to wipe them daily:
+
+	crontab -e
+	21 4 * * * echo -n "" >/tmp/dnsmasq.log; /etc/init.d/dnsmasq reload
+
 ### Installation for Linux DIY routers
 Sorry, there are no packages yet for Ubuntu / Fedora / CentOS / Gentoo. For now, just compile it from source.
 

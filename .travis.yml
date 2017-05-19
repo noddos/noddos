@@ -19,5 +19,5 @@ script:
   - cd src
   - cmake .
   - make 
-  - DeviceProfile_test
+  - ./DeviceProfile_test
   - make test
