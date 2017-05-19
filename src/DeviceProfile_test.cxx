@@ -93,7 +93,7 @@ int main()
 	// testfailed |= test_match ("192.168.1.243", "7b50c7cd-d7b9-40ad-980d-0b520ad3d05e", hc);
 	// testfailed |= test_match ("192.168.1.229", "b2e13a63-c40b-4448-b524-3c2852bc1cb7", hc);
 	// testfailed |= test_match ("192.168.1.227", "2ae4a61f-75f7-481f-b28c-e3534ee1e04b", hc);
-	testfailed |= test_match ("192.168.1.226", "76905373-748b-4e25-a550-296b3e1c7086", hc);
+	// testfailed |= test_match ("192.168.1.226", "76905373-748b-4e25-a550-296b3e1c7086", hc);
 	// testfailed |= test_match ("192.168.1.224", "76905373-748b-4e25-a550-296b3e1c7086", hc);
 	if (testfailed) {
 		exit (1);
