@@ -554,10 +554,11 @@ uint32_t HostCache::RestApiCall (const std::string api, const json &j, const std
 		if(ret) {
 			syslog (LOG_ERR, "Curl setopt CURLOPT_HTTPHEADER returned %d", ret);
 		}
-		ret = curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0);
-		if(ret) {
-			syslog (LOG_ERR, "Curl setopt CURLOPT_WRITEFUNCTION returned %d", ret);
-		}
+		// libcurl on lede 17.01.1 doesn't support HTTP/2.0
+		// ret = curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0);
+		// if(ret) {
+		//	syslog (LOG_ERR, "Curl setopt CURLOPT_HTTP_VERSION returned %d", ret);
+		// WRITEFUNCTION}
 		ret = curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 0L);
 		if(ret) {
 			syslog (LOG_ERR, "Curl setopt CURLOPT_MAXREDIRS returned %d", ret);

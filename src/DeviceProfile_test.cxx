@@ -80,21 +80,23 @@ int main()
 	hc.AddByMac ("00:00:00:00:00:21", "192.168.1.227");
 	hc.AddByMac ("00:00:00:00:00:22", "192.168.1.226");
 	hc.AddByMac ("00:00:00:00:00:23", "192.168.1.248");
+	hc.AddByMac ("00:00:00:00:00:24", "192.168.1.243");
+	hc.AddByMac ("00:00:00:00:00:25", "192.168.1.229");
 	hc.DeviceProfiles_load(deviceprofilesfile);
 	DnsmasqLogFile d ("tests/dnsmasqmatchdata.log", hc, 86400, true);
 
 
 	// pending good test data for dnsmasq.log that allows the matching of most of these.
-	// testfailed |= test_match ("192.168.1.235", "694e8c7e-69f0-400f-824d-b94af7c7b7cc", hc);
-	// testfailed |= test_match ("192.168.1.244", "dff464bf-c954-43d2-8b5a-87ef4b632da5", hc);
-	// testfailed |= test_match ("192.168.1.251", "6e617357-5a44-4f5a-8675-5ecba34055be", hc);
-	// testfailed |= test_match ("192.168.1.248", "7d8f2ed0-38f9-455d-a816-89a1daeb6ae2", hc);
-	// testfailed |= test_match ("192.168.1.225", "5ec4dd66-22ee-4cd6-beed-fa4fdfd38c34", hc);
-	// testfailed |= test_match ("192.168.1.243", "7b50c7cd-d7b9-40ad-980d-0b520ad3d05e", hc);
-	// testfailed |= test_match ("192.168.1.229", "b2e13a63-c40b-4448-b524-3c2852bc1cb7", hc);
-	// testfailed |= test_match ("192.168.1.227", "2ae4a61f-75f7-481f-b28c-e3534ee1e04b", hc);
-	// testfailed |= test_match ("192.168.1.226", "76905373-748b-4e25-a550-296b3e1c7086", hc);
-	// testfailed |= test_match ("192.168.1.224", "76905373-748b-4e25-a550-296b3e1c7086", hc);
+	testfailed |= ! test_match ("192.168.1.235", "694e8c7e-69f0-400f-824d-b94af7c7b7cc", hc);
+	testfailed |= ! test_match ("192.168.1.244", "dff464bf-c954-43d2-8b5a-87ef4b632da5", hc);
+	testfailed |= ! test_match ("192.168.1.251", "6e617357-5a44-4f5a-8675-5ecba34055be", hc);
+	// testfailed |= ! test_match ("192.168.1.248", "7d8f2ed0-38f9-455d-a816-89a1daeb6ae2", hc);
+	// testfailed |= ! test_match ("192.168.1.225", "5ec4dd66-22ee-4cd6-beed-fa4fdfd38c34", hc);
+	// testfailed |= ! test_match ("192.168.1.243", "7b50c7cd-d7b9-40ad-980d-0b520ad3d05e", hc);
+	// testfailed |= ! test_match ("192.168.1.229", "b2e13a63-c40b-4448-b524-3c2852bc1cb7", hc);
+	// testfailed |= ! test_match ("192.168.1.227", "2ae4a61f-75f7-481f-b28c-e3534ee1e04b", hc);
+	// testfailed |= ! test_match ("192.168.1.226", "76905373-748b-4e25-a550-296b3e1c7086", hc);
+	// testfailed |= ! test_match ("192.168.1.224", "76905373-748b-4e25-a550-296b3e1c7086", hc);
 	if (testfailed) {
 		exit (1);
     }
@@ -106,7 +108,7 @@ bool test_match (std::string inIp, std::string inDpUuid, HostCache &hc) {
 	std::shared_ptr<Host> h_ptr = hc.FindHostByIp(inIp);
 	if (h_ptr == nullptr) {
 		std::cout << "IP address " << inIp << " not found in HostCache" << std::endl;
-		return true;
+		return false;
 	}
 	h_ptr->Match(hc.DeviceProfiles_getmap());
 	std::string uuid = h_ptr->Uuid_get ();
@@ -119,10 +121,10 @@ bool test_match (std::string inIp, std::string inDpUuid, HostCache &hc) {
 		json j;
 		h_ptr->DeviceStats(j, true, true);
 		std::cout << j << std::endl;
-		return true;
+		return false;
 
 	} else {
 		std::cout << inIp << " MATCHED " << inDpUuid << std::endl;
-		return false;
+		return true;
 	}
 }

@@ -92,7 +92,7 @@ uint32_t RestApiCall (const std::string api, const json &j, const std::string Cl
 		// curl_easy_setopt(curl, CURLOPT_SSLCERTTYPE, "PEM");
 		ret = curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_ALL);
 		if(ret) {
-			syslog (LOG_ERR, "Curl setopt CURLOPT_USE_SSL returned %u", ret);
+		 	syslog (LOG_ERR, "Curl setopt CURLOPT_USE_SSL returned %u", ret);
 		}
 		ret = curl_easy_setopt(curl, CURLOPT_SSLCERT, ClientApiCertFile.c_str());
 		if(ret) {
@@ -126,10 +126,11 @@ uint32_t RestApiCall (const std::string api, const json &j, const std::string Cl
 		if(ret) {
 			syslog (LOG_ERR, "Curl setopt CURLOPT_HTTPHEADER returned %d", ret);
 		}
-		ret = curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0);
-		if(ret) {
-			syslog (LOG_ERR, "Curl setopt CURLOPT_WRITEFUNCTION returned %d", ret);
-		}
+		// Curllib version on lede doesn't support HTTP 2.0
+		// ret = curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0);
+		// if(ret) {
+		// 	syslog (LOG_ERR, "Curl setopt CURLOPT_WRITEFUNCTION returned %d", ret);
+		// }
 		ret = curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 0L);
 		if(ret) {
 			syslog (LOG_ERR, "Curl setopt CURLOPT_MAXREDIRS returned %d", ret);
