@@ -45,7 +45,7 @@ bool do_uploadstats() {
 	json j;
 	ifs >> j;
 	ifs.close();
-	auto r = RestApiCall ("v1/uploadstats", j, "/etc/noddos/noddosapiclient.pem", "/etc/noddos/noddosapiclient.key");
+	auto r = RestApiCall ("v1/uploadstats", j, "tests/noddosapiclient.pem", "tests/noddosapiclient.key");
 	std::cout << "Curl result: " << r << std::endl;
 	return r == 201;
 }
@@ -56,7 +56,7 @@ bool do_uploaddevices() {
 	json j;
 	ifs >> j;
 	ifs.close();
-	auto r = RestApiCall ("v1/uploaddevices", j, "/etc/noddos/noddosapiclient.pem", "/etc/noddos/noddosapiclient.key");
+	auto r = RestApiCall ("v1/uploaddevices", j, "tests/noddosapiclient.pem", "tests/noddosapiclient.key");
 	std::cout << "Curl result: " << r << std::endl;
 	return r == 201;
 }
@@ -102,10 +102,10 @@ uint32_t RestApiCall (const std::string api, const json &j, const std::string Cl
 		if(ret) {
 			syslog (LOG_ERR, "Curl setopt CURLOPT_SSLKEY returned %u", ret);
 		}
-		// ret = curl_easy_setopt(curl, CURLOPT_SSL_CIPHER_LIST, "ECDHE-RSA-AES256-GCM-SHA384");
-		// if(ret) {
-		//	syslog (LOG_ERR, "Curl setopt CURLOPT_SSL_CIPHER_LIST returned %d", ret);
-		//}
+		ret = curl_easy_setopt(curl, CURLOPT_SSL_CIPHER_LIST, "ECDHE-RSA-AES256-GCM-SHA384");
+		if(ret) {
+			syslog (LOG_ERR, "Curl setopt CURLOPT_SSL_CIPHER_LIST returned %d", ret);
+		}
 		ret = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, buf);
 		if(ret) {
 			syslog (LOG_ERR, "Curl setopt CURLOPT_POSTFIELDS returned %d", ret);
@@ -126,10 +126,10 @@ uint32_t RestApiCall (const std::string api, const json &j, const std::string Cl
 		if(ret) {
 			syslog (LOG_ERR, "Curl setopt CURLOPT_HTTPHEADER returned %d", ret);
 		}
-		// ret = curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0);
-		// if(ret) {
-		// 	syslog (LOG_ERR, "Curl setopt CURLOPT_WRITEFUNCTION returned %d", ret);
-		// }
+		ret = curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0);
+		if(ret) {
+			syslog (LOG_ERR, "Curl setopt CURLOPT_WRITEFUNCTION returned %d", ret);
+		}
 		ret = curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 0L);
 		if(ret) {
 			syslog (LOG_ERR, "Curl setopt CURLOPT_MAXREDIRS returned %d", ret);
@@ -138,10 +138,10 @@ uint32_t RestApiCall (const std::string api, const json &j, const std::string Cl
 		if(ret) {
 			syslog (LOG_ERR, "Curl setopt CURLOPT_TCP_KEEPALIVE returned %d", ret);
 		}
-		// ret = curl_easy_setopt(curl, CURLOPT_TCP_FASTOPEN, 1L);
-		// if(ret) {
-		// 	syslog (LOG_ERR, "Curl setopt CURLOPT_WRITEFUNCTION returned %d", ret);
-		// }
+		ret = curl_easy_setopt(curl, CURLOPT_TCP_FASTOPEN, 1L);
+		if(ret) {
+			syslog (LOG_ERR, "Curl setopt CURLOPT_WRITEFUNCTION returned %d", ret);
+		}
 		ret = curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, (long) 5000);
 		if(ret) {
 			syslog (LOG_ERR, "Curl setopt CURLOPT_TIMEOUT_MS returned %d", ret);

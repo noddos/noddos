@@ -92,15 +92,19 @@ define Package/noddos/install
 	$(INSTALL_DIR) $(1)/var/lib/noddos
 	#$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_DIR) $(1)/etc/init.d
+	$(INSTALL_DIR) $(1)/usr/lib/lua
+	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/model/cbi
+	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/view/admin_status
+	$(INSTALL_DIR) $(1)/www/cgi-bin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/noddos $(1)/usr/sbin/
 	$(INSTALL_BIN) ./tools/getnoddosdeviceprofiles $(1)/usr/bin
 	$(INSTALL_BIN) ./tools/makenoddoscert.sh $(1)/usr/bin
 	$(INSTALL_BIN) ./files/noddos.conf-base $(1)/etc/noddos
 	$(INSTALL_BIN) ./files/noddosconfig.pem $(1)/etc/noddos
 	$(INSTALL_BIN) ./files/noddos $(1)/etc/init.d
-    $(INSTALL_BIN) ./files/clientdetails $(1)/www/cgi-bin
-    $(INSTALL_BIN) ./files/noddos.lua $(1)/usr/lib/lua/luci/model/cbi/admin_network
-    $(INSTALL_BIN) ./files/clients.htm $(1)/usr/lib/lua/luci/view/admin_status
+	$(INSTALL_BIN) ./files/clientdetails $(1)/www/cgi-bin
+	$(INSTALL_BIN) ./files/noddos.lua $(1)/usr/lib/lua/luci/model/cbi/admin_network
+	$(INSTALL_BIN) ./files/clients.htm $(1)/usr/lib/lua/luci/view/admin_status
 	$(INSTALL_BIN) ./files/dkjson.lua $(1)/usr/lib/lua
 	$(1)/usr/bin/makenoddoscert.sh
 endef
@@ -118,8 +122,8 @@ define Package/noddos/postinst
 	# Creating a client certificate
 	$(1)/usr/bin/makenoddoscert.sh
 	if [ -z "$${IPKG_INSTROOT}" ]; then
-        echo "Enabling rc.d symlink for noddos"
-        cd /etc/rc.d
+		echo "Enabling rc.d symlink for noddos"
+		cd /etc/rc.d
 		/etc/init.d/noddos enable
 	fi
 	echo "Adding dnsmasq configuration settings for noddos: logdhcp, logqueries, logfile"

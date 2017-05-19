@@ -47,12 +47,33 @@ After restart, there should be a /tmp/dnsmasq.log file
 
 	service dnsmasq restart
 
-Download the package and install it
+We need to modify the menu structure of the Luci web interface to point to the Noddos Client and Configuration pages. First edit the file /usr/lib/lua/luci/view/admin_status. Insert on line 14:
 
-	wget <package-url>
+	if nixio.fs.access("/etc/config/noddos") then
+    	entry({"admin", "status", "clients"}, template("admin_status/clients"), _("Clients"), 3)
+    end
+
+Then edit /usr/lib/lua/luci/controller/admin/network.lua, insert on line l15:
+
+    if nixio.fs.access("/etc/config/noddos") then
+        page = entry({"admin", "network", "noddos"}, cbi("admin_network/noddos"), nil)
+        page.target = cbi("admin_network/noddos")
+        page.title = _("Client Firewall")
+        page.order = 55
+        page.leaf = true
+    end
+
+To make sure Luci picks up the menu and module changes, execute:
+
+	rm /tmp/luci-modulecache 
+    rm /tmp/luci-indexcache
+
+Now we can install the actual Noddos package you can download from the releases menu on Github
+
+	wget <noddos-package-url-on-github>
 	opkg install <package>
 
-Edit /etc/noddos/noddos.conf to add whitelisted hosts. Make sure to include the WAN and LAN IP- or MAC-addresses of your router. You may also want to include addresses of your PCs that you use daily as collecting traffic statistics for them is of no much use with the traffic they generate to so many destinations. You may also want to add the MAC addresses of phones or tablets. For more information, see the section below on the Noddos configuration file.
+Go to the Luci -> Network -> Client Firewall page to configure Noddos. Make sure to include the Loopback, WAN and LAN IP- or MAC-addresses of your router. You may also want to whitelist addresses of your PCs that you use daily as collecting traffic statistics for them is of no much use with the traffic they generate to so many destinations. You may also want to add the MAC addresses of phones or tablets. 
 
 	/etc/init.d/noddos start
 
@@ -61,10 +82,15 @@ Optional: remove odhcp so dnsmasq becomes the DHCP server. That enables noddos t
 	opkg remove odhcp
 	/etc/init.d/dnsmasq restart
 
-Install a cronjob to do this frequently (please pick a randon time of day instead of 3:23am), ie
+Install a cronjob to download the Device Profiles database frequently (please pick a randon minute instead of 23 minutes after the hour, ie
 
-	crontab -e -u noddos
+	crontab -e 
     	23 */3 * * * /usr/bin/getnoddosdeviceprofiles
+
+Install a cronjob to have Noddos save the data it has collected so that the Luci -> Status -> Clients page can provide an overview:
+
+	crontab -e
+	*/15 * * * * kill -SIGUSR2 $(cat /var/lib/noddos/noddos.pid)
 
 ### Installation for Linux DIY routers
 Sorry, there are no packages yet for Ubuntu / Fedora / CentOS / Gentoo. For now, just compile it from source.
