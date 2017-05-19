@@ -42,7 +42,7 @@ int main()
 	openlog("DnsmasqLogFile_test", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
 	bool testfailed = false;
 	std::map<std::string, std::shared_ptr<DeviceProfile>> DeviceProfiles;
-	std::ifstream ifs("tests/DeviceProfiles.json");
+	std::ifstream ifs(deviceprofilesfile);
 	json j;
 	ifs >> j;
 	for (json::iterator it = j.begin(); it != j.end(); ++it) {

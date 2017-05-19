@@ -733,7 +733,7 @@ bool HostCache::ImportDeviceInfo (json &j) {
 	std::string IpAddress = "";
 	if (j.find("Ipv4Address") != j.end()) {
 		if (j["Ipv4Address"].is_string()) {
-			IpAddress = j["IpAddress"].get<std::string>();
+			IpAddress = j["Ipv4Address"].get<std::string>();
 		}
 	}
 	if (Debug == true) {
