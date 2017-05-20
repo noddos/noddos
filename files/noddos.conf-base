@@ -7,18 +7,9 @@
     "SignatureCertFile": "/etc/noddos/noddossignature.pem",
     "PidFile": "/var/lib/noddos/noddos.pid",
     "DnsmasqLogFile": "/tmp/dnsmasq.log",
-    "WhitelistedIpv4Addresses": [
-        "127.0.0.1" 
-    ],
-    "WhitelistedIpv6Addresses": [],
-    "WhitelistedMacAddresses": [ ],
-    "ReportTrafficToRfc1918": false,
     "ListenIpAddresses": [],
     "ListenInterfaces": [],
-    "TrafficReportInterval": 3600,
     "DeviceReportInterval": 14400,
     "ExpireDnsQuery": 86400,
     "ExpireHost": 604800,
-    "UploadMode": "Anonymous"
-}
-
+    "UploadMode": "Anonymous",

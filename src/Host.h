@@ -71,7 +71,7 @@ class Host : public iCache {
 			IdentifyConfidenceLevel = EnforceConfidenceLevel = ConfidenceLevel::None;
 		}
 
-		Host(const std::string inMacAddress, const std::string inUuid = "", const bool inDebug = false):
+		Host(const std::string inMacAddress, const std::string inUuid, const bool inDebug = false):
 				MacAddress{inMacAddress}, Uuid{inUuid}, Debug{inDebug} {
 			iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);
 			UploadStats = true;

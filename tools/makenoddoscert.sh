@@ -20,7 +20,7 @@ cd /etc/noddos
 
 openssl req \
     -x509 \
-    -newkey rsa:4096 \
+    -newkey rsa:2048 \
     -keyout noddosapiclient.pem \
     -out noddosapiclient.key \
     -days 3650 \

@@ -71,13 +71,15 @@ int main(int argc, char** argv) {
 
 	parse_commandline(argc, argv, debug, flowtrack, configfile, daemon, prune);
 
+	if (daemon) {
+		openlog(argv[0], LOG_NOWAIT | LOG_PID, LOG_UUCP);
+	} else {
+		openlog(argv[0], LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
+	}
 	Config config(configfile, debug);
 
 	if (daemon) {
-		openlog(argv[0], LOG_NOWAIT | LOG_PID, LOG_UUCP);
 		daemonize(config);
-	} else {
-		openlog(argv[0], LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
 	}
 	write_pidfile(config.PidFile);
 

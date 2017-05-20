@@ -392,7 +392,7 @@ bool Host::DnsLogEntry_set(const std::string inFqdn, const std::string inIpAddre
 		DnsCache[inFqdn] = std::make_shared<DnsLogEntry>(inFqdn);
 		newentry = true;
 		if(Debug) {
-			syslog(LOG_DEBUG, "Creating DnsLogEntry for %s", inFqdn.c_str());
+			syslog(LOG_DEBUG, "Creating DnsLogEntry for %s with expiration %lu", inFqdn.c_str(), DnsCache[inFqdn]->Expiration_get());
 		}
 	}
 
@@ -409,6 +409,9 @@ bool Host::Dhcp_set (const std::shared_ptr<DhcpRequest> inDhcp_sptr) {
 
 	Dhcp = *inDhcp_sptr;
 	Dhcp.Expiration_set();
+	if(Debug) {
+		syslog(LOG_DEBUG, "Creating DHCP data for %s with expiration %lu", Dhcp.MacAddress.c_str(), Dhcp.Expiration_get());
+	}
 	return true;
 }
 
@@ -421,6 +424,9 @@ bool Host::Dhcp_set (const std::string IpAddress, const std::string MacAddress, 
 
 	iCache::FirstSeen = iCache::LastModified = iCache::LastSeen = time(nullptr);
 	Dhcp.Expiration_set();
+	if(Debug) {
+		syslog(LOG_DEBUG, "Creating DHCP data for %s with expiration %lu", Dhcp.MacAddress.c_str(), Dhcp.Expiration_get());
+	}
 	return true;
 }
 
@@ -433,7 +439,7 @@ bool Host::SsdpInfo_set(const std::shared_ptr<SsdpHost> insHost) {
 	iCache::LastModified = iCache::LastSeen;
 	Ssdp = *insHost;
 
-	// Information in the SSDP multicast message has changed so if the Location field contains are URL, we query it
+	// Information in the SSDP multicast message has changed so if the Location field contains a URL, we query it
 	if (Ssdp.Location != "") {
 		auto resp = SsdpLocation::Get(Ssdp);
 	}

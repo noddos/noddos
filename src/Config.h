@@ -78,7 +78,7 @@ public:
 		}
 	}
 	bool Load(std::string inConfigFile) {
-		if (Debug) {
+		if (Debug == true) {
 			syslog(LOG_DEBUG, "Opening & reading config file %s", inConfigFile.c_str());
 		}
 		bool configfailure=false;
