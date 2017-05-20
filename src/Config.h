@@ -128,7 +128,7 @@ public:
 				newClientApiCertFile = j["ClientApiCertFile"].get<std::string>();
 			}
 			if (j.count("ClientApiKeyFile")) {
-				newClientApiCertFile = j["ClientApiKeyFile"].get<std::string>();
+				newClientApiKeyFile = j["ClientApiKeyFile"].get<std::string>();
 			}
 			if (j.count("SignatureCertFile")) {
 				newSignatureCertFile = j["SignatureCertFile"].get<std::string>();

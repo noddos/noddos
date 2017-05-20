@@ -496,8 +496,9 @@ uint32_t HostCache::RestApiCall (const std::string api, const json &j, const std
 	std::string body = j.dump();
 	char buf[strlen(body.c_str())+1];
 	strcpy(buf, body.c_str());
-	if (Debug == true) {
+	if (Debug) {
 		syslog (LOG_DEBUG, "Uploading %zu bytes of data to %s", strlen(buf), url.c_str());
+		syslog (LOG_DEBUG, "Upload using cert %s and key %s", ClientApiCertFile.c_str(), ClientApiKeyFile.c_str());
 	}
 
 	struct curl_slist *hlist = NULL;
@@ -520,7 +521,7 @@ uint32_t HostCache::RestApiCall (const std::string api, const json &j, const std
 		// curl_easy_setopt(curl, CURLOPT_SSLCERTTYPE, "PEM");
 		ret = curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_ALL);
 		if(ret) {
-			syslog (LOG_ERR, "Curl setopt CURLOPT_USE_SSL returned %u", ret);
+		 	syslog (LOG_ERR, "Curl setopt CURLOPT_USE_SSL returned %u", ret);
 		}
 		ret = curl_easy_setopt(curl, CURLOPT_SSLCERT, ClientApiCertFile.c_str());
 		if(ret) {
@@ -554,11 +555,11 @@ uint32_t HostCache::RestApiCall (const std::string api, const json &j, const std
 		if(ret) {
 			syslog (LOG_ERR, "Curl setopt CURLOPT_HTTPHEADER returned %d", ret);
 		}
-		// libcurl on lede 17.01.1 doesn't support HTTP/2.0
+		// Curllib version on lede doesn't support HTTP 2.0
 		// ret = curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0);
 		// if(ret) {
-		//	syslog (LOG_ERR, "Curl setopt CURLOPT_HTTP_VERSION returned %d", ret);
-		// WRITEFUNCTION}
+		// 	syslog (LOG_ERR, "Curl setopt CURLOPT_WRITEFUNCTION returned %d", ret);
+		// }
 		ret = curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 0L);
 		if(ret) {
 			syslog (LOG_ERR, "Curl setopt CURLOPT_MAXREDIRS returned %d", ret);
@@ -593,6 +594,7 @@ uint32_t HostCache::RestApiCall (const std::string api, const json &j, const std
 			ret = curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 		}
 
+
 	    ret = curl_easy_perform(curl);
 		if(ret) {
 			syslog (LOG_ERR, "Curl easy_perform returned %d", ret);
@@ -602,10 +604,11 @@ uint32_t HostCache::RestApiCall (const std::string api, const json &j, const std
 	    curl_slist_free_all(hlist);
 	    curl_easy_cleanup(curl);
 	    curl = NULL;
-	    if (Debug == true) {
-	    	syslog (LOG_DEBUG, "Upload resulted in %lu status, data %s", response_code, response_string.c_str());
+	    if (Debug) {
+	    		syslog (LOG_DEBUG, "Upload resulted in %lu status, data %s", response_code, response_string.c_str());
 	    }
 	}
+
 
     if (Debug == true) {
     	std::string file = api;
