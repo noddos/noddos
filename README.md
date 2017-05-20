@@ -1,5 +1,3 @@
-[![Noddos Client Firewall](https://www.noddos.io/assets/images/noddos-animated.gif)](https://github.com/noddos/noddos/releases)
-
 [![Build Status](https://travis-ci.org/noddos/noddos.svg?branch=master)](https://travis-ci.org/noddos/noddos)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/97e9282c128543edab63fcb92f576fd7)](https://www.codacy.com/app/noddos/noddos?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=noddos/noddos&amp;utm_campaign=Badge_Grade)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/879/badge)](https://bestpractices.coreinfrastructure.org/projects/879)
@@ -92,7 +90,7 @@ Install a cronjob to download the Device Profiles database frequently (please pi
 Install a cronjob to have Noddos save the data it has collected so that the Luci -> Status -> Clients page can provide an overview:
 
 	crontab -e
-	*/15 * * * * kill -SIGUSR2 $(cat /var/lib/noddos/noddos.pid)
+	*/15 * * * * kill -SIGUSR1 $(cat /var/lib/noddos/noddos.pid)
 
 We're telling dnsmasq to create some log files that can pretty big so we want to wipe them daily:
 
@@ -255,9 +253,9 @@ __DeviceProfilesFile__: The list of deviceprofiles for matching hosts against. T
 
 __DnsmasqLogFile__: The dnsmasq daemon is configured per the installation instructions to write his extended DNS and DHCP logging to this file. Nodddos tails this file, parses the log lines and populates its DNS and DHCP tables with the information. Default: /var/log/dnsmasq.log
 
-__MatchFile__: Noddos will write all current matched devices to this file after receiving a SIGUSR1 or SIGTERM signal. At startup, Noddos will read this file to have an initial list of matched devices. Default: /var/lib/noddos/DeviceMatches.json
+__MatchFile__: Noddos will write all current matched devices to this file after receiving a SIGTERM signal. At startup, Noddos will read this file to have an initial list of matched devices. Default: /var/lib/noddos/DeviceMatches.json on Linux systems and /etc/noddos/DeviceMatches.json on routers wit hLede firmware
 
-__DumpFile__: Noddos will write all informaiton it has on devices to this file after received a SIGUSR2 signal. Default /var/lib/nodds/DeviceDump.json
+__DumpFile__: Noddos will write all informaiton it has on devices to this file after received a SIGUSR1 signal. Default /var/lib/nodds/DeviceDump.json on Linux systems and /tmp/Devicedump.json on routers with Lede firmware
 
 __ClientApiCertFile__: certificate for key used to authenticate against Noddos API. Default: /etc/noddos/noddosapiclient.pem
 
@@ -267,7 +265,7 @@ __SignatureCertFile__: certificate used to validate the digital signature for th
 
 __PidFile__: Location for pidfile of nodlisten daemon.  Default: /var/lib/noddos/noddos.pid
 
-__UploadMode__: If and how Noddos show upload data: Possible values: None, Anonymous, Account
+__UploadMode__: If and how Noddos show upload data: Possible values: None or Anonymous.
 
 __WhitelistedMacAddresses__: list of ethernet MAC addresses that that should not have any data uploaded to the cloud. Default: empty list of strings
 
@@ -287,7 +285,6 @@ __DeviceReportInterval__: Interval between uploads of data on unmatched devices.
 
 __ExpireDnsQuery__: Cached DNS records will be pruned after this interval. This should be larger of typical largest TTL seen on DNS records. Default: 86400 seconds
 Default: 7 days
-Command line option: -d, --dnsexpire (janitor.py)
 
 __ExpireHost__: Cached Host records will be deleted if no traffic is seen from them based on this setting. Default: 604800 seconds
 Default: 7 days
@@ -299,7 +296,7 @@ __SIGTERM__: Writes DeviceMatches.json file and exits.
 
 __SIGHUP__: Reloads noddos.conf and DeviceProfiles.json.
 
-__SIGTERM1__: Writes DeviceMatches.json file.
+__SIGTUSR1__: Runs matching alogrithm and writes DeviceDump.json file.
 
-__SIGTERM2__: Runs matching alogirithm, writes Devicedump.json and uploads (if not disabled) device info and traffic stats to the cloud.
+__SIGTUSR2__: Runs matching algorithm and uploads (if not disabled) device info and traffic stats to the cloud.
 

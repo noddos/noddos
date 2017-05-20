@@ -58,6 +58,7 @@ bool drop_process_privileges(Config &inConfig);
 int setup_signal_fd(int sfd);
 bool add_epoll_filehandle(int epfd, std::map<int, iDeviceInfoSource *> & epollmap,  iDeviceInfoSource& i);
 bool daemonize(Config &inConfig);
+bool write_pidfile(std::string pidfile);
 
 void parse_commandline(int argc, char** argv, bool& debug, bool& flowtrack, std::string& configfile, bool& daemon, bool& prune);
 
@@ -75,8 +76,10 @@ int main(int argc, char** argv) {
 	if (daemon) {
 		openlog(argv[0], LOG_NOWAIT | LOG_PID, LOG_UUCP);
 		daemonize(config);
-	} else
+	} else {
 		openlog(argv[0], LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
+	}
+	write_pidfile(config.PidFile);
 
 	HostCache hC(config.TrafficReportInterval, config.Debug);
 
@@ -214,7 +217,9 @@ int main(int argc, char** argv) {
 						hC.DeviceProfiles_load(config.DeviceProfilesFile);
 					} else if (si.ssi_signo == SIGUSR1) {
 						syslog(LOG_INFO, "Processing signal event SIGUSR1");
+						hC.Match();
 						hC.ExportDeviceProfileMatches(config.MatchFile, false);
+						hC.ExportDeviceProfileMatches(config.DumpFile, true);
 					} else if (si.ssi_signo == SIGUSR2) {
 						syslog(LOG_INFO, "Processing signal event SIGUSR2");
 						hC.Match();
@@ -224,7 +229,6 @@ int main(int argc, char** argv) {
 						if (flowtrack && config.TrafficReportInterval) {
 							hC.UploadTrafficStats(config.TrafficReportInterval, config.ReportTrafficToRfc1918, config.ClientApiCertFile, config.ClientApiKeyFile);
 						}
-						hC.ExportDeviceProfileMatches(config.DumpFile, true);
 						NextDeviceUpload = time(nullptr) + config.DeviceReportInterval;
 					} else  {
 						syslog(LOG_ERR, "Got some unhandled signal: %zu", res);
@@ -431,15 +435,18 @@ bool daemonize (Config &inConfig) {
 	close(STDOUT_FILENO);
 	close(STDERR_FILENO);
 
-	std::ofstream ofs(inConfig.PidFile);
+	return true;
+}
+
+bool write_pidfile(std::string pidfile) {
+	std::ofstream ofs(pidfile);
 	if (ofs.is_open()) {
-		ofs << sid;
+		ofs << getpid();
 		ofs.close();
 	} else {
-		syslog(LOG_ERR, "Error creating PID file %s", inConfig.PidFile.c_str());
+		syslog(LOG_ERR, "Error creating PID file %s", pidfile.c_str());
 	}
 
-	return true;
 }
 
 void parse_commandline(int argc, char** argv, bool& debug, bool& flowtrack, std::string& configfile, bool& daemon, bool& prune) {
