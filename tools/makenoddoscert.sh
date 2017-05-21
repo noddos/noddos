@@ -21,15 +21,14 @@ cd /etc/noddos
 openssl req \
     -x509 \
     -newkey rsa:2048 \
-    -keyout noddosapiclient.pem \
-    -out noddosapiclient.key \
+    -keyout noddosapiclient.key \
+    -out noddosapiclient.pem \
     -days 3650 \
     -nodes \
     -subj "/C=US/ST=noddosclientcert/L=Somewhere/O=Noddos/CN=client@noddos.io"  
 
-fingerprint=$(openssl x509 -noout -in noddosapiclient.pem -fingerprint 2>/dev/null | \
-     sed 's|SHA1 Fingerprint=||' | tr -d ':')
-
-echo "Certificate fingerprint " $fingerprint
+#fingerprint=$(openssl x509 -noout -in noddosapiclient.pem -fingerprint 2>/dev/null | \
+#     sed 's|SHA1 Fingerprint=||' | tr -d ':')
+#echo "Certificate fingerprint " $fingerprint
 
 cd $CWD

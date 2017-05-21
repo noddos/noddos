@@ -69,7 +69,7 @@ start_service() {
     whitelist=$(uci get noddos.@noddos[0].whitelistmac | tr -d "'")
     for mac in $whitelist; do
         if [ "$firstentry" -eq "0" ]; then
-            firstentry = 1
+            firstentry=1
         else
             echo '        ,' >>$CONFFILE
         fi

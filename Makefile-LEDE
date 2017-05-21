@@ -111,10 +111,9 @@ endef
 define Package/noddos/postinst
 	#!/bin/sh
 
-	if [ ! -f /etc/config/noddos ]; then
-		echo 'config noddos' >/etc/config/noddos
-		echo "        option upload '1'" >>/etc/config/noddos
-	fi
+	echo -n "Downloading Device Profiles and checking digital signature ... "
+	/usr/bin/getnoddosdeviceprofiles
+
 	cd $(1)/etc/noddos
 	# Creating a client certificate
 	$(1)/usr/bin/makenoddoscert.sh
@@ -129,13 +128,15 @@ define Package/noddos/postinst
 	uci set "dhcp.@dnsmasq[0].logfile=/tmp/dnsmasq.log"
 	uci commit dhcp
 
-	uci set "noddos.@noddos[0].rfc1918=0"
-	uci set "noddos.@noddos[0].upload=1"
-	uci set "noddos.@noddos[0].whitelistipv4=''"
-	uci set "noddos.@noddos[0].whitelistipv6=''"
-	uci set "noddos.@noddos[0].whitelistmac=''"
-	uci commit noddos
-
+	if [ ! -f /etc/config/noddos ]; then
+		echo 'config noddos' >/etc/config/noddos
+		echo "        option upload '1'" >>/etc/config/noddos
+		echo "        option rfc1918 '0'" >>/etc/config/noddos
+		echo "        list whitelistipv4 '127.0.0.1'" >>/etc/config/noddos
+		echo "        list whitelistipv6 ''" >>/etc/config/noddos
+		echo "        list whitelistmac ''" >>/etc/config/noddos
+		uci commit noddos
+	fi
 	exit 0
 endef
 
