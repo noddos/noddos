@@ -31,4 +31,4 @@ openssl req \
 #     sed 's|SHA1 Fingerprint=||' | tr -d ':')
 #echo "Certificate fingerprint " $fingerprint
 
-cd $CWD
+cd $CURDIR
