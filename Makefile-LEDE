@@ -55,7 +55,7 @@ whitelisted flows, noddos can optionally upload anonimized traffic statistics fo
 endef
 
 define Package/noddos/conffiles
-	noddos.conf
+	noddos.conf-base
 	noddosconfig.pem
 endef
 
@@ -92,32 +92,51 @@ define Package/noddos/install
 	$(INSTALL_DIR) $(1)/var/lib/noddos
 	#$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_DIR) $(1)/etc/init.d
+	$(INSTALL_DIR) $(1)/usr/lib/lua
+	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/model/cbi/admin_network
+	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/view/admin_status
+	$(INSTALL_DIR) $(1)/www/cgi-bin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/noddos $(1)/usr/sbin/
 	$(INSTALL_BIN) ./tools/getnoddosdeviceprofiles $(1)/usr/bin
 	$(INSTALL_BIN) ./tools/makenoddoscert.sh $(1)/usr/bin
-	$(INSTALL_BIN) ./files/noddos.conf $(1)/etc/noddos
-	$(INSTALL_BIN) ./files/noddosconfig.pem $(1)/etc/noddos
-	#$(INSTALL_BIN) ./files/uci/noddos $(1)/etc/config
 	$(INSTALL_BIN) ./files/noddos $(1)/etc/init.d
-	$(1)/usr/bin/makenoddoscert.sh
+	$(INSTALL_DATA) ./files/noddos.conf-base $(1)/etc/noddos
+	$(INSTALL_DATA) ./files/noddosconfig.pem $(1)/etc/noddos
+	$(INSTALL_DATA) ./files/clientdetails $(1)/www/cgi-bin
+	$(INSTALL_DATA) ./files/noddos.lua $(1)/usr/lib/lua/luci/model/cbi/admin_network
+	$(INSTALL_DATA) ./files/clients.htm $(1)/usr/lib/lua/luci/view/admin_status
+	$(INSTALL_DATA) ./files/dkjson.lua $(1)/usr/lib/lua
 endef
 
 define Package/noddos/postinst
-	#!/bin/bash
-	echo "Downloading and validating Device Profiles"
-	$(1)/usr/bin/getnoddosdeviceprofiles -c $(1)/etc/noddos/noddosconfig.pem
+	#!/bin/sh
+
+	echo -n "Downloading Device Profiles and checking digital signature ... "
+	/usr/bin/getnoddosdeviceprofiles
+
 	cd $(1)/etc/noddos
 	# Creating a client certificate
 	$(1)/usr/bin/makenoddoscert.sh
 	if [ -z "$${IPKG_INSTROOT}" ]; then
-        echo "Enabling rc.d symlink for noddos"
-        cd /etc/rc.d
+		echo "Enabling rc.d symlink for noddos"
+		cd /etc/rc.d
 		/etc/init.d/noddos enable
 	fi
 	echo "Adding dnsmasq configuration settings for noddos: logdhcp, logqueries, logfile"
-	uci set dhcp.@dnsmasq[0].logqueries="1"
-	uci set dhcp.@dnsmasq[0].logdhcp="1"
-	uci set dhcp.@dnsmasq[0].logfile="/tmp/dnsmasq.log"
+	uci set "dhcp.@dnsmasq[0].logqueries=1"
+	uci set "dhcp.@dnsmasq[0].logdhcp=1"
+	uci set "dhcp.@dnsmasq[0].logfile=/tmp/dnsmasq.log"
+	uci commit dhcp
+
+	if [ ! -f /etc/config/noddos ]; then
+		echo 'config noddos' >/etc/config/noddos
+		echo "        option upload '1'" >>/etc/config/noddos
+		echo "        option rfc1918 '0'" >>/etc/config/noddos
+		echo "        list whitelistipv4 '127.0.0.1'" >>/etc/config/noddos
+		echo "        list whitelistipv6 ''" >>/etc/config/noddos
+		echo "        list whitelistmac ''" >>/etc/config/noddos
+		uci commit noddos
+	fi
 	exit 0
 endef
 

@@ -71,7 +71,7 @@ class Host : public iCache {
 			IdentifyConfidenceLevel = EnforceConfidenceLevel = ConfidenceLevel::None;
 		}
 
-		Host(const std::string inMacAddress, const std::string inUuid = "", const bool inDebug = false):
+		Host(const std::string inMacAddress, const std::string inUuid, const bool inDebug = false):
 				MacAddress{inMacAddress}, Uuid{inUuid}, Debug{inDebug} {
 			iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);
 			UploadStats = true;
@@ -107,7 +107,7 @@ class Host : public iCache {
 		void ExportDeviceInfo (json &j, bool detailed = false);
 		bool DeviceStats(json& j, const uint32_t interval, bool force = false, bool detailed = false);
 		bool TrafficStats(json& j, const uint32_t interval, const bool ReportRfc1918, const std::unordered_set<std::string> & LocalIps, bool force = false);
-		bool inRfc1918(const std::string ip );
+		bool inPrivateAddressRange(const std::string ip );
 
 	    // iCache interface methods.
 	    time_t Expiration_set (time_t inExpiration = HOSTDEFAULTEXPIRATION) {

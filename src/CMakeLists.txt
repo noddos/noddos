@@ -59,9 +59,12 @@ target_link_libraries(HostCache_test curl ssl crypto)
 
 
 add_test (DeviceProfile DeviceProfile_test)
-add_executable(DeviceProfile_test DeviceProfile_test.cxx)
+add_executable(DeviceProfile_test DeviceProfile_test.cxx DeviceProfile.cxx
+	FlowTrack.cxx Config.cxx HostCache.cxx Host.cxx SsdpServer.cxx
+	DnsmasqLogFile.cxx DnsLogEntry.cxx SsdpLocation.cxx opensslfingerprint.cxx)
+target_link_libraries(DeviceProfile_test curl ssl crypto netfilter_conntrack)
 
-add_test (DnsmasqLogFile DnsmasqLogFile_test HostCache.cxx)
+add_test (DnsmasqLogFile DnsmasqLogFile_test)
 add_executable(DnsmasqLogFile_test DnsmasqLogFile_test.cxx DnsmasqLogFile.cxx
     HostCache.cxx Host.cxx DnsLogEntry.cxx SsdpServer.cxx SsdpLocation.cxx
     opensslfingerprint.cxx)
@@ -84,8 +87,11 @@ add_test (SsdpServer SsdpServer_test)
 add_executable(SsdpServer_test SsdpServer_test.cxx DnsmasqLogFile.cxx
     HostCache.cxx Host.cxx DnsLogEntry.cxx SsdpServer.cxx SsdpLocation.cxx
     opensslfingerprint.cxx)
-
 target_link_libraries(SsdpServer_test curl ssl crypto)
+
+add_test (Curl Curl_test)
+add_executable(Curl_test Curl_test.cxx)
+target_link_libraries(Curl_test curl ssl crypto)
 
 add_test (Noddos noddos_test)
 add_executable(noddos_test noddos_test.cxx)

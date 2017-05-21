@@ -28,15 +28,23 @@
 using nlohmann::json;
 
 
+#include "noddos.h"
 #include "DeviceProfile.h"
+#include "HostCache.h"
+#include "DnsmasqLogFile.h"
+
+static std::string deviceprofilesfile = "tests/DeviceProfiles.json";
+
+bool test_match (std::string inIp, std::string inDpUuid, HostCache &hc);
 
 int main()
 {
+	openlog("DnsmasqLogFile_test", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
+	bool testfailed = false;
 	std::map<std::string, std::shared_ptr<DeviceProfile>> DeviceProfiles;
-	std::ifstream ifs("tests/DeviceProfiles.json");
+	std::ifstream ifs(deviceprofilesfile);
 	json j;
 	ifs >> j;
-	bool invalid = false;
 	for (json::iterator it = j.begin(); it != j.end(); ++it) {
 	  std::cout << *it << std::endl;
 	  std::string uuid = (*it)["DeviceProfileUuid"].get<std::string>();
@@ -44,12 +52,79 @@ int main()
 	  if (DeviceProfiles[uuid]->isValid()) {
 		  std::cout << "Valid Device Profile with UUID " << uuid << std::endl;
 	  } else {
-		  invalid = true;
+		  testfailed = true;
 		  std::cout << "Invalid Device Profile " << uuid << std::endl;
 	  }
 	}
-	if (invalid) {
+	HostCache hc(0, true);
+	hc.AddByMac ("00:00:00:00:00:01", "192.168.1.232");
+	hc.AddByMac ("00:00:00:00:00:02", "192.168.1.98");
+	hc.AddByMac ("00:00:00:00:00:03", "192.168.1.99");
+	hc.AddByMac ("00:00:00:00:00:04", "192.168.1.235");
+	hc.AddByMac ("00:00:00:00:00:05", "192.168.1.241");
+	hc.AddByMac ("00:00:00:00:00:06", "192.168.1.251");
+	hc.AddByMac ("00:00:00:00:00:07", "192.168.1.234");
+	hc.AddByMac ("00:00:00:00:00:08", "192.168.1.240");
+	hc.AddByMac ("00:00:00:00:00:09", "192.168.1.238");
+	hc.AddByMac ("00:00:00:00:00:10", "192.168.1.234");
+	hc.AddByMac ("00:00:00:00:00:13", "192.168.1.80");
+	hc.AddByMac ("00:00:00:00:00:11", "192.168.1.225");
+	hc.AddByMac ("00:00:00:00:00:12", "192.168.1.242");
+	hc.AddByMac ("00:00:00:00:00:14", "192.168.1.231");
+	hc.AddByMac ("00:00:00:00:00:15", "192.168.1.133");
+	hc.AddByMac ("00:00:00:00:00:16", "192.168.1.238");
+	hc.AddByMac ("00:00:00:00:00:17", "192.168.1.146");
+	hc.AddByMac ("00:00:00:00:00:18", "192.168.1.224");
+	hc.AddByMac ("00:00:00:00:00:19", "192.168.1.239");
+	hc.AddByMac ("00:00:00:00:00:20", "192.168.1.11");
+	hc.AddByMac ("00:00:00:00:00:21", "192.168.1.227");
+	hc.AddByMac ("00:00:00:00:00:22", "192.168.1.226");
+	hc.AddByMac ("00:00:00:00:00:23", "192.168.1.248");
+	hc.AddByMac ("00:00:00:00:00:24", "192.168.1.243");
+	hc.AddByMac ("00:00:00:00:00:25", "192.168.1.229");
+	hc.DeviceProfiles_load(deviceprofilesfile);
+	DnsmasqLogFile d ("tests/dnsmasqmatchdata.log", hc, 86400, true);
+
+
+	// pending good test data for dnsmasq.log that allows the matching of most of these.
+	// testfailed |= ! test_match ("192.168.1.235", "694e8c7e-69f0-400f-824d-b94af7c7b7cc", hc);
+	// testfailed |= ! test_match ("192.168.1.244", "dff464bf-c954-43d2-8b5a-87ef4b632da5", hc);
+	// testfailed |= ! test_match ("192.168.1.251", "6e617357-5a44-4f5a-8675-5ecba34055be", hc);
+	// testfailed |= ! test_match ("192.168.1.248", "7d8f2ed0-38f9-455d-a816-89a1daeb6ae2", hc);
+	// testfailed |= ! test_match ("192.168.1.225", "5ec4dd66-22ee-4cd6-beed-fa4fdfd38c34", hc);
+	// testfailed |= ! test_match ("192.168.1.243", "7b50c7cd-d7b9-40ad-980d-0b520ad3d05e", hc);
+	// testfailed |= ! test_match ("192.168.1.229", "b2e13a63-c40b-4448-b524-3c2852bc1cb7", hc);
+	// testfailed |= ! test_match ("192.168.1.227", "2ae4a61f-75f7-481f-b28c-e3534ee1e04b", hc);
+	// testfailed |= ! test_match ("192.168.1.226", "76905373-748b-4e25-a550-296b3e1c7086", hc);
+	// testfailed |= ! test_match ("192.168.1.224", "76905373-748b-4e25-a550-296b3e1c7086", hc);
+	if (testfailed) {
 		exit (1);
     }
+
 	exit(0);
+}
+
+bool test_match (std::string inIp, std::string inDpUuid, HostCache &hc) {
+	std::shared_ptr<Host> h_ptr = hc.FindHostByIp(inIp);
+	if (h_ptr == nullptr) {
+		std::cout << "IP address " << inIp << " not found in HostCache" << std::endl;
+		return false;
+	}
+	h_ptr->Match(hc.DeviceProfiles_getmap());
+	std::string uuid = h_ptr->Uuid_get ();
+	if (uuid != inDpUuid) {
+		if (uuid == "") {
+			std::cout << inIp << " did not match with profile " << inDpUuid << std::endl;
+		} else {
+			std::cout << inIp << " did not match with profile " << inDpUuid << " but with " << uuid << std::endl;
+		}
+		json j;
+		h_ptr->DeviceStats(j, true, true);
+		std::cout << j << std::endl;
+		return false;
+
+	} else {
+		std::cout << inIp << " MATCHED " << inDpUuid << std::endl;
+		return true;
+	}
 }

@@ -10,7 +10,7 @@
     "User": "noddos",
     "Group": "noddos",
     "WhitelistedIpv4Addresses": [
-        "127.0.0.1", 
+        "127.0.0.1" 
     ],
     "WhitelistedIpv6Addresses": [],
     "WhitelistedMacAddresses": [  "18:22:7e:d2:7b:00" ],

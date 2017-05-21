@@ -32,7 +32,7 @@
 static std::string deviceprofilesfile = "tests/DeviceProfiles.json";
 
 int main () {
-
+	bool testfailed = false;
 	openlog("Host_test", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
 	HostCache hC;
 	hC.DeviceProfiles_load(deviceprofilesfile);
@@ -45,6 +45,19 @@ int main () {
 	hC.AddByMac ("00:00:00:00:00:06", "192.168.1.234");
 	hC.AddByMac ("00:00:00:00:00:07", "192.168.1.240");
 
+	hC.AddByMac ("00:00:00:00:00:08", "192.168.1.227");
+	hC.AddByMac ("00:00:00:00:00:09", "192.168.1.226");
+	hC.AddByMac ("00:00:00:00:00:10", "192.168.1.80");
+	hC.AddByMac ("00:00:00:00:00:11", "192.168.1.225");
+	hC.AddByMac ("00:00:00:00:00:12", "192.168.1.242");
+	hC.AddByMac ("00:00:00:00:00:14", "192.168.1.231");
+	hC.AddByMac ("00:00:00:00:00:15", "192.168.1.133");
+	hC.AddByMac ("00:00:00:00:00:16", "192.168.1.238");
+	hC.AddByMac ("00:00:00:00:00:17", "192.168.1.146");
+	hC.AddByMac ("00:00:00:00:00:18", "192.168.1.224");
+	hC.AddByMac ("00:00:00:00:00:19", "192.168.1.239");
+
+
 	auto sh = std::make_shared<SsdpHost>();
 	sh->IpAddress = "192.168.1.234";
 	sh->Manufacturer = "Amazon.com, Inc.";
@@ -52,66 +65,75 @@ int main () {
 	hC.AddSsdpInfo(sh);
 
 	auto res = hC.MatchByIpAddress("192.168.1.234");
-	std::cout << "Host with SsdpManufacturer " << sh->Manufacturer << " and SsdpModelName " << sh->ModelName << " matched " << res << " times" << std::endl;
+	if (res != true) {
+		std::cout << "Test failure: Host with SsdpManufacturer " << sh->Manufacturer << " and SsdpModelName " << sh->ModelName << " did not match " << std::endl;
+		testfailed = true;
+	}
 
 	auto dr = std::make_shared<DhcpRequest>();
 	dr->DhcpHostname = "udhcp 0.9.9-pre";
 	dr->IpAddress = "192.168.1.98";
 	hC.AddDhcpRequest(dr);
+	hC.AddDnsQueryIp("192.168.1.98", "ctv.zenfs.com", "1.1.1.1");
 	hC.AddDnsQueryIp("192.168.1.98", "control2.tvinteractive.tv", "1.1.1.1");
 	hC.AddDnsQueryIp("192.168.1.98", "bis-tv-widgets.secure.yahoo.com", "1.1.1.2");
 	auto res2 = hC.MatchByIpAddress("192.168.1.98");
-	std::cout << "Host with DhcpHostname" << dr->DhcpHostname << " and DnsQuery for " << "control2.tvinteractive.tv" << " matched " << res2 << " times" << std::endl;
+	if (res2 != true) {
+		std::cout << "Test failure: Host with DhcpHostname " << dr->DhcpHostname << " and DnsQuery for " << "control2.tvinteractive.tv" << " did not match" << std::endl;
+		testfailed = true;
+	}
 
 	hC.AddDnsQueryIp("192.168.1.241", "init.itunes.apple.com", "2.2.2.2");
 	hC.AddDnsQueryIp("192.168.1.241", "apps.itunes.com", "2.2.2.3");
 	hC.AddDnsQueryIp("192.168.1.241", "time-ios.g.aaplimg.com", "2.2.2.4");
 	auto res3 = hC.MatchByIpAddress("192.168.1.241");
-	std::cout << "Host with Dnsqueries init.itunes.apple.com apps.itunes.com apps.itunes.com matched " << res3 << " times" << std::endl;
-
+	if (res3 != true) {
+		std::cout << "Test failure: Host with Dnsqueries init.itunes.apple.com apps.itunes.com apps.itunes.com did not match" << std::endl;
+		testfailed = true;
+	}
 	dr->DhcpHostname = "kindle-a40752280";
 	dr->IpAddress = "192.168.1.251";
 	hC.AddDhcpRequest(dr);
 	hC.AddDnsQueryIp("192.168.1.251", "api.amazon.com", "1.1.1.5");
 	auto res4 = hC.MatchByIpAddress("192.168.1.251");
-	std::cout << "Host with DhcpHostname " << dr->DhcpHostname << " and DnsQuery for " << "api.amazon.com" << " matched " << res4 << " times" << std::endl;
-
-	bool testfailed = false;
+	if (res4 != true) {
+		std::cout << "Test failure: Host with DhcpHostname " << dr->DhcpHostname << " and DnsQuery for " << "api.amazon.com" << " did not match" << std::endl;
+	}
 	auto h = Host("01:01:01:01:01:01", true);
-	if (h.inRfc1918("11.0.0.0")) {
-		std::cout << "11.0.0.0 is not RFC1918" << std::endl;
+	if (h.inPrivateAddressRange("11.0.0.0")) {
+		std::cout << "Test failure: 11.0.0.0 is not RFC1918" << std::endl;
 		testfailed = true;
 	}
-	if (h.inRfc1918("9.255.255.255")) {
-		std::cout << "9.255.255.255 is not RFC1918" << std::endl;
+	if (h.inPrivateAddressRange("9.255.255.255")) {
+		std::cout << "Test failure: 9.255.255.255 is not RFC1918" << std::endl;
 		testfailed = true;
 	}
-	if (h.inRfc1918("172.15.255.255")) {
-		std::cout << "172.15.255 is not RFC1918" << std::endl;
+	if (h.inPrivateAddressRange("172.15.255.255")) {
+		std::cout << "Test failure: 172.15.255 is not RFC1918" << std::endl;
 		testfailed = true;
 	}
-	if (h.inRfc1918("172.24.0.0")) {
-		std::cout << "172.24.0.0 is not RFC1918" << std::endl;
+	if (h.inPrivateAddressRange("172.24.0.0")) {
+		std::cout << "Test failure: 172.24.0.0 is not RFC1918" << std::endl;
 		testfailed = true;
 	}
-	if (h.inRfc1918("192.167.255.255")) {
-		std::cout << "192.167.255.255 is not RFC1918" << std::endl;
+	if (h.inPrivateAddressRange("192.167.255.255")) {
+		std::cout << "Test failure: 192.167.255.255 is not RFC1918" << std::endl;
 		testfailed = true;
 	}
-	if (h.inRfc1918("192.169.0.0")) {
-		std::cout << "192.169.0.0 is not RFC1918" << std::endl;
+	if (h.inPrivateAddressRange("192.169.0.0")) {
+		std::cout << "Test failure: 192.169.0.0 is not RFC1918" << std::endl;
 		testfailed = true;
 	}
-	if (not h.inRfc1918("192.168.1.1")) {
-		std::cout << "192.168.1.1 is RFC1918" << std::endl;
+	if (not h.inPrivateAddressRange("192.168.1.1")) {
+		std::cout << "Test failure: 192.168.1.1 is RFC1918" << std::endl;
 		testfailed = true;
 	}
-	if (not h.inRfc1918("172.20.1.1")) {
-		std::cout << "172.20.1.1 is RFC1918" << std::endl;
+	if (not h.inPrivateAddressRange("172.20.1.1")) {
+		std::cout << "Test failure: 172.20.1.1 is RFC1918" << std::endl;
 		testfailed = true;
 	}
-	if (not h.inRfc1918("10.255.1.1")) {
-		std::cout << "10.255.1.1 is RFC1918" << std::endl;
+	if (not h.inPrivateAddressRange("10.255.1.1")) {
+		std::cout << "Test failure: 10.255.1.1 is RFC1918" << std::endl;
 		testfailed = true;
 	}
 	if (testfailed) {

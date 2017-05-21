@@ -1,5 +1,4 @@
 /*
-   Copyright 2017 Steven Hessing
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -165,6 +164,11 @@ bool Host::Match(const MatchCondition& mc) {
 	} else if (mc.Key == "SsdpLocation") {
 		value = Ssdp.Location;
 	}
+	if (value == "") {
+		if(Debug) {
+			syslog(LOG_DEBUG, "Host %s has no value for MustMatch condition %s", MacAddress.c_str(), mc.Key.c_str());
+		}
+	}
 	size_t startpos = 0;
 	size_t mcvaluelength = mc.Value.length();
 	size_t datavaluelength = value.length();
@@ -249,7 +253,7 @@ bool Host::DeviceStats(json& j, const uint32_t time_interval, bool force, bool d
 	return true;
 }
 
-bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportRfc1918, const std::unordered_set<std::string> &LocalIps, bool force) {
+bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportPrivateAddresses, const std::unordered_set<std::string> &LocalIps, bool force) {
 	if (not isMatched()) {
 		return false;
 	}
@@ -265,7 +269,7 @@ bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportRfc19
 	std::unordered_set<std::string> endpoints;
 	for (auto &fc: FlowCache) {
 		std::string ip = fc.first;
-		if (ReportRfc1918 || not inRfc1918(ip)) {
+		if (ReportPrivateAddresses || not inPrivateAddressRange(ip)) {
 			for (auto &fe : *(fc.second)) {
 				if(fe->Fresh(interval)) {
 					auto it = allIps.find(ip);
@@ -288,7 +292,14 @@ bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportRfc19
 	return false;
 }
 
-bool Host::inRfc1918(const std::string ip ) {
+bool Host::inPrivateAddressRange(const std::string inIp ) {
+	if (inIp.find(':') != std::string::npos) {
+		// IPv6 address
+		std::string ip = inIp;
+		std::transform(ip.begin(), ip.end(), ip.begin(), ::tolower);
+		return ip.substr(0,2) == "fd";
+	}
+	// IPv4 Address
 	uint32_t Rfc1918_10start = ntohl(10);
 	uint32_t Rfc1918_10end = ntohl(4294967050);
 	uint32_t Rfc1918_172start = ntohl(4268);
@@ -297,8 +308,9 @@ bool Host::inRfc1918(const std::string ip ) {
 	uint32_t Rfc1918_192end = ntohl(4294944960);
 	struct sockaddr_in sa;
 	char str[INET_ADDRSTRLEN];
-	inet_pton(AF_INET, ip.c_str(), &(sa.sin_addr));
+	inet_pton(AF_INET, inIp.c_str(), &(sa.sin_addr));
 	uint32_t ip_int = ntohl(sa.sin_addr.s_addr);
+
 	return
 		(Rfc1918_10start <= ip_int && ip_int <= Rfc1918_10end) ||
 		(Rfc1918_172start <= ip_int && ip_int <= Rfc1918_172end) ||
@@ -380,7 +392,7 @@ bool Host::DnsLogEntry_set(const std::string inFqdn, const std::string inIpAddre
 		DnsCache[inFqdn] = std::make_shared<DnsLogEntry>(inFqdn);
 		newentry = true;
 		if(Debug) {
-			syslog(LOG_DEBUG, "Creating DnsLogEntry for %s", inFqdn.c_str());
+			syslog(LOG_DEBUG, "Creating DnsLogEntry for %s with expiration %lu", inFqdn.c_str(), DnsCache[inFqdn]->Expiration_get());
 		}
 	}
 
@@ -397,6 +409,9 @@ bool Host::Dhcp_set (const std::shared_ptr<DhcpRequest> inDhcp_sptr) {
 
 	Dhcp = *inDhcp_sptr;
 	Dhcp.Expiration_set();
+	if(Debug) {
+		syslog(LOG_DEBUG, "Creating DHCP data for %s with expiration %lu", Dhcp.MacAddress.c_str(), Dhcp.Expiration_get());
+	}
 	return true;
 }
 
@@ -409,6 +424,9 @@ bool Host::Dhcp_set (const std::string IpAddress, const std::string MacAddress, 
 
 	iCache::FirstSeen = iCache::LastModified = iCache::LastSeen = time(nullptr);
 	Dhcp.Expiration_set();
+	if(Debug) {
+		syslog(LOG_DEBUG, "Creating DHCP data for %s with expiration %lu", Dhcp.MacAddress.c_str(), Dhcp.Expiration_get());
+	}
 	return true;
 }
 
@@ -421,7 +439,7 @@ bool Host::SsdpInfo_set(const std::shared_ptr<SsdpHost> insHost) {
 	iCache::LastModified = iCache::LastSeen;
 	Ssdp = *insHost;
 
-	// Information in the SSDP multicast message has changed so if the Location field contains are URL, we query it
+	// Information in the SSDP multicast message has changed so if the Location field contains a URL, we query it
 	if (Ssdp.Location != "") {
 		auto resp = SsdpLocation::Get(Ssdp);
 	}

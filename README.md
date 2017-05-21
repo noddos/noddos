@@ -5,16 +5,16 @@
 
 # Noddos - A device-aware firewall
 
-The Noddos client monitors network traffic in the home- or enterprise network, identifies IOT and other devices and dynamically applies device-specific ACLs to the traffic of the identified devices. It's goal is to identify and stop rogue traffic from devices that have been hacked, for example when a device is being used in a DDOS attack. The ACLs are downloaded from the cloud and are generated based on traffic stats uploaded anonymously by the Noddos client. You can install the Noddos client on Linux-based (DIY) routers and firewalls and on Home Gateways running firmware from the Lede project. For more information see the [Noddos website](https://www.noddos.io/). 
+The Noddos client monitors network traffic in the home- or enterprise network, identifies IOT and other devices and will soon dynamically applies device-specific ACLs to the traffic of the identified devices. It's goal is to identify and stop rogue traffic from devices that have been breached, for example when a device is being used in a DDOS attack. The ACLs are downloaded from the cloud and are generated based on traffic stats uploaded anonymously by the Noddos client. You can install the Noddos client on Linux-based (DIY) routers and firewalls and on Home Gateways running firmware from the Lede project. For more information see the [Noddos website](https://www.noddos.io/). 
 
 The current focus of Noddos is on building the database of device profiles by getting the client installed on many devices. The short-term goal is to make the client available for as many platforms as possible and entice people to install the software by giving them views on the collected data for the devices in their home. With many clients reporting data, we can enhance the database of device profiles. When that is well underway the focus will shift to adding the actual firewall capability.
 
 ## Client Overview
 
-Noddos runs as a daemon to listen to DHCP, DNS and SSDP traffic on the home network. It reads DHCP and DNS data from the dnsmasq daemon that should be configured to log extended DNS and DHCP data. If incoming SSDP data has a 'Location' header then Noddos will call the URL contained in the header to collect additional device information. Using the Linux Netfilter functionality, it tracks network flows in real time.
-Noddos reads the DeviceProfiles file that specifies the matching conditions and traffic filtering rules. Periodically, Noddos matches discovered devices with the device profile database to identify known devices. Noddos can be configured upload traffic statistics for identified devices and device attributes for devices it not yet has been able to match to a device profile. There is a configuration file that can be used to specify a.o. whether traffic and device statistics should be uploaded and whether or not they should be uploaded anonymously.
+Noddos runs as a daemon to listen to DHCP, DNS and SSDP traffic on the home or enterprise network. It reads DHCP and DNS data from the dnsmasq daemon, if it is configured to log extended DNS and DHCP data. If incoming SSDP data has a 'Location' header then Noddos will call the URL contained in the header to collect additional device information. Using the Linux Netfilter functionality, it tracks network flows in real time.
+Noddos reads a Device Profiles file that specifies the matching conditions and traffic filtering rules. Periodically, Noddos matches discovered devices with the device profile database to identify known devices. Noddos can be configured to upload traffic statistics for identified devices and device attributes for devices it has not yet been able to match to a device profile. There is a configuration file that can be used to specify a.o. whether traffic and device statistics should be uploaded and whether or not they should be uploaded anonymously.
 
-The Noddos process should be started at boot time. A systemctl file is included in the source for Ubuntu systems and an init.d/procd script is automatically installed by the package for [Lede project](https://lede-project.org/) firmware. The process runs as a daemon and can drop privileges after initial startup. Due to issues with polling the file handle for a netfilter conntrack connection, it is recommended to not drop privileges so it is possible to re-establish the filehandle after poll errors occur.
+The Noddos process should be started at boot time. The noddos package for routers running firmware of the [Lede project](https://lede-project.org/) includes an init.d/procd script that launches noddos. Additionally, a systemctl file is included in the source for Ubuntu systems. The process runs as a daemon and can drop privileges after initial startup. Due to issues with polling the file handle for a netfilter conntrack connection, it is recommended to not drop privileges so it is possible to re-establish the filehandle after poll errors occur. Depending on traffic patterns, the client can consume about 10MB of DRAM. Going forward that memory footprint should go down once more efficient storage of FQDNs and IP addresses is implemented. The CPU usage for the process is minimal after it has performed the inital processing of the dnsmasq log file.
 
 The 'getnoddosdeviceprofiles' script is used to securely download the list of Device Profiles over HTTPS from the Noddos web site, check the digital signature of the file using a Noddos certificate and makes the file available to the Noddos client. It needs access to the public cert that was used to sign the file. This script should be called at least once per day from cron. 
 
@@ -47,12 +47,33 @@ After restart, there should be a /tmp/dnsmasq.log file
 
 	service dnsmasq restart
 
-Download the package and install it
+We need to modify the menu structure of the Luci web interface to point to the Noddos Client and Configuration pages. First edit the file /usr/lib/lua/luci/view/admin_status. Insert on line 14:
 
-	wget <package-url>
+	if nixio.fs.access("/etc/config/noddos") then
+    	entry({"admin", "status", "clients"}, template("admin_status/clients"), _("Clients"), 3)
+    end
+
+Then edit /usr/lib/lua/luci/controller/admin/network.lua, insert on line l15:
+
+    if nixio.fs.access("/etc/config/noddos") then
+        page = entry({"admin", "network", "noddos"}, cbi("admin_network/noddos"), nil)
+        page.target = cbi("admin_network/noddos")
+        page.title = _("Client Firewall")
+        page.order = 55
+        page.leaf = true
+    end
+
+To make sure Luci picks up the menu and module changes, execute:
+
+	rm /tmp/luci-modulecache 
+    rm /tmp/luci-indexcache
+
+Now we can install the actual Noddos package you can download from the releases menu on Github
+
+	wget <noddos-package-url-on-github>
 	opkg install <package>
 
-Edit /etc/noddos/noddos.conf to add whitelisted hosts. Make sure to include the WAN and LAN IP- or MAC-addresses of your router. You may also want to include addresses of your PCs that you use daily as collecting traffic statistics for them is of no much use with the traffic they generate to so many destinations. You may also want to add the MAC addresses of phones or tablets. For more information, see the section below on the Noddos configuration file.
+Go to the Luci -> Network -> Client Firewall page to configure Noddos. Make sure to include the Loopback, WAN and LAN IP- or MAC-addresses of your router. You may also want to whitelist addresses of your PCs that you use daily as collecting traffic statistics for them is of no much use with the traffic they generate to so many destinations. You may also want to add the MAC addresses of phones or tablets. 
 
 	/etc/init.d/noddos start
 
@@ -61,10 +82,20 @@ Optional: remove odhcp so dnsmasq becomes the DHCP server. That enables noddos t
 	opkg remove odhcp
 	/etc/init.d/dnsmasq restart
 
-Install a cronjob to do this frequently (please pick a randon time of day instead of 3:23am), ie
+Install a cronjob to download the Device Profiles database frequently (please pick a randon minute instead of 23 minutes after the hour, ie
 
-	crontab -e -u noddos
+	crontab -e 
     	23 */3 * * * /usr/bin/getnoddosdeviceprofiles
+
+Install a cronjob to have Noddos save the data it has collected so that the Luci -> Status -> Clients page can provide an overview:
+
+	crontab -e
+	*/15 * * * * kill -SIGUSR1 $(cat /var/lib/noddos/noddos.pid)
+
+We're telling dnsmasq to create some log files that can pretty big so we want to wipe them daily:
+
+	crontab -e
+	21 4 * * * echo -n "" >/tmp/dnsmasq.log; /etc/init.d/dnsmasq reload
 
 ### Installation for Linux DIY routers
 Sorry, there are no packages yet for Ubuntu / Fedora / CentOS / Gentoo. For now, just compile it from source.
@@ -222,9 +253,9 @@ __DeviceProfilesFile__: The list of deviceprofiles for matching hosts against. T
 
 __DnsmasqLogFile__: The dnsmasq daemon is configured per the installation instructions to write his extended DNS and DHCP logging to this file. Nodddos tails this file, parses the log lines and populates its DNS and DHCP tables with the information. Default: /var/log/dnsmasq.log
 
-__MatchFile__: Noddos will write all current matched devices to this file after receiving a SIGUSR1 or SIGTERM signal. At startup, Noddos will read this file to have an initial list of matched devices. Default: /var/lib/noddos/DeviceMatches.json
+__MatchFile__: Noddos will write all current matched devices to this file after receiving a SIGTERM signal. At startup, Noddos will read this file to have an initial list of matched devices. Default: /var/lib/noddos/DeviceMatches.json on Linux systems and /etc/noddos/DeviceMatches.json on routers wit hLede firmware
 
-__DumpFile__: Noddos will write all informaiton it has on devices to this file after received a SIGUSR2 signal. Default /var/lib/nodds/DeviceDump.json
+__DumpFile__: Noddos will write all informaiton it has on devices to this file after received a SIGUSR1 signal. Default /var/lib/nodds/DeviceDump.json on Linux systems and /tmp/Devicedump.json on routers with Lede firmware
 
 __ClientApiCertFile__: certificate for key used to authenticate against Noddos API. Default: /etc/noddos/noddosapiclient.pem
 
@@ -234,7 +265,7 @@ __SignatureCertFile__: certificate used to validate the digital signature for th
 
 __PidFile__: Location for pidfile of nodlisten daemon.  Default: /var/lib/noddos/noddos.pid
 
-__UploadMode__: If and how Noddos show upload data: Possible values: None, Anonymous, Account
+__UploadMode__: If and how Noddos show upload data: Possible values: None or Anonymous.
 
 __WhitelistedMacAddresses__: list of ethernet MAC addresses that that should not have any data uploaded to the cloud. Default: empty list of strings
 
@@ -254,7 +285,6 @@ __DeviceReportInterval__: Interval between uploads of data on unmatched devices.
 
 __ExpireDnsQuery__: Cached DNS records will be pruned after this interval. This should be larger of typical largest TTL seen on DNS records. Default: 86400 seconds
 Default: 7 days
-Command line option: -d, --dnsexpire (janitor.py)
 
 __ExpireHost__: Cached Host records will be deleted if no traffic is seen from them based on this setting. Default: 604800 seconds
 Default: 7 days
@@ -266,7 +296,7 @@ __SIGTERM__: Writes DeviceMatches.json file and exits.
 
 __SIGHUP__: Reloads noddos.conf and DeviceProfiles.json.
 
-__SIGTERM1__: Writes DeviceMatches.json file.
+__SIGTUSR1__: Runs matching alogrithm and writes DeviceDump.json file.
 
-__SIGTERM2__: Runs matching alogirithm, writes Devicedump.json and uploads (if not disabled) device info and traffic stats to the cloud.
+__SIGTUSR2__: Runs matching algorithm and uploads (if not disabled) device info and traffic stats to the cloud.
 

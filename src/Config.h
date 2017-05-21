@@ -78,7 +78,7 @@ public:
 		}
 	}
 	bool Load(std::string inConfigFile) {
-		if (Debug) {
+		if (Debug == true) {
 			syslog(LOG_DEBUG, "Opening & reading config file %s", inConfigFile.c_str());
 		}
 		bool configfailure=false;
@@ -128,7 +128,7 @@ public:
 				newClientApiCertFile = j["ClientApiCertFile"].get<std::string>();
 			}
 			if (j.count("ClientApiKeyFile")) {
-				newClientApiCertFile = j["ClientApiKeyFile"].get<std::string>();
+				newClientApiKeyFile = j["ClientApiKeyFile"].get<std::string>();
 			}
 			if (j.count("SignatureCertFile")) {
 				newSignatureCertFile = j["SignatureCertFile"].get<std::string>();

@@ -1,0 +1,191 @@
+[
+    {
+        "DeviceProfileUuid": "",
+        "Ipv4Address": "192.168.1.240",
+        "MacAddress": "00:01:2e:6f:e0:f3",
+        "SsdpManufacturer": "",
+        "SsdpModelName": ""
+    },
+    {
+        "DeviceProfileUuid": "",
+        "Ipv4Address": "192.168.1.251",
+        "MacAddress": "00:1d:c0:63:4a:a4",
+        "SsdpManufacturer": "",
+        "SsdpModelName": ""
+    },
+    {
+        "DeviceProfileUuid": "5ec4dd66-22ee-4cd6-beed-fa4fdfd38c34",
+        "Ipv4Address": "192.168.1.225",
+        "MacAddress": "08:05:81:21:e2:8b",
+        "SsdpManufacturer": "Roku",
+        "SsdpModelName": "Roku 4"
+    },
+    {
+        "DeviceProfileUuid": "",
+        "Ipv4Address": "192.168.1.232",
+        "MacAddress": "18:22:7e:d2:7b:00",
+        "SsdpManufacturer": "",
+        "SsdpModelName": ""
+    },
+    {
+        "DeviceProfileUuid": "",
+        "Ipv4Address": "192.168.1.242",
+        "MacAddress": "18:5e:0f:a4:c8:7e",
+        "SsdpManufacturer": "",
+        "SsdpModelName": ""
+    },
+    {
+        "DeviceProfileUuid": "",
+        "Ipv4Address": "192.168.1.11",
+        "MacAddress": "1c:1b:0d:7d:f5:ec",
+        "SsdpManufacturer": "",
+        "SsdpModelName": ""
+    },
+    {
+        "DeviceProfileUuid": "",
+        "Ipv4Address": "192.168.1.231",
+        "MacAddress": "64:bc:0c:48:45:97",
+        "SsdpManufacturer": "",
+        "SsdpModelName": ""
+    },
+    {
+        "DeviceProfileUuid": "",
+        "Ipv4Address": "192.168.1.110",
+        "MacAddress": "74:75:48:3c:d8:ad",
+        "SsdpManufacturer": "",
+        "SsdpModelName": ""
+    },
+    {
+        "DeviceProfileUuid": "",
+        "Ipv4Address": "192.168.1.80",
+        "MacAddress": "74:d4:35:16:6c:86",
+        "SsdpManufacturer": "",
+        "SsdpModelName": ""
+    },
+    {
+        "DeviceProfileUuid": "",
+        "Ipv4Address": "192.168.1.224",
+        "MacAddress": "80:58:f8:14:8c:f0",
+        "SsdpManufacturer": "",
+        "SsdpModelName": ""
+    },
+    {
+        "DeviceProfileUuid": "",
+        "Ipv4Address": "192.168.1.238",
+        "MacAddress": "84:3a:4b:47:9e:cc",
+        "SsdpManufacturer": "",
+        "SsdpModelName": ""
+    },
+    {
+        "DeviceProfileUuid": "71f97609-41e4-41c5-a315-aeac3aadbd03",
+        "Ipv4Address": "192.168.1.239",
+        "MacAddress": "94:10:3e:49:ad:fd",
+        "SsdpManufacturer": "Belkin International Inc.",
+        "SsdpModelName": "LightSwitch"
+    },
+    {
+        "DeviceProfileUuid": "447313eb-dea0-4516-9c83-3df5bf0dd948",
+        "Ipv4Address": "192.168.1.140",
+        "MacAddress": "94:10:3e:cc:3b:89",
+        "SsdpManufacturer": "Belkin International Inc.",
+        "SsdpModelName": "Bridge"
+    },
+    {
+        "DeviceProfileUuid": "694e8c7e-69f0-400f-824d-b94af7c7b7cc",
+        "Ipv4Address": "192.168.1.235",
+        "MacAddress": "a0:02:dc:f7:a4:9f",
+        "SsdpManufacturer": "Amazon.com, Inc.",
+        "SsdpModelName": "FireTV"
+    },
+    {
+        "DeviceProfileUuid": "",
+        "Ipv4Address": "192.168.1.234",
+        "MacAddress": "a4:67:06:14:2b:37",
+        "SsdpManufacturer": "",
+        "SsdpModelName": ""
+    },
+    {
+        "DeviceProfileUuid": "",
+        "Ipv4Address": "192.168.1.228",
+        "MacAddress": "a4:8d:3b:02:3d:93",
+        "SsdpManufacturer": "",
+        "SsdpModelName": ""
+    },
+    {
+        "DeviceProfileUuid": "",
+        "Ipv4Address": "192.168.1.245",
+        "MacAddress": "ac:18:26:84:1a:46",
+        "SsdpManufacturer": "",
+        "SsdpModelName": ""
+    },
+    {
+        "DeviceProfileUuid": "7d8f2ed0-38f9-455d-a816-89a1daeb6ae2",
+        "Ipv4Address": "192.168.1.249",
+        "MacAddress": "bc:66:41:10:75:c9",
+        "SsdpManufacturer": "SAMSUNG",
+        "SsdpModelName": "SNH-E6440BN"
+    },
+    {
+        "DeviceProfileUuid": "7d8f2ed0-38f9-455d-a816-89a1daeb6ae2",
+        "Ipv4Address": "192.168.1.248",
+        "MacAddress": "bc:66:41:10:75:fd",
+        "SsdpManufacturer": "SAMSUNG",
+        "SsdpModelName": "SNH-E6440BN"
+    },
+    {
+        "DeviceProfileUuid": "",
+        "Ipv4Address": "192.168.1.226",
+        "MacAddress": "bc:76:5e:59:12:b3",
+        "SsdpManufacturer": "",
+        "SsdpModelName": ""
+    },
+    {
+        "DeviceProfileUuid": "b2e13a63-c40b-4448-b524-3c2852bc1cb7",
+        "Ipv4Address": "192.168.1.229",
+        "MacAddress": "bc:8c:cd:ef:cc:d7",
+        "SsdpManufacturer": "Samsung Electronics",
+        "SsdpModelName": "UN48H6350"
+    },
+    {
+        "DeviceProfileUuid": "",
+        "Ipv4Address": "192.168.1.12",
+        "MacAddress": "d0:50:99:13:eb:20",
+        "SsdpManufacturer": "",
+        "SsdpModelName": ""
+    },
+    {
+        "DeviceProfileUuid": "",
+        "Ipv4Address": "192.168.1.127",
+        "MacAddress": "d0:52:a8:16:ff:72",
+        "SsdpManufacturer": "",
+        "SsdpModelName": ""
+    },
+    {
+        "DeviceProfileUuid": "dff464bf-c954-43d2-8b5a-87ef4b632da5",
+        "Ipv4Address": "192.168.1.244",
+        "MacAddress": "e0:3f:49:9a:03:70",
+        "SsdpManufacturer": "ASUSTeK Corporation",
+        "SsdpModelName": "WPS Router"
+    },
+    {
+        "DeviceProfileUuid": "dff464bf-c954-43d2-8b5a-87ef4b632da5",
+        "Ipv4Address": "192.168.1.254",
+        "MacAddress": "e0:3f:49:9a:ea:a8",
+        "SsdpManufacturer": "ASUSTeK Corporation",
+        "SsdpModelName": "WPS Router"
+    },
+    {
+        "DeviceProfileUuid": "",
+        "Ipv4Address": "192.168.1.146",
+        "MacAddress": "ec:9b:f3:e4:23:e5",
+        "SsdpManufacturer": "",
+        "SsdpModelName": ""
+    },
+    {
+        "DeviceProfileUuid": "",
+        "Ipv4Address": "192.168.1.133",
+        "MacAddress": "fc:a6:67:a6:d7:13",
+        "SsdpManufacturer": "",
+        "SsdpModelName": ""
+    }
+]
