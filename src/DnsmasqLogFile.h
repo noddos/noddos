@@ -132,7 +132,7 @@ public:
 
     uint32_t LinesParsed() { return lines_parsed; }
    	// iDeviceInfoSource interface methods
-   	int Open(std::string inFileName, uint32_t inExpiration);
+   	int Open(std::string inFileName, uint32_t inExpiration = DNSMASQDEFAULTEXPIRATION);
    	bool Close();
    	int GetFileHandle();
    	bool ProcessEvent(struct epoll_event &event);

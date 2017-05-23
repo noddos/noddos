@@ -25,6 +25,7 @@
 #include <sys/epoll.h>
 #include <stdlib.h>
 #include <ctime>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -40,6 +41,8 @@
 #include <stdio.h>
 
 #include <getopt.h>
+
+#include <curl/curl.h>
 
 #include "noddosconfig.h"
 #include "DnsmasqLogFile.h"
@@ -83,6 +86,8 @@ int main(int argc, char** argv) {
 	}
 	write_pidfile(config.PidFile);
 
+	curl_global_init(CURL_GLOBAL_ALL);
+
 	HostCache hC(config.TrafficReportInterval, config.Debug);
 
 	hC.DeviceProfiles_load(config.DeviceProfilesFile);
@@ -101,7 +106,8 @@ int main(int argc, char** argv) {
     	syslog(LOG_ERR, "Setting up signal fd");
     } else {
     	syslog(LOG_INFO, "Signal FD is: %d", sfd);
-    	struct epoll_event event;
+        struct epoll_event event;
+        memset (&event, 0, sizeof (event));
         event.data.fd = sfd;
         event.events = EPOLLIN | EPOLLET;
         if (epoll_ctl(epfd, EPOLL_CTL_ADD, event.data.fd, &event) < 0) {
@@ -113,44 +119,16 @@ int main(int argc, char** argv) {
         }
     }
 
-	struct epoll_event event;
-
-
     DnsmasqLogFile f(config.DnsmasqLogFile, hC, 86400, config.Debug);
-    // add_epoll_filehandle(epfd, epollmap, f);
-    event.events = EPOLLIN | EPOLLET;
-    event.data.fd = f.GetFileHandle();
-    syslog (LOG_INFO, "DnsmasqLogFile FD %d", event.data.fd);
-    if (epoll_ctl(epfd, EPOLL_CTL_ADD, event.data.fd, &event) < 0) {
-    	syslog(LOG_ERR, "Can't add file handle to epoll");
-    	return false;
-    }
-    epollmap[event.data.fd] = &f;
+    add_epoll_filehandle(epfd, epollmap, f);
 
     SsdpServer s(hC, 86400, "", config.Debug);
-    // add_epoll_filehandle(epfd, epollmap, s);
-    event.events = EPOLLIN | EPOLLET;
-    event.data.fd = s.GetFileHandle();
-    syslog (LOG_INFO, "SsdpServer FD %d", event.data.fd);
-    if (epoll_ctl(epfd, EPOLL_CTL_ADD, event.data.fd, &event) < 0) {
-    	syslog(LOG_ERR, "Can't add file handle to epoll");
-    	return false;
-    }
-    epollmap[event.data.fd] = &s;
-
+    add_epoll_filehandle(epfd, epollmap, s);
 
     FlowTrack *t_ptr = nullptr;
     if (flowtrack) {
     	t_ptr = new FlowTrack(hC, config);
-    	// add_epoll_filehandle(epfd, epollmap, *t_ptr);
-    	event.events = EPOLLIN;
-    	event.data.fd = t_ptr->GetFileHandle();
-        if (epoll_ctl(epfd, EPOLL_CTL_ADD, event.data.fd, &event) < 0) {
-        	syslog(LOG_ERR, "Can't add file handle to epoll");
-        	return false;
-        }
-        epollmap[event.data.fd] = t_ptr;
-        syslog (LOG_INFO, "Conntrack FD %d", event.data.fd);
+    	add_epoll_filehandle(epfd, epollmap, *t_ptr);
     }
 
     if (config.User != "" && config.Group != "") {
@@ -179,19 +157,17 @@ int main(int argc, char** argv) {
 			if ((epoll_events[ev].events & EPOLLERR) || (epoll_events[ev].events & EPOLLHUP) ||
                     (not epoll_events[ev].events & EPOLLIN)) {
 				syslog(LOG_ERR, "Epoll event error for FD %d", epoll_events[ev].data.fd);
-				close(epoll_events[ev].data.fd);
 				epollmap.erase(epoll_events[ev].data.fd);
-				if (t_ptr != nullptr && epoll_events[ev].data.fd == t_ptr->GetFileHandle() && geteuid() == 0) {
+				if (epoll_events[ev].data.fd == t_ptr->GetFileHandle() && t_ptr != nullptr && geteuid() == 0) {
+					t_ptr->Close();
 					t_ptr->Open();
-			    	event.events = EPOLLIN;
-			    	event.data.fd = t_ptr->GetFileHandle();
-			        if (epoll_ctl(epfd, EPOLL_CTL_ADD, event.data.fd, &event) < 0) {
-			        	syslog(LOG_ERR, "Can't add file handle to epoll");
-			        	return false;
-			        }
-			        epollmap[event.data.fd] = t_ptr;
-			        syslog (LOG_INFO, "Re-opened conntrack with FD %d", event.data.fd);
-
+			    	add_epoll_filehandle(epfd, epollmap, *t_ptr);
+				} else if (epoll_events[ev].data.fd == f.GetFileHandle()) {
+					f.Close();
+					f.Open(config.DnsmasqLogFile);
+					add_epoll_filehandle(epfd, epollmap, f);
+				} else {
+					close(epoll_events[ev].data.fd);
 				}
 			} else {
 				if (config.Debug) {
@@ -225,13 +201,11 @@ int main(int argc, char** argv) {
 					} else if (si.ssi_signo == SIGUSR2) {
 						syslog(LOG_INFO, "Processing signal event SIGUSR2");
 						hC.Match();
-						if (config.DeviceReportInterval) {
-							hC.UploadDeviceStats(config.ClientApiCertFile, config.ClientApiKeyFile);
-						}
-						if (flowtrack && config.TrafficReportInterval) {
-							hC.UploadTrafficStats(config.TrafficReportInterval, config.ReportTrafficToRfc1918, config.ClientApiCertFile, config.ClientApiKeyFile);
-						}
+						hC.UploadDeviceStats(config.ClientApiCertFile, config.ClientApiKeyFile, config.DeviceReportInterval != 0);
+						hC.UploadTrafficStats(config.TrafficReportInterval, config.ReportTrafficToRfc1918,
+								config.ClientApiCertFile, config.ClientApiKeyFile, config.TrafficReportInterval != 0);
 						NextDeviceUpload = time(nullptr) + config.DeviceReportInterval;
+						NextTrafficUpload = time(nullptr) + config.TrafficReportInterval;
 					} else  {
 						syslog(LOG_ERR, "Got some unhandled signal: %zu", res);
 					}
@@ -246,16 +220,15 @@ int main(int argc, char** argv) {
 						syslog(LOG_DEBUG, "Starting matching");
 					}
 					hC.Match();
-					if (config.DeviceReportInterval) {
-						hC.UploadDeviceStats(config.ClientApiCertFile, config.ClientApiKeyFile);
-					}
+					hC.UploadDeviceStats(config.ClientApiCertFile, config.ClientApiKeyFile, config.DeviceReportInterval != 0);
 					NextDeviceUpload = t + config.DeviceReportInterval;
 				}
 				if (t > NextTrafficUpload && flowtrack && config.TrafficReportInterval) {
 					if (config.Debug) {
 						syslog(LOG_DEBUG, "Starting traffic upload");
 					}
-					hC.UploadTrafficStats(config.TrafficReportInterval, config.ReportTrafficToRfc1918, config.ClientApiCertFile, config.ClientApiKeyFile);
+					hC.UploadTrafficStats(config.TrafficReportInterval, config.ReportTrafficToRfc1918, config.ClientApiCertFile,
+							config.ClientApiKeyFile, config.TrafficReportInterval != 0);
 					NextTrafficUpload = t + config.TrafficReportInterval;
 				}
 				if (prune && t > NextPrune) {
@@ -277,14 +250,29 @@ exitprog:
 	if (flowtrack && t_ptr != nullptr) {
 		t_ptr->Close();
 		// Is this crashing when noddos exits?
-		// delete t_ptr;
+		delete t_ptr;
 	}
 	close (epfd);
 	close (sfd);
 	closelog();
 	unlink (config.PidFile.c_str());
 	free (epoll_events);
+	curl_global_cleanup();
 }
+
+bool add_epoll_filehandle(int epfd, std::map<int,iDeviceInfoSource*> &epollmap, iDeviceInfoSource& i) {
+	struct epoll_event event;
+    memset (&event, 0, sizeof (event));
+	event.data.fd = i.GetFileHandle();
+    event.events = EPOLLIN | EPOLLET;
+    if (epoll_ctl(epfd, EPOLL_CTL_ADD, event.data.fd, &event) < 0) {
+    	syslog(LOG_ERR, "Can't add file handle to epoll");
+    	return false;
+    }
+    epollmap[event.data.fd] = &i;
+    return true;
+}
+
 
 int setup_signal_fd (int sfd) {
 	sigset_t mask;
@@ -358,17 +346,6 @@ bool drop_process_privileges(Config &inConfig) {
 	return true;
 }
 
-bool add_epoll_filehandle(int epfd, std::map<int,iDeviceInfoSource*> &epollmap, iDeviceInfoSource& i) {
-	struct epoll_event event;
-    event.data.fd = i.GetFileHandle();
-    event.events = EPOLLIN | EPOLLET;
-    if (epoll_ctl(epfd, EPOLL_CTL_ADD, event.data.fd, &event) < 0) {
-    	syslog(LOG_ERR, "Can't add file handle to epoll");
-    	return false;
-    }
-    epollmap[event.data.fd] = &i;
-    return true;
-}
 
 bool daemonize (Config &inConfig) {
 	std::ifstream ifs(inConfig.PidFile);

@@ -490,7 +490,7 @@ bool HostCache::ExportDeviceProfileMatches(const std::string filename, bool deta
 	return true;
 }
 
-uint32_t HostCache::RestApiCall (const std::string api, const json &j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile) {
+uint32_t HostCache::RestApiCall (const std::string api, const json &j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload) {
 	std::string url = "https://api.noddos.io/" + api;
 
 	std::string body = j.dump();
@@ -501,114 +501,115 @@ uint32_t HostCache::RestApiCall (const std::string api, const json &j, const std
 		syslog (LOG_DEBUG, "Upload using cert %s and key %s", ClientApiCertFile.c_str(), ClientApiKeyFile.c_str());
 	}
 
-	struct curl_slist *hlist = NULL;
-	hlist = curl_slist_append(hlist, "Content-Type: application/json");
-	if (hlist == NULL) {
-		syslog(LOG_ERR, "Couldn't create curl header for API call to %s", api.c_str());
-	}
-
-    std::string response_string;
-    std::string header_string;
-    long response_code;
-    double elapsed;
-	auto curl = curl_easy_init();
-	if (curl) {
-		CURLcode ret;
-		ret = curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-		if(ret) {
-			syslog (LOG_ERR, "Curl setopt CURLOPT_URL returned %d",ret);
-		}
-		// curl_easy_setopt(curl, CURLOPT_SSLCERTTYPE, "PEM");
-		ret = curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_ALL);
-		if(ret) {
-		 	syslog (LOG_ERR, "Curl setopt CURLOPT_USE_SSL returned %u", ret);
-		}
-		ret = curl_easy_setopt(curl, CURLOPT_SSLCERT, ClientApiCertFile.c_str());
-		if(ret) {
-			syslog (LOG_ERR, "Curl setopt CURLOPT_SSLCERT returned %u", ret);
-		}
-		ret = curl_easy_setopt(curl, CURLOPT_SSLKEY, ClientApiKeyFile.c_str());
-		if(ret) {
-			syslog (LOG_ERR, "Curl setopt CURLOPT_SSLKEY returned %u", ret);
-		}
-		ret = curl_easy_setopt(curl, CURLOPT_SSL_CIPHER_LIST, "ECDHE-RSA-AES256-GCM-SHA384");
-		if(ret) {
-			syslog (LOG_ERR, "Curl setopt CURLOPT_SSL_CIPHER_LIST returned %d", ret);
-		}
-		ret = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, buf);
-		if(ret) {
-			syslog (LOG_ERR, "Curl setopt CURLOPT_POSTFIELDS returned %d", ret);
-		}
-		ret = curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, (curl_off_t) strlen(buf));
-		if(ret) {
-			syslog (LOG_ERR, "Curl setopt CURLOPT_POSTFIELDSIZE_LARGE returned %d", ret);
-		}
-		ret = curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
-		if(ret) {
-			syslog (LOG_ERR, "Curl setopt CURLOPT_NOPROGRESS returned %d", ret);
-		}
-		ret = curl_easy_setopt(curl, CURLOPT_USERAGENT, "noddos/1.0.0");
-		if(ret) {
-			syslog (LOG_ERR, "Curl setopt CURLOPT_USERAGENT returned %u", ret);
-		}
-		ret = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, hlist);
-		if(ret) {
-			syslog (LOG_ERR, "Curl setopt CURLOPT_HTTPHEADER returned %d", ret);
-		}
-		// Curllib version on lede doesn't support HTTP 2.0
-		// ret = curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0);
-		// if(ret) {
-		// 	syslog (LOG_ERR, "Curl setopt CURLOPT_WRITEFUNCTION returned %d", ret);
-		// }
-		ret = curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 0L);
-		if(ret) {
-			syslog (LOG_ERR, "Curl setopt CURLOPT_MAXREDIRS returned %d", ret);
-		}
-		ret = curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 0L);
-		if(ret) {
-			syslog (LOG_ERR, "Curl setopt CURLOPT_TCP_KEEPALIVE returned %d", ret);
-		}
-		// ret = curl_easy_setopt(curl, CURLOPT_TCP_FASTOPEN, 1L);
-		// if(ret) {
-		// 	syslog (LOG_ERR, "Curl setopt CURLOPT_WRITEFUNCTION returned %d", ret);
-		// }
-		ret = curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, (long) 5000);
-		if(ret) {
-			syslog (LOG_ERR, "Curl setopt CURLOPT_TIMEOUT_MS returned %d", ret);
-		}
-		ret = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlwriteFunction);
-		if(ret) {
-			syslog (LOG_ERR, "Curl setopt CURLOPT_WRITEFUNCTION returned %d", ret);
-		}
-		ret = curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_string);
-		if(ret) {
-			syslog (LOG_ERR, "Curl setopt CURLOPT_WRITEDATA returned %d", ret);
-		}
-		ret = curl_easy_setopt(curl, CURLOPT_HEADERDATA, &header_string);
-		if(ret) {
-			syslog (LOG_ERR, "Curl setopt CURLOPT_HEADERDATA returned %d", ret);
-		}
-		if (false && Debug) {
-			// TODO test on whether STDOUT is open for writing
-			// 'always' disabled as this logs to STDOUT, which is normally closed
-			ret = curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+	long response_code = 0;
+	if (doUpload) {
+		struct curl_slist *hlist = NULL;
+		hlist = curl_slist_append(hlist, "Content-Type: application/json");
+		if (hlist == NULL) {
+			syslog(LOG_ERR, "Couldn't create curl header for API call to %s", api.c_str());
 		}
 
+		std::string response_string;
+		std::string header_string;
+		double elapsed;
+		auto curl = curl_easy_init();
+		if (curl) {
+			CURLcode ret;
+			ret = curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+			if(ret) {
+				syslog (LOG_ERR, "Curl setopt CURLOPT_URL returned %d",ret);
+			}
+			// curl_easy_setopt(curl, CURLOPT_SSLCERTTYPE, "PEM");
+			ret = curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_ALL);
+			if(ret) {
+				syslog (LOG_ERR, "Curl setopt CURLOPT_USE_SSL returned %u", ret);
+			}
+			ret = curl_easy_setopt(curl, CURLOPT_SSLCERT, ClientApiCertFile.c_str());
+			if(ret) {
+				syslog (LOG_ERR, "Curl setopt CURLOPT_SSLCERT returned %u", ret);
+			}
+			ret = curl_easy_setopt(curl, CURLOPT_SSLKEY, ClientApiKeyFile.c_str());
+			if(ret) {
+				syslog (LOG_ERR, "Curl setopt CURLOPT_SSLKEY returned %u", ret);
+			}
+			ret = curl_easy_setopt(curl, CURLOPT_SSL_CIPHER_LIST, "ECDHE-RSA-AES256-GCM-SHA384");
+			if(ret) {
+				syslog (LOG_ERR, "Curl setopt CURLOPT_SSL_CIPHER_LIST returned %d", ret);
+			}
+			ret = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, buf);
+			if(ret) {
+				syslog (LOG_ERR, "Curl setopt CURLOPT_POSTFIELDS returned %d", ret);
+			}
+			ret = curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, (curl_off_t) strlen(buf));
+			if(ret) {
+				syslog (LOG_ERR, "Curl setopt CURLOPT_POSTFIELDSIZE_LARGE returned %d", ret);
+			}
+			ret = curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
+			if(ret) {
+				syslog (LOG_ERR, "Curl setopt CURLOPT_NOPROGRESS returned %d", ret);
+			}
+			ret = curl_easy_setopt(curl, CURLOPT_USERAGENT, "noddos/1.0.0");
+			if(ret) {
+				syslog (LOG_ERR, "Curl setopt CURLOPT_USERAGENT returned %u", ret);
+			}
+			ret = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, hlist);
+			if(ret) {
+				syslog (LOG_ERR, "Curl setopt CURLOPT_HTTPHEADER returned %d", ret);
+			}
+			// Curllib version on lede doesn't support HTTP 2.0
+			// ret = curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0);
+			// if(ret) {
+			// 	syslog (LOG_ERR, "Curl setopt CURLOPT_WRITEFUNCTION returned %d", ret);
+			// }
+			ret = curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 0L);
+			if(ret) {
+				syslog (LOG_ERR, "Curl setopt CURLOPT_MAXREDIRS returned %d", ret);
+			}
+			ret = curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 0L);
+			if(ret) {
+				syslog (LOG_ERR, "Curl setopt CURLOPT_TCP_KEEPALIVE returned %d", ret);
+			}
+			// ret = curl_easy_setopt(curl, CURLOPT_TCP_FASTOPEN, 1L);
+			// if(ret) {
+			// 	syslog (LOG_ERR, "Curl setopt CURLOPT_WRITEFUNCTION returned %d", ret);
+			// }
+			ret = curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, (long) 5000);
+			if(ret) {
+				syslog (LOG_ERR, "Curl setopt CURLOPT_TIMEOUT_MS returned %d", ret);
+			}
+			ret = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlwriteFunction);
+			if(ret) {
+				syslog (LOG_ERR, "Curl setopt CURLOPT_WRITEFUNCTION returned %d", ret);
+			}
+			ret = curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_string);
+			if(ret) {
+				syslog (LOG_ERR, "Curl setopt CURLOPT_WRITEDATA returned %d", ret);
+			}
+			ret = curl_easy_setopt(curl, CURLOPT_HEADERDATA, &header_string);
+			if(ret) {
+				syslog (LOG_ERR, "Curl setopt CURLOPT_HEADERDATA returned %d", ret);
+			}
+			if (false && Debug) {
+				// TODO test on whether STDOUT is open for writing
+				// 'always' disabled as this logs to STDOUT, which is normally closed
+				ret = curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+			}
 
-	    ret = curl_easy_perform(curl);
-		if(ret) {
-			syslog (LOG_ERR, "Curl easy_perform returned %d", ret);
-		}
-	    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
-	    curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &elapsed);
-	    curl_slist_free_all(hlist);
-	    curl_easy_cleanup(curl);
-	    curl = NULL;
-	    if (Debug) {
+
+			ret = curl_easy_perform(curl);
+			if(ret) {
+				syslog (LOG_ERR, "Curl easy_perform returned %d", ret);
+			}
+			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+			curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &elapsed);
+			curl_slist_free_all(hlist);
+			curl_easy_cleanup(curl);
+			curl = NULL;
+			if (Debug) {
 	    		syslog (LOG_DEBUG, "Upload resulted in %lu status, data %s", response_code, response_string.c_str());
-	    }
+			}
+		}
 	}
-
 
     if (Debug == true) {
     	std::string file = api;
@@ -628,7 +629,7 @@ uint32_t HostCache::RestApiCall (const std::string api, const json &j, const std
     return (uint32_t) response_code;
 }
 
-uint32_t HostCache::UploadDeviceStats(const std::string ClientApiCertFile, const std::string ClientApiKeyFile) {
+uint32_t HostCache::UploadDeviceStats(const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload) {
 	uint32_t uploads = 0;
 	json j;
 	for (auto it : hC) {
@@ -643,7 +644,7 @@ uint32_t HostCache::UploadDeviceStats(const std::string ClientApiCertFile, const
 		}
 	}
 	if (uploads > 0) {
-		auto r = RestApiCall ("v1/uploaddevices", j, ClientApiCertFile, ClientApiKeyFile);
+		auto r = RestApiCall ("v1/uploaddevices", j, ClientApiCertFile, ClientApiKeyFile, doUpload);
 		syslog(LOG_INFO, "Called v1/uploaddevices API with status_code %u", r);
 	} else {
 		syslog(LOG_INFO, "Not calling v1/uploaddevices API as there is no data to report");
@@ -651,7 +652,8 @@ uint32_t HostCache::UploadDeviceStats(const std::string ClientApiCertFile, const
 	return uploads;
 }
 
-bool HostCache::UploadTrafficStats(const time_t interval, const bool ReportRfc1918, const std::string ClientCertFile, const std::string ClientApiKeyFile) {
+bool HostCache::UploadTrafficStats(const time_t interval, const bool ReportRfc1918, const std::string ClientCertFile,
+		const std::string ClientApiKeyFile, bool doUpload) {
 	uint32_t uploads = 0;
 	json j;
 	for (auto it : hC) {
@@ -664,7 +666,7 @@ bool HostCache::UploadTrafficStats(const time_t interval, const bool ReportRfc19
 		}
 	}
 	if (uploads > 0) {
-		auto r = RestApiCall ("v1/uploadstats", j, ClientCertFile, ClientApiKeyFile);
+		auto r = RestApiCall ("v1/uploadstats", j, ClientCertFile, ClientApiKeyFile, doUpload);
 		syslog(LOG_INFO, "Called v1/uploadstats API with status_code %u", r);
 	} else {
 		syslog(LOG_INFO, "Not calling v1/uploadstats API as there is no data to report");

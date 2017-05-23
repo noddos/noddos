@@ -34,8 +34,10 @@ start_service() {
     fi
     if [ $(uci get noddos.@noddos[0].upload) -eq "1" ]; then
         echo '    "TrafficReportInterval": 3600,' >>$CONFFILE
+        echo '    "DeviceReportInterval": 14400,' >>$CONFFILE
     else
         echo '    "TrafficReportInterval": 0,' >>$CONFFILE
+        echo '    "DeviceReportInterval": 0,' >>$CONFFILE
     fi
     echo '    "WhitelistedIpv4Addresses": [' >> $CONFFILE
     firstentry=0
@@ -94,10 +96,10 @@ start_service() {
     procd_close_instance
 }
 
-savematches_service() {
+savedata_service() {
     kill -SIGUSR1 $(cat /var/lib/noddos/noddos.pid)
 }
 
-savedata_service() {
+uploaddata_service() {
     kill -SIGUSR2 $(cat /var/lib/noddos/noddos.pid)
 }

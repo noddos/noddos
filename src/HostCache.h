@@ -103,9 +103,10 @@ public:
 	bool SendUdpPing (const std::string DstIpAddress, const uint16_t DstPort);
 	uint32_t getInterfaceIpAddresses();
 
-	uint32_t RestApiCall (const std::string api, const json &j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile);
-	uint32_t UploadDeviceStats(const std::string ClientApiCertFile, const std::string ClientApiKeyFile);
-	bool UploadTrafficStats(const time_t interval, const bool ReportRfc1918, const std::string ClientApiCertFile, const std::string ClientApiKeyFile);
+	uint32_t RestApiCall (const std::string api, const json &j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
+	uint32_t UploadDeviceStats(const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
+	bool UploadTrafficStats(const time_t interval, const bool ReportRfc1918, const std::string ClientApiCertFile, const std::string ClientApiKeyFile,
+			bool doUpload = false);
 	uint32_t ImportDeviceProfileMatches(const std::string filename);
 	bool ExportDeviceProfileMatches(const std::string filename, const bool detailed = false);
 	bool ImportDeviceInfo (json &j);
