@@ -35,8 +35,8 @@ end
 device = {}
 profile = {}
 
-if nixio.fs.access("/tmp/DeviceDump.json") then
-        io.input("/tmp/DeviceDump.json")
+if nixio.fs.access("/var/lib/noddos/DeviceDump.json") then
+        io.input("/var/lib/noddos/DeviceDump.json")
         local t = io.read("*all")
         local json = require "dkjson"
         local devdump = json.decode(t)

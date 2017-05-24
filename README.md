@@ -22,9 +22,9 @@ The 'getnoddosdeviceprofiles' script is used to securely download the list of De
 ## Installation 
 
 ### Installation on Home Gateways running Lede firmware
-Here are instructions for installing Noddos on Home Gateways running Lede firmware. At this time, the following packages are available:
-- Linksys WRT AC series running using the [ARM Cortex A9 vfpv3 package architecture](https://lede-project.org/docs/instructionset/arm_cortex-a9_vfpv3) : [opkg link](placeholder)
-- Various routers from Asus RT-AC56/68/87U, Buffalo, D-Link DIR-885L, Linksys EA6xxx, Netgear R6250/6300/7000/8000/9000 and TPlink Archer C5, C8, C9 using the [arm_cortex_A9 package architecture](https://lede-project.org/docs/instructionset/arm_cortex-a9): [opkg link](placeholder)
+Here are instructions for installing Noddos on Home Gateways running Lede firmware. At this time, the following packages are available from the [Github Noddos releases menu](https://github.com/noddos/noddos/releases):
+- Linksys WRT AC series running using the [ARM Cortex A9 vfpv3 package architecture](https://lede-project.org/docs/instructionset/arm_cortex-a9_vfpv3)
+- Various routers from Asus RT-AC56/68/87U, Buffalo, D-Link DIR-885L, Linksys EA6xxx, Netgear R6250/6300/7000/8000/9000 and TPlink Archer C5, C8, C9 using the [arm_cortex_A9 package architecture](https://lede-project.org/docs/instructionset/arm_cortex-a9)
 
 If you have a different router, you can either send me a request to build a package for that router or you can follow the instructions to create your own package. If someone wants a package for a router running OpenWRT then please ping me and I'll attempt to build a package for that firmware.
     
@@ -165,13 +165,11 @@ Install development packages for libcurl, libopenssl and libnetfilter_conntrack
     cd noddos/src
     cmake .
     make
+    sudo apt install openssl ssl libcurl3 brotli wget libnetfilter-conntrack3 ca-certificates
     make test
 
 ### Install noddos
 Install needed apps
-
-    sudo apt install openssl ssl libcurl3 brotli wget libnetfilter-conntrack3 ca-certificates
-
     sudo adduser --system --home /var/lib/noddos --shell /bin/false \
          --disabled-login --disabled-password\
          --quiet  --group noddos
@@ -190,11 +188,11 @@ Directory where DeviceProfiles.json will be downloaded to
     sudo mkdir /var/lib/noddos
     sudo chown noddos:noddos /var/lib/noddos
 
-    sudo install noddos -o 0 -g 0 -s noddos /usr/sbin 
-    sudo install noddos -o 0 -g 0 ../tools/getnoddosdeviceprofiles /usr/bin 
-    sudo install noddos -o 0 -g 0 ../tools/makenoddoscert.sh /usr/bin 
+    sudo install -o 0 -g 0 -s noddos /usr/sbin 
+    sudo install -o 0 -g 0 tools/getnoddosdeviceprofiles /usr/bin 
+    sudo install -o 0 -g 0 tools/makenoddoscert.sh /usr/bin 
  
-	sudo -u noddos /usr/bingetnoddosdeviceprofiles
+	sudo -u noddos /usr/bin/getnoddosdeviceprofiles
 
 	cd /etc/noddos
 	/usr/bin/makenoddoscert.sh
@@ -298,7 +296,7 @@ __SIGTERM__: Writes DeviceMatches.json file and exits.
 
 __SIGHUP__: Reloads noddos.conf and DeviceProfiles.json.
 
-__SIGTUSR1__: Runs matching alogrithm and writes DeviceDump.json file.
+__SIGUSR1__: Runs matching alogrithm and writes DeviceDump.json file.
 
-__SIGTUSR2__: Runs matching algorithm and uploads (if not disabled) device info and traffic stats to the cloud.
+__SIGUSR2__: Runs matching algorithm and uploads (if not disabled) device info and traffic stats to the cloud.
 

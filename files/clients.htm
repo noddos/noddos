@@ -7,13 +7,16 @@
 <%-
 
     require "nixio.fs"
+    require "os"
 
+	local last_modified = "<boottime>"
     local style = true
     local v
     local devdump
 
-    if nixio.fs.access("/tmp/DeviceDump.json") then
-        io.input("/tmp/DeviceDump.json")
+    if nixio.fs.access("/var/lib/noddos/DeviceDump.json") then
+		last_modified = os.date("%c", nixio.fs.stat("/var/lib/noddos/DeviceDump.json")['mtime'])
+        io.input("/var/lib/noddos/DeviceDump.json")
         t = io.read("*all")
         devdump = luci.jsonc.parse(t)
         io.input("/var/lib/noddos/DeviceProfiles.json")

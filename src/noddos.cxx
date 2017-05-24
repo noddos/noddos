@@ -164,7 +164,7 @@ int main(int argc, char** argv) {
 			    	add_epoll_filehandle(epfd, epollmap, *t_ptr);
 				} else if (epoll_events[ev].data.fd == f.GetFileHandle()) {
 					f.Close();
-					f.Open(config.DnsmasqLogFile);
+					f.Open(config.DnsmasqLogFile, 0); // 0: do not read file, just jump to the end and listen for writes to it
 					add_epoll_filehandle(epfd, epollmap, f);
 				} else {
 					close(epoll_events[ev].data.fd);

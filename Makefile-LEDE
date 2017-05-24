@@ -117,6 +117,7 @@ define Package/noddos/postinst
 	cd $(1)/etc/noddos
 	# Creating a client certificate
 	$(1)/usr/bin/makenoddoscert.sh
+
 	if [ -z "$${IPKG_INSTROOT}" ]; then
 		echo "Enabling rc.d symlink for noddos"
 		cd /etc/rc.d
@@ -127,6 +128,10 @@ define Package/noddos/postinst
 	uci set "dhcp.@dnsmasq[0].logdhcp=1"
 	uci set "dhcp.@dnsmasq[0].logfile=/tmp/dnsmasq.log"
 	uci commit dhcp
+
+	if [ ! -f /var/lib/noddos/DeviceDump.json ]; then
+		echo "[]" >/var/lib/noddos/DeviceDump.json
+	fi
 
 	if [ ! -f /etc/config/noddos ]; then
 		echo 'config noddos' >/etc/config/noddos
