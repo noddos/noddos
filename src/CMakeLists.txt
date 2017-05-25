@@ -89,6 +89,9 @@ add_executable(SsdpServer_test SsdpServer_test.cxx DnsmasqLogFile.cxx
     opensslfingerprint.cxx)
 target_link_libraries(SsdpServer_test curl ssl crypto)
 
+add_test (MacAddress MacAddress_test)
+add_executable(MacAddress_test MacAddress_test.cxx MacAddress.cxx)
+
 add_test (Curl Curl_test)
 add_executable(Curl_test Curl_test.cxx)
 target_link_libraries(Curl_test curl ssl crypto)

@@ -80,8 +80,21 @@ bool HostCache::MatchByMac(const std::string inMacAddress) {
 	if (Debug == true) {
 		syslog(LOG_DEBUG, "Starting match for MAC address %s", inMacAddress.c_str());
 	}
-	if (hC.find(inMacAddress) != hC.end()) {
-		auto &h = *(hC[inMacAddress]);
+	MacAddress m(inMacAddress);
+	if (hC.find(m.Mac) != hC.end()) {
+		auto &h = *(hC[m.Mac]);
+		return h.Match(dpMap);
+	}
+
+	return false;
+}
+
+bool HostCache::MatchByMac(const MacAddress &inMacAddress) {
+	if (Debug == true) {
+		syslog(LOG_DEBUG, "Starting match for MAC address %s", inMacAddress.c_str());
+	}
+	if (hC.find(inMacAddress.Mac) != hC.end()) {
+		auto &h = *(hC[inMacAddress.Mac]);
 		return h.Match(dpMap);
 	}
 
@@ -90,8 +103,8 @@ bool HostCache::MatchByMac(const std::string inMacAddress) {
 
 bool HostCache::MatchByIpAddress(const std::string inIpAddress) {
 	if (Ip2MacMap.find(inIpAddress) != Ip2MacMap.end()) {
-		std::string mac = Ip2MacMap[inIpAddress];
-		return MatchByMac(mac);
+		MacAddress m(Ip2MacMap[inIpAddress]);
+		return MatchByMac(m);
 	}
 	return false;
 }
@@ -101,8 +114,8 @@ std::shared_ptr<Host> HostCache::FindHostByIp (const std::string inIp) {
 	if ( it == Ip2MacMap.end()) {
 		return nullptr;
 	}
-	std::string	MacAddress = it->second;
-	return FindHostByMac (MacAddress);
+	MacAddress mac(it->second);
+	return FindHostByMac (mac);
 }
 
 std::shared_ptr<Host> HostCache::FindOrCreateHostByIp (const std::string inIp, const std::string Uuid) {
@@ -113,21 +126,23 @@ std::shared_ptr<Host> HostCache::FindOrCreateHostByIp (const std::string inIp, c
 	if (inIp == "" || WhitelistedNodes.find(inIp) != WhitelistedNodes.end()) {
 		return nullptr;
     }
-	std::string MacAddress;
+	std::string MacAddressString;
+	MacAddress Mac;
 	auto it = Ip2MacMap.find(inIp);
 	if ( it == Ip2MacMap.end()) {
-		MacAddress = MacLookup(inIp);
-		if (MacAddress == "") {
+		MacAddressString = MacLookup(inIp);
+		if (MacAddressString == "") {
 			if (Debug == true) {
 				syslog(LOG_DEBUG, "Couldn't find ARP entry for %s", inIp.c_str());
 			}
 			return nullptr;
 		}
-		Ip2MacMap[inIp] = MacAddress;
+		Mac.set(MacAddressString);
+		Ip2MacMap[inIp] = Mac.get();
 	} else {
-		MacAddress = it->second;
+		Mac.set(it->second);
 	}
-	return FindOrCreateHostByMac (MacAddress, Uuid, inIp);
+	return FindOrCreateHostByMac (Mac.str(), Uuid, inIp);
 }
 
 std::shared_ptr<Host> HostCache::FindHostByMac (const std::string inMac) {
@@ -135,12 +150,20 @@ std::shared_ptr<Host> HostCache::FindHostByMac (const std::string inMac) {
 		syslog(LOG_WARNING, "empty Mac Address provided");
 		return nullptr;
 	}
-	std::string Mac = inMac;
-	std::transform(Mac.begin(), Mac.end(), Mac.begin(), ::tolower);
-	if (hC.find(Mac) == hC.end()) {
+	MacAddress m(inMac);
+	return FindHostByMac(m);
+}
+
+std::shared_ptr<Host> HostCache::FindHostByMac (const MacAddress &inMac) {
+	if (inMac.get() == 0) {
+		syslog(LOG_WARNING, "Mac Address with invalid value provided");
 		return nullptr;
 	}
-	return hC[Mac];
+	// std::transform(Mac.begin(), Mac.end(), Mac.begin(), ::tolower);
+	if (hC.find(inMac.get()) == hC.end()) {
+		return nullptr;
+	}
+	return hC[inMac.get()];
 }
 
 std::shared_ptr<Host> HostCache::FindOrCreateHostByMac (const std::string inMac, const std::string Uuid, const std::string inIp) {
@@ -154,36 +177,36 @@ std::shared_ptr<Host> HostCache::FindOrCreateHostByMac (const std::string inMac,
 		syslog(LOG_WARNING, "empty Mac Address provided");
 		return nullptr;
 	}
-	std::string Mac = inMac;
-	std::transform(Mac.begin(), Mac.end(), Mac.begin(), ::tolower);
-	if (hC.find(Mac) == hC.end()) {
+	MacAddress Mac = inMac;
+	// std::transform(Mac.begin(), Mac.end(), Mac.begin(), ::tolower);
+	if (hC.find(Mac.get()) == hC.end()) {
 		if (Debug == true) {
-			syslog(LOG_DEBUG, "Adding new Host with MAC address %s for IP %s", Mac.c_str(), inIp.c_str());
+			syslog(LOG_DEBUG, "Adding new Host with MAC address %s for IP %s", inMac.c_str(), inIp.c_str());
 		}
-		auto h = std::make_shared<Host>(Mac, Uuid, Debug);
+		auto h = std::make_shared<Host>(Mac.str(), Uuid, Debug);
 		h->IpAddress_set (inIp);
-		hC[Mac] = h;
+		hC[Mac.get()] = h;
 		return h;
 	}
 	if (Debug == true) {
 		syslog(LOG_DEBUG, "Found MAC address %s for IP %s", Mac.c_str(), inIp.c_str());
 	}
-	return hC[Mac];
+	return hC[Mac.get()];
 }
 
 bool HostCache::AddByMac (const std::string inMacAddress, const std::string inIpAddress) {
 	if (Debug == true) {
 		syslog(LOG_DEBUG, "Creating new host for MAC %s with IP %s", inMacAddress.c_str(), inIpAddress.c_str());
 	}
-	std::string Mac = inMacAddress;
-	std::transform(Mac.begin(), Mac.end(), Mac.begin(), ::tolower);
-	if (hC.find(Mac) != hC.end()) {
+	MacAddress mac(inMacAddress);
+	// std::transform(Mac.begin(), Mac.end(), Mac.begin(), ::tolower);
+	if (hC.find(mac.Mac) != hC.end()) {
 		return false;
     }
-	auto h = std::make_shared<Host>(Mac, Debug);
+	auto h = std::make_shared<Host>(mac.str(), Debug);
 	h->IpAddress_set (inIpAddress);
-	hC[Mac] = h;
-	Ip2MacMap[inIpAddress] = Mac;
+	hC[mac.Mac] = h;
+	Ip2MacMap[inIpAddress] = mac.Mac;
 	return true;
 }
 
@@ -718,7 +741,7 @@ bool HostCache::ImportDeviceInfo (json &j) {
 		return false;
 	}
 
-	std::string MacAddress;
+	std::string MacAddressString;
 	if (j.find("MacAddress") == j.end()) {
 		syslog(LOG_ERR, "No MacAddress set, ignoring this Object");
 		return false;
@@ -727,14 +750,14 @@ bool HostCache::ImportDeviceInfo (json &j) {
 		syslog(LOG_ERR, "MacAddress is not a string, ignoring this Object");
 		return false;
 	}
-	MacAddress = j["MacAddress"].get<std::string>();
-	if (MacAddress == "" ) {
+	MacAddressString = j["MacAddress"].get<std::string>();
+	if (MacAddressString == "" ) {
 		syslog(LOG_ERR, "MacAddress set to empty value, ignoring this Object");
 		return false;
     }
 
 	if (Debug == true) {
-		syslog(LOG_DEBUG, "Importing Device Profile for UUID %s with MacAddress %s", DeviceProfileUuid.c_str(), MacAddress.c_str());
+		syslog(LOG_DEBUG, "Importing Device Profile for UUID %s with MacAddress %s", DeviceProfileUuid.c_str(), MacAddressString.c_str());
 	}
 	std::string IpAddress = "";
 	if (j.find("Ipv4Address") != j.end()) {
@@ -743,10 +766,11 @@ bool HostCache::ImportDeviceInfo (json &j) {
 		}
 	}
 	if (Debug == true) {
-		syslog(LOG_DEBUG, "Importing Device Profile for UUID %s with MacAddress %s", DeviceProfileUuid.c_str(), MacAddress.c_str());
+		syslog(LOG_DEBUG, "Importing Device Profile for UUID %s with MacAddress %s", DeviceProfileUuid.c_str(), MacAddressString.c_str());
 	}
 
-	auto hit = hC.find(MacAddress);
+	MacAddress m(MacAddressString);
+	auto hit = hC.find(m.Mac);
 	if (hit != hC.end()) {
 		std::string uuid = hit->second->Uuid_get();
 		if (uuid != DeviceProfileUuid) {
@@ -754,8 +778,8 @@ bool HostCache::ImportDeviceInfo (json &j) {
 			return false;
 		}
 	}
-	if (not FindOrCreateHostByMac(MacAddress, DeviceProfileUuid, IpAddress)) {
-		syslog(LOG_WARNING, "Failed to create Host with MacAddress %s and uuid %s", MacAddress.c_str(), DeviceProfileUuid.c_str());
+	if (not FindOrCreateHostByMac(m.str(), DeviceProfileUuid, IpAddress)) {
+		syslog(LOG_WARNING, "Failed to create Host with MacAddress %s and uuid %s", MacAddressString.c_str(), DeviceProfileUuid.c_str());
 		return false;
 	}
 	return true;

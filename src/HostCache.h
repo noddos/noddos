@@ -29,14 +29,15 @@
 
 #include "Host.h"
 #include "DeviceProfile.h"
+#include "MacAddress.h"
 #include "Config.h"
 
 #include "noddos.h"
 
 class HostCache {
 private:
-	std::map<std::string, std::shared_ptr<Host>> hC; 	// map from Mac to Host
-	std::map<std::string, std::string> Ip2MacMap; 	// map from IP to MaC
+	std::map<unsigned long long, std::shared_ptr<Host>> hC; 	// map from Mac to Host
+	std::map<std::string, unsigned long long> Ip2MacMap; 	// map from IP to MaC
 	DeviceProfileMap dpMap;
 	std::regex arp_rx, dev_rx;
 	std::unordered_set<std::string> WhitelistedNodes;
@@ -44,9 +45,6 @@ private:
 	std::unordered_set<std::string> LocalInterfaces;
 	std::unordered_set<std::string> LocalIpAddresses;
 	uint32_t FlowExpiration;
-
-
-
 
 public:
 	HostCache(const uint32_t inFlowExpiration = FLOWDEFAULTEXPIRATION, const bool inDebug = false): Debug{inDebug} {
@@ -80,6 +78,7 @@ public:
 	bool isWhitelisted(Host &inHost) { return isWhitelisted(inHost.MacAddress_get()) || isWhitelisted(inHost.Ipv4Address_get()) || isWhitelisted(inHost.Ipv6Address_get()); }
 
 	uint32_t Match();
+	bool MatchByMac(const MacAddress &inMacAddress);
 	bool MatchByMac(const std::string inMacAddress);
 	bool MatchByIpAddress(const std::string inIpAddress);
 
@@ -94,6 +93,7 @@ public:
 	std::shared_ptr<Host> FindHostByIp (const std::string inIp);
 	std::shared_ptr<Host> FindOrCreateHostByIp (const std::string ip, const std::string Uuid = "");
 	std::shared_ptr<Host> FindHostByMac (const std::string inMac);
+	std::shared_ptr<Host> FindHostByMac (const MacAddress &inMac);
 	std::shared_ptr<Host> FindOrCreateHostByMac (const std::string mac, const std::string Uuid = "", const std::string inIp = "");
 
 	uint32_t Prune (bool Force = false);
