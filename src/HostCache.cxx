@@ -76,28 +76,14 @@ uint32_t HostCache::Match() {
 	return matched;
 }
 
-bool HostCache::MatchByMac(const std::string inMacAddress) {
-	if (Debug == true) {
-		syslog(LOG_DEBUG, "Starting match for MAC address %s", inMacAddress.c_str());
-	}
-	MacAddress m(inMacAddress);
-	if (hC.find(m.Mac) != hC.end()) {
-		auto &h = *(hC[m.Mac]);
-		return h.Match(dpMap);
-	}
-
-	return false;
-}
-
 bool HostCache::MatchByMac(const MacAddress &inMacAddress) {
 	if (Debug == true) {
 		syslog(LOG_DEBUG, "Starting match for MAC address %s", inMacAddress.c_str());
 	}
-	if (hC.find(inMacAddress.Mac) != hC.end()) {
-		auto &h = *(hC[inMacAddress.Mac]);
+	if (hC.find(inMacAddress.get()) != hC.end()) {
+		auto &h = *(hC[inMacAddress.get()]);
 		return h.Match(dpMap);
 	}
-
 	return false;
 }
 
@@ -126,18 +112,16 @@ std::shared_ptr<Host> HostCache::FindOrCreateHostByIp (const std::string inIp, c
 	if (inIp == "" || WhitelistedNodes.find(inIp) != WhitelistedNodes.end()) {
 		return nullptr;
     }
-	std::string MacAddressString;
 	MacAddress Mac;
 	auto it = Ip2MacMap.find(inIp);
 	if ( it == Ip2MacMap.end()) {
-		MacAddressString = MacLookup(inIp);
-		if (MacAddressString == "") {
+		Mac = MacLookup(inIp);
+		if (Mac.isValid() == false) {
 			if (Debug == true) {
 				syslog(LOG_DEBUG, "Couldn't find ARP entry for %s", inIp.c_str());
 			}
 			return nullptr;
 		}
-		Mac.set(MacAddressString);
 		Ip2MacMap[inIp] = Mac.get();
 	} else {
 		Mac.set(it->second);
@@ -145,68 +129,54 @@ std::shared_ptr<Host> HostCache::FindOrCreateHostByIp (const std::string inIp, c
 	return FindOrCreateHostByMac (Mac.str(), Uuid, inIp);
 }
 
-std::shared_ptr<Host> HostCache::FindHostByMac (const std::string inMac) {
-	if (inMac == "") {
-		syslog(LOG_WARNING, "empty Mac Address provided");
-		return nullptr;
-	}
-	MacAddress m(inMac);
-	return FindHostByMac(m);
-}
-
 std::shared_ptr<Host> HostCache::FindHostByMac (const MacAddress &inMac) {
-	if (inMac.get() == 0) {
+	if (inMac.isValid() == false) {
 		syslog(LOG_WARNING, "Mac Address with invalid value provided");
 		return nullptr;
 	}
-	// std::transform(Mac.begin(), Mac.end(), Mac.begin(), ::tolower);
 	if (hC.find(inMac.get()) == hC.end()) {
 		return nullptr;
 	}
 	return hC[inMac.get()];
 }
 
-std::shared_ptr<Host> HostCache::FindOrCreateHostByMac (const std::string inMac, const std::string Uuid, const std::string inIp) {
+std::shared_ptr<Host> HostCache::FindOrCreateHostByMac (const MacAddress inMac, const std::string Uuid, const std::string inIp) {
 	if (Debug == true) {
 		syslog(LOG_DEBUG, "Find or create host for MAC %s", inMac.c_str());
 	}
-	if (WhitelistedNodes.find(inMac) != WhitelistedNodes.end()) {
+	if (WhitelistedNodes.find(inMac.str()) != WhitelistedNodes.end()) {
 		return nullptr;
     }
-	if (inMac == "") {
+	if (inMac.isValid() == false) {
 		syslog(LOG_WARNING, "empty Mac Address provided");
 		return nullptr;
 	}
-	MacAddress Mac = inMac;
-	// std::transform(Mac.begin(), Mac.end(), Mac.begin(), ::tolower);
-	if (hC.find(Mac.get()) == hC.end()) {
+	if (hC.find(inMac.get()) == hC.end()) {
 		if (Debug == true) {
 			syslog(LOG_DEBUG, "Adding new Host with MAC address %s for IP %s", inMac.c_str(), inIp.c_str());
 		}
-		auto h = std::make_shared<Host>(Mac.str(), Uuid, Debug);
+		auto h = std::make_shared<Host>(inMac.str(), Uuid, Debug);
 		h->IpAddress_set (inIp);
-		hC[Mac.get()] = h;
+		hC[inMac.get()] = h;
 		return h;
 	}
 	if (Debug == true) {
-		syslog(LOG_DEBUG, "Found MAC address %s for IP %s", Mac.c_str(), inIp.c_str());
+		syslog(LOG_DEBUG, "Found MAC address %s for IP %s", inMac.c_str(), inIp.c_str());
 	}
-	return hC[Mac.get()];
+	return hC[inMac.get()];
 }
 
-bool HostCache::AddByMac (const std::string inMacAddress, const std::string inIpAddress) {
+bool HostCache::AddByMac (const MacAddress inMacAddress, const std::string inIpAddress) {
 	if (Debug == true) {
 		syslog(LOG_DEBUG, "Creating new host for MAC %s with IP %s", inMacAddress.c_str(), inIpAddress.c_str());
 	}
-	MacAddress mac(inMacAddress);
-	// std::transform(Mac.begin(), Mac.end(), Mac.begin(), ::tolower);
-	if (hC.find(mac.Mac) != hC.end()) {
+	if (hC.find(inMacAddress.get()) != hC.end()) {
 		return false;
     }
-	auto h = std::make_shared<Host>(mac.str(), Debug);
+	auto h = std::make_shared<Host>(inMacAddress, Debug);
 	h->IpAddress_set (inIpAddress);
-	hC[mac.Mac] = h;
-	Ip2MacMap[inIpAddress] = mac.Mac;
+	hC[inMacAddress.get()] = h;
+	Ip2MacMap[inIpAddress] = inMacAddress.get();
 	return true;
 }
 
@@ -274,28 +244,28 @@ bool HostCache::AddDhcpRequest (const std::shared_ptr<DhcpRequest> inDhcpRequest
 	return false;
 }
 
-bool HostCache::AddDhcpRequest (const std::string IpAddress, const std::string MacAddress, const std::string Hostname, const std::string DhcpHostname, const std::string DhcpVendor) {
+bool HostCache::AddDhcpRequest (const std::string IpAddress, const MacAddress inMac, const std::string Hostname, const std::string DhcpHostname, const std::string DhcpVendor) {
 	if (Debug == true) {
-		syslog(LOG_DEBUG, "Adding DHCP request for host with MAC %s & IP %s", MacAddress.c_str(), IpAddress.c_str());
+		syslog(LOG_DEBUG, "Adding DHCP request for host with MAC %s & IP %s", inMac.c_str(), IpAddress.c_str());
 	}
-	if (IpAddress == "" && MacAddress == "") {
+	if (IpAddress == "" && inMac.isValid() == false) {
 		syslog(LOG_WARNING, "No IpAdddress or Macaddress in DHCP request");
 		return false;
 
 	}
-	if (isWhitelisted(IpAddress) || isWhitelisted(MacAddress)) {
+	if (isWhitelisted(IpAddress) || isWhitelisted(inMac.str())) {
 		return false;
     }
 
 	std::shared_ptr<Host> h;
-	if (MacAddress != "") {
-		h = FindOrCreateHostByMac(MacAddress, "", IpAddress);
+	if (inMac.isValid() == true) {
+		h = FindOrCreateHostByMac(inMac, "", IpAddress);
 	} else {
 		h = FindOrCreateHostByIp(IpAddress);
 	}
 
 	if (h) {
-		h->Dhcp_set(IpAddress, MacAddress, Hostname, DhcpHostname, DhcpVendor);
+		h->Dhcp_set(IpAddress, inMac.str(), Hostname, DhcpHostname, DhcpVendor);
 		return true;
 	}
 	return false;
@@ -324,12 +294,13 @@ bool HostCache::AddSsdpInfo (const std::shared_ptr<SsdpHost> sHost) {
 
 // TODO: Lookup MAC addresses in ARP table using IOCTL now works but you need to specify the Ethernet interface and we don't have code for that yet
 // so for now we'll continue doing lookups in /proc/net/arp even though that is slower
-std::string HostCache::MacLookup (const std::string inIpAddress, std::string inInterface, const int retries) {
+MacAddress HostCache::MacLookup (const std::string inIpAddress, const std::string inInterface, const int retries) {
 	int domain;
 	struct arpreq areq;
 	memset(&areq, 0, sizeof(areq));
 	void *addr_ptr;
 
+	MacAddress Mac("00:00:00:00:00:00");
 	if (inIpAddress.find(":") == std::string::npos ) {
 		struct sockaddr_in *sin = (struct sockaddr_in *) &areq.arp_pa;
 	    sin->sin_family = domain = AF_INET;
@@ -341,7 +312,7 @@ std::string HostCache::MacLookup (const std::string inIpAddress, std::string inI
 	}
     if (not inet_pton(domain, inIpAddress.c_str(), addr_ptr)) {
 		syslog (LOG_ERR, "inet_pton failed for %s", inIpAddress.c_str());
-		return "";
+		return Mac;
 	}
 
 	struct sockaddr_in *sin = (struct sockaddr_in *) &areq.arp_ha;
@@ -352,7 +323,7 @@ std::string HostCache::MacLookup (const std::string inIpAddress, std::string inI
     int s;
 	if ((s = socket(domain, SOCK_DGRAM, 0)) == -1) {
         syslog(LOG_ERR, "Can't open socket for ARP table lookup");
-        return "";
+        return Mac;
     }
 
     if (-1 == ioctl(s,SIOCGARP , (caddr_t) &areq)) {
@@ -366,15 +337,15 @@ std::string HostCache::MacLookup (const std::string inIpAddress, std::string inI
 				return MacLookup (inIpAddress, inInterface, retries - 1);
 			}
 		}
-		return "";
+		return Mac;
 	}
 	char mA[18];
 	unsigned char *ptr = (unsigned char *) areq.arp_ha.sa_data;
 	sprintf(mA, "%02X:%02X:%02X:%02X:%02X:%02X",
 	        (ptr[0] & 0xff), (ptr[1] & 0xff), (ptr[2] & 0xff),
 	        (ptr[3] & 0xff), (ptr[4] & 0xff), (ptr[5] & 0xff));
-	std::string MacAddress(mA);
-	return MacAddress;
+	Mac.set(mA);
+	return Mac;
 }
 
 uint32_t HostCache::getInterfaceIpAddresses() {
@@ -430,18 +401,19 @@ uint32_t HostCache::getInterfaceIpAddresses() {
 	return 0;
 }
 
-std::string HostCache::MacLookup (const std::string inIpAddress, const int retries) {
+MacAddress HostCache::MacLookup (const std::string inIpAddress, const int retries) {
 	// TODO: we should cache ARP table and only refresh it if a MAC lookup fails
 	std::ifstream ifs("/proc/net/arp");
 	std::string line;
+	MacAddress Mac;
 	while (std::getline(ifs, line)) {
 		std::smatch m;
 		if(std::regex_match(line, m, arp_rx)) {
 			std::string ip = m.str(1);
-			std::string mac = m.str(2);
-			if (ip == inIpAddress && mac != "00:00:00:00:00:00") {
+			Mac.set(m.str(2));
+			if (ip == inIpAddress && Mac.isValid() != 0) {
 				ifs.close();
-				return mac;
+				return Mac;
 			}
 		}
 
@@ -456,7 +428,7 @@ std::string HostCache::MacLookup (const std::string inIpAddress, const int retri
 			return MacLookup (inIpAddress, retries - 1);
 		}
 	}
-	return "";
+	return Mac;
 }
 
 bool HostCache::SendUdpPing (const std::string DstIpAddress, const uint16_t DstPort) {

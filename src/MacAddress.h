@@ -50,6 +50,9 @@ public:
     };
 
 	const char* c_str() const {return str().c_str(); };
+
+	bool isValid() const { return Mac > 0; }
+	bool operator()( MacAddress const& lhs, MacAddress const& rhs ) const  { return lhs.Mac < rhs.Mac; }
 };
 
 #endif /* MACADDRESS_H_ */

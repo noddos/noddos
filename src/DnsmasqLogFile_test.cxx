@@ -34,16 +34,16 @@ int main () {
 	// the client IP address translates to a MAC address as
 	// the client ip address in the test colleteral may no longer
 	// be present.
-	hc.AddByMac ("00:00:00:00:00:01", "192.168.1.232");
-	hc.AddByMac ("00:00:00:00:00:02", "192.168.1.98");
-	hc.AddByMac ("00:00:00:00:00:03", "192.168.1.99");
-	hc.AddByMac ("00:00:00:00:00:04", "192.168.1.235");
-	hc.AddByMac ("00:00:00:00:00:05", "192.168.1.241");
-	hc.AddByMac ("00:00:00:00:00:06", "192.168.1.251");
-	hc.AddByMac ("00:00:00:00:00:07", "192.168.1.234");
-	hc.AddByMac ("00:00:00:00:00:08", "192.168.1.240");
-	hc.AddByMac ("00:00:00:00:00:09", "192.168.1.238");
-	hc.AddByMac ("00:00:00:00:00:10", "192.168.1.234");
+	hc.AddByMac (MacAddress("00:00:00:00:00:01"), "192.168.1.232");
+	hc.AddByMac (MacAddress("00:00:00:00:00:02"), "192.168.1.98");
+	hc.AddByMac (MacAddress("00:00:00:00:00:03"), "192.168.1.99");
+	hc.AddByMac (MacAddress("00:00:00:00:00:04"), "192.168.1.235");
+	hc.AddByMac (MacAddress("00:00:00:00:00:05"), "192.168.1.241");
+	hc.AddByMac (MacAddress("00:00:00:00:00:06"), "192.168.1.251");
+	hc.AddByMac (MacAddress("00:00:00:00:00:07"), "192.168.1.234");
+	hc.AddByMac (MacAddress("00:00:00:00:00:08"), "192.168.1.240");
+	hc.AddByMac (MacAddress("00:00:00:00:00:09"), "192.168.1.238");
+	hc.AddByMac (MacAddress("00:00:00:00:00:10"), "192.168.1.234");
 
 	DnsmasqLogFile d ("tests/dnsmasqdnsdata.log", hc, 86400);
 	auto lp = d.LinesParsed();

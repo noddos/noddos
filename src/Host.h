@@ -40,6 +40,7 @@ using json = nlohmann::json;
 #include "SsdpHost.h"
 #include "DeviceProfile.h"
 #include "MatchCondition.h"
+#include "MacAddress.h"
 
 typedef std::map<std::string, std::shared_ptr<DnsLogEntry>> DnsCache;
 typedef std::list<std::shared_ptr<FlowEntry>> FlowEntryList;
@@ -53,7 +54,7 @@ class Host : public iCache {
     	std::map<std::string, std::shared_ptr<FlowEntryList>> FlowCache;
     	std::string Ipv4Address;
     	std::string Ipv6Address;
-    	std::string MacAddress;
+    	MacAddress Mac;
     	DhcpRequest Dhcp;
     	SsdpHost Ssdp;
     	std::string Uuid;
@@ -64,15 +65,15 @@ class Host : public iCache {
     	bool Debug;
 
 	public:
-		Host(const std::string inMacAddress, const bool inDebug = false): MacAddress{inMacAddress}, Debug{inDebug}  {
+		Host(const MacAddress inMac, const bool inDebug = false): Mac{inMac}, Debug{inDebug}  {
 			iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);
 			UploadStats = true;
 			matchtime = 0;
 			IdentifyConfidenceLevel = EnforceConfidenceLevel = ConfidenceLevel::None;
 		}
 
-		Host(const std::string inMacAddress, const std::string inUuid, const bool inDebug = false):
-				MacAddress{inMacAddress}, Uuid{inUuid}, Debug{inDebug} {
+		Host(const MacAddress inMac, const std::string inUuid, const bool inDebug = false):
+				Mac{inMac}, Uuid{inUuid}, Debug{inDebug} {
 			iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);
 			UploadStats = true;
 			matchtime = 0;
@@ -100,7 +101,8 @@ class Host : public iCache {
 		bool isMatched () { return Uuid != ""; }
 		bool UploadsEnabled ();
 		std::string Uuid_get () { return Uuid; }
-		std::string MacAddress_get () { return MacAddress; }
+		// MacAddress MacAddress_get () { return Mac; }
+		std::string MacAddress_get () { return Mac.str(); }
 		std::string Ipv4Address_get () { return Ipv4Address; }
 		std::string Ipv6Address_get () { return Ipv6Address; }
 

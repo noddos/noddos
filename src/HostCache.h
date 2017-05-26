@@ -79,27 +79,25 @@ public:
 
 	uint32_t Match();
 	bool MatchByMac(const MacAddress &inMacAddress);
-	bool MatchByMac(const std::string inMacAddress);
 	bool MatchByIpAddress(const std::string inIpAddress);
 
-	bool AddByMac (const std::string inMacAddress, const std::string inIpAddress = "");
+	bool AddByMac (const MacAddress inMacAddress, const std::string inIpAddress = "");
 	bool AddFlow (const std::string srcip, const uint16_t srcport, const std::string dstip, const uint16_t dstport, const uint8_t protocol, const uint32_t expiration);
 	bool AddDnsQueryIp (const std::string clientip, const std::string fqdn, const std::string ip, const uint32_t expire = 86400);
 	bool AddDhcpRequest (const std::shared_ptr<DhcpRequest> inDhcpRequest_sptr);
 	bool AddDhcpRequest (const DhcpRequest &inDhcpRequest);
-	bool AddDhcpRequest (const std::string IpAddress, const std::string MacAddress, const std::string Hostname, const std::string DhcpHostname, const std::string DhcpVendor);
+	bool AddDhcpRequest (const std::string IpAddress, const MacAddress inMac, const std::string Hostname, const std::string DhcpHostname, const std::string DhcpVendor);
 	bool AddSsdpInfo (const std::shared_ptr<SsdpHost> insHost);
 
 	std::shared_ptr<Host> FindHostByIp (const std::string inIp);
 	std::shared_ptr<Host> FindOrCreateHostByIp (const std::string ip, const std::string Uuid = "");
-	std::shared_ptr<Host> FindHostByMac (const std::string inMac);
 	std::shared_ptr<Host> FindHostByMac (const MacAddress &inMac);
-	std::shared_ptr<Host> FindOrCreateHostByMac (const std::string mac, const std::string Uuid = "", const std::string inIp = "");
+	std::shared_ptr<Host> FindOrCreateHostByMac (const MacAddress inMac, const std::string Uuid = "", const std::string inIp = "");
 
 	uint32_t Prune (bool Force = false);
 
-	std::string MacLookup (const std::string inIpAddress, const int retries = 1);
-	std::string MacLookup (const std::string inIpAddress, std::string inInterface, const int retries = 1);
+	MacAddress MacLookup (const std::string inIpAddress, const int retries = 1);
+	MacAddress MacLookup (const std::string inIpAddress, const std::string inInterface, const int retries = 1);
 	bool SendUdpPing (const std::string DstIpAddress, const uint16_t DstPort);
 	uint32_t getInterfaceIpAddresses();
 

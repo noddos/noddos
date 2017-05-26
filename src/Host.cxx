@@ -60,7 +60,7 @@ bool Host::Match(const DeviceProfileMap& dpMap) {
 	std::string matcheduuid = "";
 	for (auto &kv : dpMap) {
 		if(Debug) {
-			syslog(LOG_DEBUG, "Evaluating host %s against device profile %s", MacAddress.c_str(), kv.first.c_str());
+			syslog(LOG_DEBUG, "Evaluating host %s against device profile %s", Mac.c_str(), kv.first.c_str());
 		}
 		auto &dp = *(kv.second);
 		auto match = Match(dp);
@@ -74,7 +74,7 @@ bool Host::Match(const DeviceProfileMap& dpMap) {
 	}
 	if (bestmatch >= ConfidenceLevel::Low) {
 		Uuid = matcheduuid;
-		syslog(LOG_DEBUG, "Host %s matched %s", MacAddress.c_str(), Uuid.c_str());
+		syslog(LOG_DEBUG, "Host %s matched %s", Mac.c_str(), Uuid.c_str());
 		return true;
 	}
 	return false;
@@ -90,7 +90,7 @@ ConfidenceLevel Host::Match(const DeviceProfile& dp) {
 		auto match = Match(*i);
 		if (match >= ConfidenceLevel::High) {
 			if(Debug) {
-				syslog(LOG_DEBUG, "Host %s matched with high confidence", MacAddress.c_str());
+				syslog(LOG_DEBUG, "Host %s matched with high confidence", Mac.c_str());
 			}
 			return match;
         }
@@ -99,7 +99,7 @@ ConfidenceLevel Host::Match(const DeviceProfile& dp) {
         }
 	}
 	if(Debug) {
-		syslog(LOG_DEBUG, "Host %s match level %d", MacAddress.c_str(), static_cast<int>(bestmatch));
+		syslog(LOG_DEBUG, "Host %s match level %d", Mac.c_str(), static_cast<int>(bestmatch));
 	}
 	return bestmatch;
 }
@@ -111,7 +111,7 @@ ConfidenceLevel Host::Match(const Identifier& i) {
 		}
 		if(not Match (*mc)) {
 			if(Debug) {
-				syslog (LOG_DEBUG, "Host %s did not match condition %s", MacAddress.c_str(), (*mc).Key.c_str());
+				syslog (LOG_DEBUG, "Host %s did not match condition %s", Mac.c_str(), (*mc).Key.c_str());
 			}
 			return ConfidenceLevel::None;
 		}
@@ -122,13 +122,13 @@ ConfidenceLevel Host::Match(const Identifier& i) {
 		}
 		if(not Match (*cc)) {
 			if(Debug) {
-				syslog (LOG_DEBUG, "Host %s did not contain condition %s", MacAddress.c_str(), (*cc).Key.c_str());
+				syslog (LOG_DEBUG, "Host %s did not contain condition %s", Mac.c_str(), (*cc).Key.c_str());
 			}
 			return ConfidenceLevel::None;
 		}
 	}
 	if(Debug) {
-		syslog(LOG_DEBUG, "Host %s matched MustMatch and/or MustContain conditions", MacAddress.c_str());
+		syslog(LOG_DEBUG, "Host %s matched MustMatch and/or MustContain conditions", Mac.c_str());
 	}
 	return i.IdentifyConfidenceLevel_get();
 }
@@ -136,7 +136,7 @@ ConfidenceLevel Host::Match(const Identifier& i) {
 bool Host::Match(const MatchCondition& mc) {
 	std::string value;
 	if (mc.Key == "MacOid") {
-		value = MacAddress.substr(0,8);
+		value = Mac.str().substr(0,8);
 	} else if (mc.Key == "DhcpHostname") {
 		value = Dhcp.DhcpHostname;
 	} else if (mc.Key == "DhcpVendor") {
@@ -166,7 +166,7 @@ bool Host::Match(const MatchCondition& mc) {
 	}
 	if (value == "") {
 		if(Debug) {
-			syslog(LOG_DEBUG, "Host %s has no value for MustMatch condition %s", MacAddress.c_str(), mc.Key.c_str());
+			syslog(LOG_DEBUG, "Host %s has no value for MustMatch condition %s", Mac.c_str(), mc.Key.c_str());
 		}
 	}
 	size_t startpos = 0;
@@ -182,7 +182,7 @@ bool Host::Match(const MatchCondition& mc) {
 	}
 	if (value.compare(startpos, mcvalue.length() - startpos, mcvalue) == 0) {
 		if(Debug) {
-			syslog(LOG_DEBUG, "Host %s matched MustMatch condition", MacAddress.c_str());
+			syslog(LOG_DEBUG, "Host %s matched MustMatch condition", Mac.c_str());
 		}
 		return true;
     }
@@ -197,11 +197,11 @@ bool Host::Match(const ContainCondition& cc) {
 		for (auto fqdn: cc.Values) {
 			if (DnsCache.find(fqdn) != DnsCache.end()) {
 				if(Debug) {
-					syslog(LOG_DEBUG, "Found DnsQuery for %s from host %s", fqdn.c_str(), MacAddress.c_str());
+					syslog(LOG_DEBUG, "Found DnsQuery for %s from host %s", fqdn.c_str(), Mac.c_str());
 				}
 			} else {
 				if(Debug) {
-					syslog(LOG_DEBUG, "Didn't find DnsQuery for %s from host %s", fqdn.c_str(), MacAddress.c_str());
+					syslog(LOG_DEBUG, "Didn't find DnsQuery for %s from host %s", fqdn.c_str(), Mac.c_str());
 				}
 				return false;
 			}
@@ -213,7 +213,7 @@ bool Host::Match(const ContainCondition& cc) {
 		return false;
 	}
 	if(Debug) {
-		syslog(LOG_DEBUG, "Host %s matched MustContain condition", MacAddress.c_str());
+		syslog(LOG_DEBUG, "Host %s matched MustContain condition", Mac.c_str());
 	}
 	return true;
 }
@@ -224,7 +224,7 @@ bool Host::DeviceStats(json& j, const uint32_t time_interval, bool force, bool d
 	if (not force && (isMatched() || LastModified < (time(nullptr) - time_interval))) {
 		return false;
 	}
-	j["MacOid"] = MacAddress.substr(0,8);
+	j["MacOid"] = Mac.str().substr(0,8);
 	j["DhcpHostname"] = Dhcp.DhcpHostname;
 	j["DhcpVendor"] = Dhcp.DhcpVendor;
 	j["Hostname"] = Dhcp.Hostname;
@@ -318,7 +318,7 @@ bool Host::inPrivateAddressRange(const std::string inIp ) {
 }
 
 void Host::ExportDeviceInfo (json &j, bool detailed) {
-	json h{{"MacAddress", MacAddress},
+	json h{{"MacAddress", Mac.str()},
 			{"DeviceProfileUuid", Uuid},
 			{"Ipv4Address", Ipv4Address},
 			{"SsdpManufacturer", Ssdp.Manufacturer},
@@ -453,7 +453,7 @@ bool Host::UploadsEnabled() {
 uint32_t Host::Prune (bool Force) {
 	bool pruned = false;
 	if(Debug) {
-		syslog(LOG_DEBUG, "Pruning host %s", MacAddress.c_str());
+		syslog(LOG_DEBUG, "Pruning host %s", Mac.c_str());
 	}
 	uint32_t pruned_flowentries = 0;
 	uint32_t pruned_flows = 0;

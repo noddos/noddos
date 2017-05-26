@@ -36,26 +36,26 @@ int main () {
 	openlog("Host_test", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
 	HostCache hC;
 	hC.DeviceProfiles_load(deviceprofilesfile);
-	hC.AddByMac ("00:00:00:00:00:01", "192.168.1.232");
-	hC.AddByMac ("00:00:00:00:00:02", "192.168.1.98");
-	hC.AddByMac ("00:00:00:00:00:03", "192.168.1.99");
-	hC.AddByMac ("00:00:00:00:00:04", "192.168.1.235");
-	hC.AddByMac ("00:00:00:00:00:05", "192.168.1.241");
-	hC.AddByMac ("00:00:00:00:00:05", "192.168.1.251");
-	hC.AddByMac ("00:00:00:00:00:06", "192.168.1.234");
-	hC.AddByMac ("00:00:00:00:00:07", "192.168.1.240");
+	hC.AddByMac (MacAddress("00:00:00:00:00:01"), "192.168.1.232");
+	hC.AddByMac (MacAddress("00:00:00:00:00:02"), "192.168.1.98");
+	hC.AddByMac (MacAddress("00:00:00:00:00:03"), "192.168.1.99");
+	hC.AddByMac (MacAddress("00:00:00:00:00:04"), "192.168.1.235");
+	hC.AddByMac (MacAddress("00:00:00:00:00:05"), "192.168.1.241");
+	hC.AddByMac (MacAddress("00:00:00:00:00:05"), "192.168.1.251");
+	hC.AddByMac (MacAddress("00:00:00:00:00:06"), "192.168.1.234");
+	hC.AddByMac (MacAddress("00:00:00:00:00:07"), "192.168.1.240");
 
-	hC.AddByMac ("00:00:00:00:00:08", "192.168.1.227");
-	hC.AddByMac ("00:00:00:00:00:09", "192.168.1.226");
-	hC.AddByMac ("00:00:00:00:00:10", "192.168.1.80");
-	hC.AddByMac ("00:00:00:00:00:11", "192.168.1.225");
-	hC.AddByMac ("00:00:00:00:00:12", "192.168.1.242");
-	hC.AddByMac ("00:00:00:00:00:14", "192.168.1.231");
-	hC.AddByMac ("00:00:00:00:00:15", "192.168.1.133");
-	hC.AddByMac ("00:00:00:00:00:16", "192.168.1.238");
-	hC.AddByMac ("00:00:00:00:00:17", "192.168.1.146");
-	hC.AddByMac ("00:00:00:00:00:18", "192.168.1.224");
-	hC.AddByMac ("00:00:00:00:00:19", "192.168.1.239");
+	hC.AddByMac (MacAddress("00:00:00:00:00:08"), "192.168.1.227");
+	hC.AddByMac (MacAddress("00:00:00:00:00:09"), "192.168.1.226");
+	hC.AddByMac (MacAddress("00:00:00:00:00:10"), "192.168.1.80");
+	hC.AddByMac (MacAddress("00:00:00:00:00:11"), "192.168.1.225");
+	hC.AddByMac (MacAddress("00:00:00:00:00:12"), "192.168.1.242");
+	hC.AddByMac (MacAddress("00:00:00:00:00:14"), "192.168.1.231");
+	hC.AddByMac (MacAddress("00:00:00:00:00:15"), "192.168.1.133");
+	hC.AddByMac (MacAddress("00:00:00:00:00:16"), "192.168.1.238");
+	hC.AddByMac (MacAddress("00:00:00:00:00:17"), "192.168.1.146");
+	hC.AddByMac (MacAddress("00:00:00:00:00:18"), "192.168.1.224");
+	hC.AddByMac (MacAddress("00:00:00:00:00:19"), "192.168.1.239");
 
 
 	auto sh = std::make_shared<SsdpHost>();
@@ -99,7 +99,7 @@ int main () {
 	if (res4 != true) {
 		std::cout << "Test failure: Host with DhcpHostname " << dr->DhcpHostname << " and DnsQuery for " << "api.amazon.com" << " did not match" << std::endl;
 	}
-	auto h = Host("01:01:01:01:01:01", true);
+	auto h = Host(MacAddress("01:01:01:01:01:01"), true);
 	if (h.inPrivateAddressRange("11.0.0.0")) {
 		std::cout << "Test failure: 11.0.0.0 is not RFC1918" << std::endl;
 		testfailed = true;
