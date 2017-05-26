@@ -101,21 +101,21 @@ bool DnsmasqLogFile::ParseDhcpLine (const std::string line) {
 			}
 		}
 		DhcpRequestMap[querynumber]->IpAddress = ack_m.str(1);
-		DhcpRequestMap[querynumber]->MacAddress = ack_m.str(2);
+		DhcpRequestMap[querynumber]->Mac.set(ack_m.str(2));
 		DhcpRequestMap[querynumber]->DhcpHostname = ack_m.str(4);
 		std::transform(DhcpRequestMap[querynumber]->DhcpHostname.begin(), DhcpRequestMap[querynumber]->DhcpHostname.end(),
 				DhcpRequestMap[querynumber]->DhcpHostname.begin(), ::tolower);
 		if(Debug) {
 			syslog(LOG_DEBUG, "Parsed DHCP Ack %s : %s : %s",
 				DhcpRequestMap[querynumber]->IpAddress.c_str(),
-				DhcpRequestMap[querynumber]->MacAddress.c_str(),
+				DhcpRequestMap[querynumber]->Mac.c_str(),
 				DhcpRequestMap[querynumber]->DhcpHostname.c_str()
 			);
 		}
 		// The DHCP Ack is the last message for a DHCP query that we collect info from so now we can poplate the Host entity
 		hCache.AddDhcpRequest(
 				DhcpRequestMap[querynumber]->IpAddress,
-				DhcpRequestMap[querynumber]->MacAddress,
+				DhcpRequestMap[querynumber]->Mac,
 				DhcpRequestMap[querynumber]->Hostname,
 				DhcpRequestMap[querynumber]->DhcpHostname,
 				DhcpRequestMap[querynumber]->DhcpVendor

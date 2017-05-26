@@ -410,14 +410,14 @@ bool Host::Dhcp_set (const std::shared_ptr<DhcpRequest> inDhcp_sptr) {
 	Dhcp = *inDhcp_sptr;
 	Dhcp.Expiration_set();
 	if(Debug) {
-		syslog(LOG_DEBUG, "Creating DHCP data for %s with expiration %lu", Dhcp.MacAddress.c_str(), Dhcp.Expiration_get());
+		syslog(LOG_DEBUG, "Creating DHCP data for %s with expiration %lu", Dhcp.Mac.c_str(), Dhcp.Expiration_get());
 	}
 	return true;
 }
 
-bool Host::Dhcp_set (const std::string IpAddress, const std::string MacAddress, const std::string Hostname, const std::string DhcpHostname, const std::string DhcpVendor) {
+bool Host::Dhcp_set (const std::string IpAddress, const MacAddress Mac, const std::string Hostname, const std::string DhcpHostname, const std::string DhcpVendor) {
 	Dhcp.IpAddress = IpAddress;
-	Dhcp.MacAddress = MacAddress;
+	Dhcp.Mac = Mac;
 	Dhcp.Hostname = Hostname;
 	Dhcp.DhcpHostname = DhcpHostname;
 	Dhcp.DhcpVendor = DhcpVendor;
@@ -425,7 +425,7 @@ bool Host::Dhcp_set (const std::string IpAddress, const std::string MacAddress, 
 	iCache::FirstSeen = iCache::LastModified = iCache::LastSeen = time(nullptr);
 	Dhcp.Expiration_set();
 	if(Debug) {
-		syslog(LOG_DEBUG, "Creating DHCP data for %s with expiration %lu", Dhcp.MacAddress.c_str(), Dhcp.Expiration_get());
+		syslog(LOG_DEBUG, "Creating DHCP data for %s with expiration %lu", Dhcp.Mac.c_str(), Dhcp.Expiration_get());
 	}
 	return true;
 }

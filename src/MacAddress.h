@@ -53,6 +53,9 @@ public:
 
 	bool isValid() const { return Mac > 0; }
 	bool operator()( MacAddress const& lhs, MacAddress const& rhs ) const  { return lhs.Mac < rhs.Mac; }
+	bool operator == (const MacAddress &rhs) const {
+		return Mac == rhs.Mac;
+	}
 };
 
 #endif /* MACADDRESS_H_ */
