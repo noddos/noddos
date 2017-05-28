@@ -45,7 +45,7 @@ After restarting the dnsmasq and the log subsystem, there should be a /tmp/syste
 
 We need to modify the menu structure of the Luci web interface to point to the Noddos Client and Configuration pages. First edit the file /usr/lib/lua/luci/controller/admin/status.lua. Insert on line 15:
 
-	if nixio.fs.access("/usr/lib/lua/luci/view/admin_status") then
+	if nixio.fs.access("/usr/lib/lua/luci/view/admin_status/clients.htm") then
     	entry({"admin", "status", "clients"}, template("admin_status/clients"), _("Clients"), 3)
     end
 
@@ -54,7 +54,7 @@ Then edit /usr/lib/lua/luci/controller/admin/network.lua, insert on line l16:
     if nixio.fs.access("/usr/lib/lua/luci/model/cbi/admin_network/noddos.lua") then
         page = entry({"admin", "network", "noddos"}, cbi("admin_network/noddos"), nil)
         page.target = cbi("admin_network/noddos")
-        page.title = _("Client Firewall")
+        page.title = _("Client Tracking")
         page.order = 55
         page.leaf = true
     end
