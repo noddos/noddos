@@ -40,6 +40,8 @@ using json = nlohmann::json;
 #include "SsdpHost.h"
 #include "DeviceProfile.h"
 #include "MatchCondition.h"
+#include "MacAddress.h"
+#include "boost/asio.hpp"
 
 typedef std::map<std::string, std::shared_ptr<DnsLogEntry>> DnsCache;
 typedef std::list<std::shared_ptr<FlowEntry>> FlowEntryList;
@@ -50,10 +52,11 @@ typedef std::list<std::shared_ptr<FlowEntry>> FlowEntryList;
 class Host : public iCache {
 	private:
     	std::map<std::string, std::shared_ptr<DnsLogEntry>> DnsCache;
-    	std::map<std::string, std::shared_ptr<FlowEntryList>> FlowCache;
+    	std::map<boost::asio::ip::address_v4, std::shared_ptr<FlowEntryList>> FlowCacheIpv4;
+    	std::map<boost::asio::ip::address_v6, std::shared_ptr<FlowEntryList>> FlowCacheIpv6;
     	std::string Ipv4Address;
     	std::string Ipv6Address;
-    	std::string MacAddress;
+    	MacAddress Mac;
     	DhcpRequest Dhcp;
     	SsdpHost Ssdp;
     	std::string Uuid;
@@ -64,15 +67,15 @@ class Host : public iCache {
     	bool Debug;
 
 	public:
-		Host(const std::string inMacAddress, const bool inDebug = false): MacAddress{inMacAddress}, Debug{inDebug}  {
+		Host(const MacAddress inMac, const bool inDebug = false): Mac{inMac}, Debug{inDebug}  {
 			iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);
 			UploadStats = true;
 			matchtime = 0;
 			IdentifyConfidenceLevel = EnforceConfidenceLevel = ConfidenceLevel::None;
 		}
 
-		Host(const std::string inMacAddress, const std::string inUuid, const bool inDebug = false):
-				MacAddress{inMacAddress}, Uuid{inUuid}, Debug{inDebug} {
+		Host(const MacAddress inMac, const std::string inUuid, const bool inDebug = false):
+				Mac{inMac}, Uuid{inUuid}, Debug{inDebug} {
 			iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);
 			UploadStats = true;
 			matchtime = 0;
@@ -89,18 +92,20 @@ class Host : public iCache {
 		bool Match(const ContainCondition& cc);
 
 		void IpAddress_set (const std::string IpAddress) { Ipv4Address = IpAddress; }
-		bool FlowEntry_set(const uint16_t inSrcPort, const std::string &inDstIp, const uint16_t inDstPort, const uint8_t inProtocol, const uint32_t inExpiration);
-		uint32_t FlowCacheCount () { return FlowCache.size(); }
+		bool FlowEntry_set(const uint16_t inSrcPort, const std::string inDstIp,
+				const uint16_t inDstPort, const uint8_t inProtocol, const uint32_t inExpiration);
+		uint32_t FlowCacheCount () { return FlowCacheIpv4.size() + FlowCacheIpv6.size(); }
 		bool DnsLogEntry_set(const std::string fqdn, const std::string ipaddress, const uint32_t expiration = 86400);
 		uint32_t DnsLogEntryCount () { return DnsCache.size(); }
 		bool Dhcp_set (const std::shared_ptr<DhcpRequest> inDhcp_sptr);
-		bool Dhcp_set (const std::string IpAddress, const std::string MacAddress, const std::string Hostname, const std::string DhcpHostname, const std::string DhcpVendor);
+		bool Dhcp_set (const std::string IpAddress, const MacAddress Mac, const std::string Hostname, const std::string DhcpHostname, const std::string DhcpVendor);
 		bool SsdpInfo_set(const std::shared_ptr<SsdpHost> insHost);
 
 		bool isMatched () { return Uuid != ""; }
 		bool UploadsEnabled ();
 		std::string Uuid_get () { return Uuid; }
-		std::string MacAddress_get () { return MacAddress; }
+		// MacAddress MacAddress_get () { return Mac; }
+		std::string MacAddress_get () { return Mac.str(); }
 		std::string Ipv4Address_get () { return Ipv4Address; }
 		std::string Ipv6Address_get () { return Ipv6Address; }
 

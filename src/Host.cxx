@@ -60,7 +60,7 @@ bool Host::Match(const DeviceProfileMap& dpMap) {
 	std::string matcheduuid = "";
 	for (auto &kv : dpMap) {
 		if(Debug) {
-			syslog(LOG_DEBUG, "Evaluating host %s against device profile %s", MacAddress.c_str(), kv.first.c_str());
+			syslog(LOG_DEBUG, "Evaluating host %s against device profile %s", Mac.c_str(), kv.first.c_str());
 		}
 		auto &dp = *(kv.second);
 		auto match = Match(dp);
@@ -74,7 +74,7 @@ bool Host::Match(const DeviceProfileMap& dpMap) {
 	}
 	if (bestmatch >= ConfidenceLevel::Low) {
 		Uuid = matcheduuid;
-		syslog(LOG_DEBUG, "Host %s matched %s", MacAddress.c_str(), Uuid.c_str());
+		syslog(LOG_DEBUG, "Host %s matched %s", Mac.c_str(), Uuid.c_str());
 		return true;
 	}
 	return false;
@@ -90,7 +90,7 @@ ConfidenceLevel Host::Match(const DeviceProfile& dp) {
 		auto match = Match(*i);
 		if (match >= ConfidenceLevel::High) {
 			if(Debug) {
-				syslog(LOG_DEBUG, "Host %s matched with high confidence", MacAddress.c_str());
+				syslog(LOG_DEBUG, "Host %s matched with high confidence", Mac.c_str());
 			}
 			return match;
         }
@@ -99,7 +99,7 @@ ConfidenceLevel Host::Match(const DeviceProfile& dp) {
         }
 	}
 	if(Debug) {
-		syslog(LOG_DEBUG, "Host %s match level %d", MacAddress.c_str(), static_cast<int>(bestmatch));
+		syslog(LOG_DEBUG, "Host %s match level %d", Mac.c_str(), static_cast<int>(bestmatch));
 	}
 	return bestmatch;
 }
@@ -111,7 +111,7 @@ ConfidenceLevel Host::Match(const Identifier& i) {
 		}
 		if(not Match (*mc)) {
 			if(Debug) {
-				syslog (LOG_DEBUG, "Host %s did not match condition %s", MacAddress.c_str(), (*mc).Key.c_str());
+				syslog (LOG_DEBUG, "Host %s did not match condition %s", Mac.c_str(), (*mc).Key.c_str());
 			}
 			return ConfidenceLevel::None;
 		}
@@ -122,13 +122,13 @@ ConfidenceLevel Host::Match(const Identifier& i) {
 		}
 		if(not Match (*cc)) {
 			if(Debug) {
-				syslog (LOG_DEBUG, "Host %s did not contain condition %s", MacAddress.c_str(), (*cc).Key.c_str());
+				syslog (LOG_DEBUG, "Host %s did not contain condition %s", Mac.c_str(), (*cc).Key.c_str());
 			}
 			return ConfidenceLevel::None;
 		}
 	}
 	if(Debug) {
-		syslog(LOG_DEBUG, "Host %s matched MustMatch and/or MustContain conditions", MacAddress.c_str());
+		syslog(LOG_DEBUG, "Host %s matched MustMatch and/or MustContain conditions", Mac.c_str());
 	}
 	return i.IdentifyConfidenceLevel_get();
 }
@@ -136,7 +136,7 @@ ConfidenceLevel Host::Match(const Identifier& i) {
 bool Host::Match(const MatchCondition& mc) {
 	std::string value;
 	if (mc.Key == "MacOid") {
-		value = MacAddress.substr(0,8);
+		value = Mac.str().substr(0,8);
 	} else if (mc.Key == "DhcpHostname") {
 		value = Dhcp.DhcpHostname;
 	} else if (mc.Key == "DhcpVendor") {
@@ -166,7 +166,7 @@ bool Host::Match(const MatchCondition& mc) {
 	}
 	if (value == "") {
 		if(Debug) {
-			syslog(LOG_DEBUG, "Host %s has no value for MustMatch condition %s", MacAddress.c_str(), mc.Key.c_str());
+			syslog(LOG_DEBUG, "Host %s has no value for MustMatch condition %s", Mac.c_str(), mc.Key.c_str());
 		}
 	}
 	size_t startpos = 0;
@@ -182,7 +182,7 @@ bool Host::Match(const MatchCondition& mc) {
 	}
 	if (value.compare(startpos, mcvalue.length() - startpos, mcvalue) == 0) {
 		if(Debug) {
-			syslog(LOG_DEBUG, "Host %s matched MustMatch condition", MacAddress.c_str());
+			syslog(LOG_DEBUG, "Host %s matched MustMatch condition", Mac.c_str());
 		}
 		return true;
     }
@@ -197,11 +197,11 @@ bool Host::Match(const ContainCondition& cc) {
 		for (auto fqdn: cc.Values) {
 			if (DnsCache.find(fqdn) != DnsCache.end()) {
 				if(Debug) {
-					syslog(LOG_DEBUG, "Found DnsQuery for %s from host %s", fqdn.c_str(), MacAddress.c_str());
+					syslog(LOG_DEBUG, "Found DnsQuery for %s from host %s", fqdn.c_str(), Mac.c_str());
 				}
 			} else {
 				if(Debug) {
-					syslog(LOG_DEBUG, "Didn't find DnsQuery for %s from host %s", fqdn.c_str(), MacAddress.c_str());
+					syslog(LOG_DEBUG, "Didn't find DnsQuery for %s from host %s", fqdn.c_str(), Mac.c_str());
 				}
 				return false;
 			}
@@ -213,7 +213,7 @@ bool Host::Match(const ContainCondition& cc) {
 		return false;
 	}
 	if(Debug) {
-		syslog(LOG_DEBUG, "Host %s matched MustContain condition", MacAddress.c_str());
+		syslog(LOG_DEBUG, "Host %s matched MustContain condition", Mac.c_str());
 	}
 	return true;
 }
@@ -224,7 +224,7 @@ bool Host::DeviceStats(json& j, const uint32_t time_interval, bool force, bool d
 	if (not force && (isMatched() || LastModified < (time(nullptr) - time_interval))) {
 		return false;
 	}
-	j["MacOid"] = MacAddress.substr(0,8);
+	j["MacOid"] = Mac.str().substr(0,8);
 	j["DhcpHostname"] = Dhcp.DhcpHostname;
 	j["DhcpVendor"] = Dhcp.DhcpVendor;
 	j["Hostname"] = Dhcp.Hostname;
@@ -267,14 +267,31 @@ bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportPriva
 	}
 
 	std::unordered_set<std::string> endpoints;
-	for (auto &fc: FlowCache) {
-		std::string ip = fc.first;
-		if (ReportPrivateAddresses || not inPrivateAddressRange(ip)) {
+	for (auto &fc: FlowCacheIpv4) {
+		boost::asio::ip::address ip = fc.first;
+		if (ReportPrivateAddresses || not inPrivateAddressRange(ip.to_string())) {
 			for (auto &fe : *(fc.second)) {
 				if(fe->Fresh(interval)) {
-					auto it = allIps.find(ip);
+					auto it = allIps.find(ip.to_string());
 					if (it == allIps.end()) {
-						endpoints.insert(ip);
+						endpoints.insert(ip.to_string());
+					} else {
+						for (auto &fqdn: *(it->second)) {
+							endpoints.insert(fqdn);
+						}
+					}
+				}
+			}
+		}
+	}
+	for (auto &fc: FlowCacheIpv6) {
+		boost::asio::ip::address ip = fc.first;
+		if (ReportPrivateAddresses || not inPrivateAddressRange(ip.to_string())) {
+			for (auto &fe : *(fc.second)) {
+				if(fe->Fresh(interval)) {
+					auto it = allIps.find(ip.to_string());
+					if (it == allIps.end()) {
+						endpoints.insert(ip.to_string());
 					} else {
 						for (auto &fqdn: *(it->second)) {
 							endpoints.insert(fqdn);
@@ -318,7 +335,7 @@ bool Host::inPrivateAddressRange(const std::string inIp ) {
 }
 
 void Host::ExportDeviceInfo (json &j, bool detailed) {
-	json h{{"MacAddress", MacAddress},
+	json h{{"MacAddress", Mac.str()},
 			{"DeviceProfileUuid", Uuid},
 			{"Ipv4Address", Ipv4Address},
 			{"SsdpManufacturer", Ssdp.Manufacturer},
@@ -335,7 +352,8 @@ void Host::ExportDeviceInfo (json &j, bool detailed) {
  *  Adds or updates the list of flows from a host to a remote host
  *  Returns true if flow was added, false if existing flow was updated
  */
-bool Host::FlowEntry_set(const uint16_t inSrcPort, const std::string &inDstIp, const uint16_t inDstPort, const uint8_t inProtocol, const uint32_t inExpiration) {
+bool Host::FlowEntry_set(const uint16_t inSrcPort, const std::string inDstIp,
+			const uint16_t inDstPort, const uint8_t inProtocol, const uint32_t inExpiration) {
 	iCache::LastSeen = time(nullptr);
 	if (inDstIp == "239.255.255.250") {
 		if(Debug) {
@@ -345,39 +363,84 @@ bool Host::FlowEntry_set(const uint16_t inSrcPort, const std::string &inDstIp, c
 	}
 	auto f = std::make_shared<FlowEntry>();
 	if(Debug) {
-		syslog(LOG_DEBUG, "Creating new Flow Entry for src port %u, dest ip %s, dest port %u, protocol %u", inSrcPort, inDstIp.c_str(), inDstPort, inProtocol);
+		syslog(LOG_DEBUG, "Creating new Flow Entry for src port %u, dest ip %s, dest port %u, protocol %u", inSrcPort,
+				inDstIp.c_str(), inDstPort, inProtocol);
 	}
 	iCache::LastModified = time(nullptr);
 	f->SrcPort = inSrcPort;
 	f->DstPort = inDstPort;
 	f->Protocol = inProtocol;
 	f->Expiration_set(inExpiration);
+
+	boost::asio::ip::address dstIpAddress;
+	dstIpAddress.from_string(inDstIp);
+
 	// Is there already at least one flow from the Host to the destination IP?
-	if (FlowCache.find(inDstIp) == FlowCache.end()) {
-		FlowCache[inDstIp] = std::make_shared<FlowEntryList>();
-		FlowCache[inDstIp]->push_back(f);
-		if(Debug) {
-			syslog(LOG_DEBUG, "Adding to FlowCache with destination %s : %u Protocol %u", inDstIp.c_str(), inDstPort, inProtocol);
+	if (dstIpAddress.is_v4()) {
+		boost::asio::ip::address_v4 dstIpv4Address = dstIpAddress.to_v4();
+
+		if (FlowCacheIpv4.find(dstIpv4Address) == FlowCacheIpv4.end()) {
+			FlowCacheIpv4[dstIpv4Address] = std::make_shared<FlowEntryList>();
+			FlowCacheIpv4[dstIpv4Address]->push_back(f);
+			if(Debug) {
+				syslog(LOG_DEBUG, "Adding to FlowCache with destination %s : %u Protocol %u", inDstIp.c_str(),
+					inDstPort, inProtocol);
+			}
+			return true;
 		}
+		// Create or update existing flow to destination IP
+		for(FlowEntryList::iterator existingflow = FlowCacheIpv4[dstIpv4Address]->begin();
+				existingflow != FlowCacheIpv4[dstIpv4Address]->end(); ++existingflow) {
+			// Update existing flow it it matches incoming flow (ignoring Expiration)
+			if (**existingflow == *f) {
+				if(Debug) {
+					syslog(LOG_DEBUG, "Updating expiration of existing FlowEntry in FlowCache for destination %s",
+						inDstIp.c_str());
+				}
+				(*existingflow)->Expiration_set(inExpiration);
+				return false;
+			}
+		}
+		// This flow doesn't match any of the existing flows
+		if(Debug) {
+			syslog(LOG_DEBUG, "Adding FlowEntry to FlowCache for destination %s", inDstIp.c_str());
+		}
+		FlowCacheIpv4[dstIpv4Address]->push_back(f);
+		return true;
+	} else if (dstIpAddress.is_v6()) {
+		boost::asio::ip::address_v6 dstIpv6Address = dstIpAddress.to_v6();
+
+		if (FlowCacheIpv6.find(dstIpv6Address) == FlowCacheIpv6.end()) {
+			FlowCacheIpv6[dstIpv6Address] = std::make_shared<FlowEntryList>();
+			FlowCacheIpv6[dstIpv6Address]->push_back(f);
+			if(Debug) {
+				syslog(LOG_DEBUG, "Adding to FlowCache with destination %s : %u Protocol %u", inDstIp.c_str(),
+					inDstPort, inProtocol);
+			}
+			return true;
+		}
+		// Create or update existing flow to destination IP
+		for(FlowEntryList::iterator existingflow = FlowCacheIpv6[dstIpv6Address]->begin();
+				existingflow != FlowCacheIpv6[dstIpv6Address]->end(); ++existingflow) {
+			// Update existing flow it it matches incoming flow (ignoring Expiration)
+			if (**existingflow == *f) {
+				if(Debug) {
+					syslog(LOG_DEBUG, "Updating expiration of existing FlowEntry in FlowCache for destination %s",
+						inDstIp.c_str());
+				}
+				(*existingflow)->Expiration_set(inExpiration);
+				return false;
+			}
+		}
+		// This flow doesn't match any of the existing flows
+		if(Debug) {
+			syslog(LOG_DEBUG, "Adding FlowEntry to FlowCache for destination %s", inDstIp.c_str());
+		}
+		FlowCacheIpv6[dstIpv6Address]->push_back(f);
 		return true;
 	}
-	// Create or update existing flow to destination IP
-	for(FlowEntryList::iterator existingflow = FlowCache[inDstIp]->begin(); existingflow != FlowCache[inDstIp]->end(); ++existingflow) {
-		// Update existing flow it it matches incoming flow (ignoring Expiration)
-		if (**existingflow == *f) {
-			if(Debug) {
-				syslog(LOG_DEBUG, "Updating expiration of existing FlowEntry in FlowCache for destination %s", inDstIp.c_str());
-			}
-			(*existingflow)->Expiration_set(inExpiration);
-			return false;
-		}
-	}
-	// This flow doesn't match any of the existing flows
-	if(Debug) {
-		syslog(LOG_DEBUG, "Adding FlowEntry to FlowCache for destination %s", inDstIp.c_str());
-	}
-	FlowCache[inDstIp]->push_back(f);
-	return true;
+	syslog(LOG_NOTICE, "IP address %s is neither v4 or v6", inDstIp.c_str());
+	return false;
 }
 
 /*
@@ -410,14 +473,14 @@ bool Host::Dhcp_set (const std::shared_ptr<DhcpRequest> inDhcp_sptr) {
 	Dhcp = *inDhcp_sptr;
 	Dhcp.Expiration_set();
 	if(Debug) {
-		syslog(LOG_DEBUG, "Creating DHCP data for %s with expiration %lu", Dhcp.MacAddress.c_str(), Dhcp.Expiration_get());
+		syslog(LOG_DEBUG, "Creating DHCP data for %s with expiration %lu", Dhcp.Mac.c_str(), Dhcp.Expiration_get());
 	}
 	return true;
 }
 
-bool Host::Dhcp_set (const std::string IpAddress, const std::string MacAddress, const std::string Hostname, const std::string DhcpHostname, const std::string DhcpVendor) {
+bool Host::Dhcp_set (const std::string IpAddress, const MacAddress Mac, const std::string Hostname, const std::string DhcpHostname, const std::string DhcpVendor) {
 	Dhcp.IpAddress = IpAddress;
-	Dhcp.MacAddress = MacAddress;
+	Dhcp.Mac = Mac;
 	Dhcp.Hostname = Hostname;
 	Dhcp.DhcpHostname = DhcpHostname;
 	Dhcp.DhcpVendor = DhcpVendor;
@@ -425,7 +488,7 @@ bool Host::Dhcp_set (const std::string IpAddress, const std::string MacAddress, 
 	iCache::FirstSeen = iCache::LastModified = iCache::LastSeen = time(nullptr);
 	Dhcp.Expiration_set();
 	if(Debug) {
-		syslog(LOG_DEBUG, "Creating DHCP data for %s with expiration %lu", Dhcp.MacAddress.c_str(), Dhcp.Expiration_get());
+		syslog(LOG_DEBUG, "Creating DHCP data for %s with expiration %lu", Dhcp.Mac.c_str(), Dhcp.Expiration_get());
 	}
 	return true;
 }
@@ -453,50 +516,88 @@ bool Host::UploadsEnabled() {
 uint32_t Host::Prune (bool Force) {
 	bool pruned = false;
 	if(Debug) {
-		syslog(LOG_DEBUG, "Pruning host %s", MacAddress.c_str());
+		syslog(LOG_DEBUG, "Pruning host %s", Mac.c_str());
 	}
 	uint32_t pruned_flowentries = 0;
 	uint32_t pruned_flows = 0;
 	// FlowCache is a map, so iterate over it
-	auto fc = FlowCache.begin();
-	while (fc != FlowCache.end()) {
-		// fc is an iterator to pair{std::string,shared_ptr<FlowEntryList>}
-		// fc.second a shared_ptr<FlowEntryList>
-		// *(fc.second) is a FlowEntryList
-		// fel is a reference to FlowEntryList
-		auto & fel = *(fc->second);
-		// FlowEntryList is std::list<std::shared_ptr<FlowEntry>>
-		auto it = fel.begin();
-		while (it != fel.end()) {
-			if (Force || (*it)->isExpired()) {
-				if (Debug) {
-					syslog(LOG_DEBUG, "Pruning FlowEntry to %s for DstPort %u with expiration %ld while now is %ld", fc->first.c_str(), (*it)->DstPort, (*it)->Expiration_get (), time(nullptr));
+	{
+		auto fc = FlowCacheIpv4.begin();
+		while (fc != FlowCacheIpv4.end()) {
+			// fc is an iterator to pair{std::string,shared_ptr<FlowEntryList>}
+			// fc.second a shared_ptr<FlowEntryList>
+			// *(fc.second) is a FlowEntryList
+			// fel is a reference to FlowEntryList
+			auto & fel = *(fc->second);
+			// FlowEntryList is std::list<std::shared_ptr<FlowEntry>>
+			auto it = fel.begin();
+			while (it != fel.end()) {
+				if (Force || (*it)->isExpired()) {
+					if (Debug) {
+						syslog(LOG_DEBUG, "Pruning FlowEntry to %s for DstPort %u with expiration %ld while now is %ld",
+								fc->first.to_string().c_str(), (*it)->DstPort, (*it)->Expiration_get (), time(nullptr));
+					}
+					// Remove element from list
+					it = fel.erase(it);
+					pruned_flowentries++;
+					pruned = true;
+				} else {
+					++it;
 				}
-				// Remove element from list
-				it = fel.erase(it);
-				pruned_flowentries++;
+			}
+			// If the list of Flow Entry pointers is empty, delete it
+			if (Force || fel.empty()) {
+				if (Debug) {
+					syslog(LOG_DEBUG, "Pruning FlowEntryList for %s as it is now empty", fc->first.to_string().c_str());
+				}
+				fc = FlowCacheIpv4.erase(fc);
 				pruned = true;
+				pruned_flows++;
 			} else {
-				++it;
+				++fc;
 			}
 		}
-		// If the list of Flow Entry pointers is empty, delete it
-		if (Force || fel.empty()) {
-			if (Debug) {
-				syslog(LOG_DEBUG, "Pruning FlowEntryList for %s as it is now empty", fc->first.c_str());
+	}
+	{
+		auto fc = FlowCacheIpv6.begin();
+		while (fc != FlowCacheIpv6.end()) {
+			// fc is an iterator to pair{std::string,shared_ptr<FlowEntryList>}
+			// fc.second a shared_ptr<FlowEntryList>
+			// *(fc.second) is a FlowEntryList
+			// fel is a reference to FlowEntryList
+			auto & fel = *(fc->second);
+			// FlowEntryList is std::list<std::shared_ptr<FlowEntry>>
+			auto it = fel.begin();
+			while (it != fel.end()) {
+				if (Force || (*it)->isExpired()) {
+					if (Debug) {
+						syslog(LOG_DEBUG, "Pruning FlowEntry to %s for DstPort %u with expiration %ld while now is %ld",
+								fc->first.to_string().c_str(), (*it)->DstPort, (*it)->Expiration_get (), time(nullptr));
+					}
+					// Remove element from list
+					it = fel.erase(it);
+					pruned_flowentries++;
+					pruned = true;
+				} else {
+					++it;
+				}
 			}
-			fc = FlowCache.erase(fc);
-			pruned = true;
-			pruned_flows++;
-		} else {
-			++fc;
+			// If the list of Flow Entry pointers is empty, delete it
+			if (Force || fel.empty()) {
+				if (Debug) {
+					syslog(LOG_DEBUG, "Pruning FlowEntryList for %s as it is now empty", fc->first.to_string().c_str());
+				}
+				fc = FlowCacheIpv6.erase(fc);
+				pruned = true;
+				pruned_flows++;
+			} else {
+				++fc;
+			}
 		}
-
+		if(Debug) {
+			syslog (LOG_DEBUG, "Pruned %u Flow Entries and %u flows", pruned_flowentries, pruned_flows);
+		}
 	}
-	if(Debug) {
-		syslog (LOG_DEBUG, "Pruned %u Flow Entries and %u flows", pruned_flowentries, pruned_flows);
-	}
-
 	uint32_t pruned_dnsqueries = 0;
 	for(auto const& dc: DnsCache) {
 		if (Force || dc.second->isExpired()) {

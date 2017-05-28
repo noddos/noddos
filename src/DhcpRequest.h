@@ -25,6 +25,7 @@
 
 #include <ctime>
 #include "iCache.h"
+#include "MacAddress.h"
 
 #define DHCPDEFAULTEXPIRATION 604800
 
@@ -33,7 +34,7 @@ public:
 	std::string DhcpHostname;	// Hostname provided by DHCP server to the client
 	std::string DhcpVendor;
 	std::string Hostname;		// Hostname provided by the client to DHCP server
-	std::string MacAddress;
+	MacAddress Mac;
 	std::string IpAddress;
 
 	DhcpRequest(const time_t inExpiration = DHCPDEFAULTEXPIRATION) { Expiration_set(inExpiration); }
@@ -47,26 +48,20 @@ public:
     uint32_t Prune (bool Force = false) { return 0; }
 
 	void operator = (const DhcpRequest &rhs) {
-		std::string rhsMac = rhs.MacAddress;
-		std::transform(rhsMac.begin(), rhsMac.end(), rhsMac.begin(), ::tolower);
 		DhcpHostname = rhs.DhcpHostname;
 		DhcpVendor = rhs.DhcpVendor;
 		Hostname = rhs.Hostname;
-		MacAddress = rhsMac;
+		Mac = rhs.Mac;
 		IpAddress = rhs.IpAddress;
 		iCache::LastModified = time(nullptr);
 		iCache::LastSeen = time(nullptr);
 		iCache::FirstSeen = time(nullptr);
 	}
     bool operator == (const DhcpRequest &rhs) const {
-		std::string lhsMac = MacAddress;
-		std::transform(lhsMac.begin(), lhsMac.end(), lhsMac.begin(), ::tolower);
-		std::string rhsMac = rhs.MacAddress;
-		std::transform(rhsMac.begin(), rhsMac.end(), rhsMac.begin(), ::tolower);
 		return DhcpHostname == rhs.DhcpHostname &&
 			DhcpVendor == rhs.DhcpVendor &&
 			Hostname == rhs.Hostname &&
-			lhsMac == rhsMac &&
+			Mac == rhs.Mac &&
 			IpAddress == rhs.IpAddress;
 	}
 };

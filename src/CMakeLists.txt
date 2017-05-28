@@ -20,7 +20,8 @@ project (Noddos CXX)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-
+add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
+add_definitions(-DBOOST_SYSTEM_NO_DEPRECATED)
 
 
 # The version number.
@@ -88,6 +89,9 @@ add_executable(SsdpServer_test SsdpServer_test.cxx DnsmasqLogFile.cxx
     HostCache.cxx Host.cxx DnsLogEntry.cxx SsdpServer.cxx SsdpLocation.cxx
     opensslfingerprint.cxx)
 target_link_libraries(SsdpServer_test curl ssl crypto)
+
+add_test (MacAddress MacAddress_test)
+add_executable(MacAddress_test MacAddress_test.cxx MacAddress.cxx)
 
 add_test (Curl Curl_test)
 add_executable(Curl_test Curl_test.cxx)

@@ -31,6 +31,7 @@ using json = nlohmann::json;
 
 #include "noddos.h"
 #include "HostCache.h"
+#include "MacAddress.h"
 #include "Host.h"
 
 // static std::string deviceprofilesfile = "tests/DeviceProfiles.json";
@@ -48,7 +49,7 @@ int main () {
 	}
 	HostCache hC(0,true);
 	// hC.DeviceProfiles_load(deviceprofilesfile);
-	hC.AddByMac ("00:00:00:00:00:03", "192.168.1.99");
+	hC.AddByMac (MacAddress("00:00:00:00:00:03"), "192.168.1.99");
 
 	std::string s;
 	auto h = hC.FindOrCreateHostByIp("192.168.1.99");
@@ -61,9 +62,10 @@ int main () {
 	//	testfailure = true;
 	//	std::cout << "Mac lookup failure for 192.168.1.1 resulting in: " << s << std::endl;
 	// }
-	if ((s = hC.MacLookup("99.99.99.99",1)) != "") {
+	MacAddress Mac = hC.MacLookup("99.99.99.99",1);
+	if (Mac.isValid() == false) {
 		testfailure = true;
-		std::cout << "Test failure: Mac lookup failure for 99.99.99.99 resulting in: " << s << std::endl;
+		std::cout << "Test failure: Mac lookup failure for 99.99.99.99 resulting in: " << Mac.str() << std::endl;
 	}
 	// Test only makes sense on local LAN, not in CI
 	// if ((s = hC.MacLookup("192.168.1.240", "enp0s31f6")) == "00:01:2e:6f:e0:f3") {

@@ -34,6 +34,8 @@
 #include <json.hpp>
 using json = nlohmann::json;
 
+#include "boost/asio.hpp"
+
 #include "iCache.h"
 
 #define DNSLOGENTRYDEFAULTEXPIRATION 86400
@@ -41,15 +43,19 @@ using json = nlohmann::json;
 class DnsLogEntry : public iCache {
     private:
         std::string Fqdn;
-        std::map<std::string, uint32_t> Ips;
+        std::map<boost::asio::ip::address_v4, uint32_t> Ipv4s;
+        std::map<boost::asio::ip::address_v6, uint32_t> Ipv6s;
         bool Debug;
 
     public:
         DnsLogEntry(const std::string inFqdn, const bool inDebug = false): Fqdn{inFqdn}, Debug{inDebug}
         	{ Expiration_set(); iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr); };
-        DnsLogEntry(const std::string inFqdn, const std::map<std::string, uint32_t> inIps, const bool inDebug = false):
-        	Fqdn{inFqdn}, Ips{inIps}, Debug{inDebug}
+        DnsLogEntry(const std::string inFqdn, const std::map<boost::asio::ip::address_v4, uint32_t> inIps, const bool inDebug = false):
+        	Fqdn{inFqdn}, Ipv4s{inIps}, Debug{inDebug}
         	{ Expiration_set(); iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr); };
+        DnsLogEntry(const std::string inFqdn, const std::map<boost::asio::ip::address_v6, uint32_t> inIps, const bool inDebug = false):
+            Fqdn{inFqdn}, Ipv6s{inIps}, Debug{inDebug}
+            { Expiration_set(); iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr); };
 
         uint32_t Ips_get(std::map<std::string,std::shared_ptr<std::unordered_set<std::string>>> &outIps);
         bool Ips_set(const std::string i, uint32_t exp = DNSLOGENTRYDEFAULTEXPIRATION);
@@ -71,7 +77,8 @@ class DnsLogEntry : public iCache {
         	if (this == &rhs)
         		return *this;
         	this->Fqdn = rhs.Fqdn;
-        	this->Ips = rhs.Ips;
+        	this->Ipv4s = rhs.Ipv4s;
+        	this->Ipv6s = rhs.Ipv6s;
         	return *this;
         }
 };
