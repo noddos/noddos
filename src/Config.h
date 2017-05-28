@@ -62,6 +62,7 @@ public:
 	std::time_t TrafficReportInterval = 3600; // Value in seconds, use 0 if no traffic stats should be uploaded
 	std::time_t DeviceReportInterval = 14400; // Value in seconds, use 0 if no device stats should be uploaded
 	bool ReportTrafficToRfc1918 = false;
+	std::time_t MatchInterval = 300;
 	std::time_t PruneInterval = 3600;
 	std::time_t ExpireDnsQuery = 86400;
 	std::time_t ExpireHost = 604800;
@@ -106,6 +107,7 @@ public:
 		time_t newTrafficReportInterval = TrafficReportInterval;
 		time_t newDeviceReportInterval = DeviceReportInterval;
 		bool newReportTrafficToRfc1918 = ReportTrafficToRfc1918;
+		time_t newMatchInterval = MatchInterval;
 		time_t newPruneInterval = PruneInterval;
 		time_t newExpireDnsQuery = ExpireDnsQuery;
 		time_t newExpireHost = ExpireHost;
@@ -174,6 +176,9 @@ public:
 			if (j.count("PruneInterval")) {
 				newPruneInterval= j["PruneInterval"].get<uint32_t>();
 			}
+			if (j.count("MatchInterval")) {
+				newMatchInterval= j["MatchInterval"].get<uint32_t>();
+			}
 			if (j.count("ExpireDnsQuery")) {
 				newExpireDnsQuery= j["ExpireDnsQuery"].get<uint32_t>();
 			}
@@ -216,6 +221,7 @@ public:
 		TrafficReportInterval = newTrafficReportInterval;
 		DeviceReportInterval = newDeviceReportInterval;
 		ReportTrafficToRfc1918 = newReportTrafficToRfc1918;
+		MatchInterval = newMatchInterval;
 		PruneInterval = newPruneInterval;
 		ExpireDnsQuery = newExpireDnsQuery;
 		ExpireHost = newExpireHost;

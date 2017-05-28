@@ -33,9 +33,13 @@ uint32_t DnsLogEntry::DnsStats (json & j, const uint32_t time_interval) {
     }
 
 	j["DnsQueries"][Fqdn] = json::array();
-	for (auto &ip: Ips) {
+	for (auto &ip: Ipv4s) {
 		dnsentries++;
-		j.push_back(ip.first);
+		j.push_back(ip.first.to_string());
+	}
+	for (auto &ip: Ipv6s) {
+		dnsentries++;
+		j.push_back(ip.first.to_string());
 	}
 
 	return dnsentries;
@@ -45,11 +49,20 @@ uint32_t DnsLogEntry::DnsStats (json & j, const uint32_t time_interval) {
 uint32_t DnsLogEntry::Prune(bool Force) {
 	uint32_t deletecount = 0;
 	auto now = time(nullptr);
-	for (auto i = Ips.begin(); i != Ips.end(); ++i) {
+	for (auto i = Ipv4s.begin(); i != Ipv4s.end(); ++i) {
 		if (Force || now > i->second ) {
-			Ips.erase(i);
+			Ipv4s.erase(i);
 			if(Debug) {
-				syslog(LOG_DEBUG, "Pruning DnsLogEntry for IP %s from %s", i->first.c_str(), Fqdn.c_str());
+				syslog(LOG_DEBUG, "Pruning DnsLogEntry for IPv4 %s from %s", i->first.to_string().c_str(), Fqdn.c_str());
+			}
+			deletecount++;
+		}
+    }
+	for (auto i = Ipv6s.begin(); i != Ipv6s.end(); ++i) {
+		if (Force || now > i->second ) {
+			Ipv6s.erase(i);
+			if(Debug) {
+				syslog(LOG_DEBUG, "Pruning DnsLogEntry for IPv6 %s from %s", i->first.to_string().c_str(), Fqdn.c_str());
 			}
 			deletecount++;
 		}
@@ -61,13 +74,19 @@ uint32_t DnsLogEntry::Prune(bool Force) {
 
 uint32_t DnsLogEntry::Ips_get(std::map<std::string,std::shared_ptr<std::unordered_set<std::string>>> &outIps) {
 	uint32_t ipcount = 0;
-	for (auto const &i: Ips) {
+	for (auto const &i: Ipv4s) {
 		ipcount++;
-		if (outIps.find(i.first) == outIps.end()) {
-			outIps[i.first] = std::make_shared<std::unordered_set<std::string>>();
-			// outIps[i.first] = std::make_unique<std::string>();
+		if (outIps.find(i.first.to_string()) == outIps.end()) {
+			outIps[i.first.to_string()] = std::make_shared<std::unordered_set<std::string>>();
 		}
-		outIps[i.first]->insert(Fqdn);
+		outIps[i.first.to_string()]->insert(Fqdn);
+	}
+	for (auto const &i: Ipv6s) {
+		ipcount++;
+		if (outIps.find(i.first.to_string()) == outIps.end()) {
+			outIps[i.first.to_string()] = std::make_shared<std::unordered_set<std::string>>();
+		}
+		outIps[i.first.to_string()]->insert(Fqdn);
 	}
 	return ipcount;
 }
@@ -76,21 +95,44 @@ uint32_t DnsLogEntry::Ips_get(std::map<std::string,std::shared_ptr<std::unordere
 bool DnsLogEntry::Ips_set(const std::string i, uint32_t inExpirationSeconds) {
 	// DNS record expires at now (in epoch seconds) + seconds after which record must be expired
 	time_t exp = time(nullptr) + inExpirationSeconds;
-
-	auto it = Ips.find(i);
-	if (it == Ips.end()) {
-		if(Debug) {
-			syslog(LOG_DEBUG, "Adding %s with expiration %lu for %s", i.c_str(), exp, Fqdn.c_str());
+	boost::asio::ip::address IpAddress;
+	IpAddress.from_string(i);
+	if (IpAddress.is_v4() == true) {
+		boost::asio::ip::address_v4 IpAddressV4 = IpAddress.to_v4();
+		auto it = Ipv4s.find(IpAddressV4);
+		if (it == Ipv4s.end()) {
+			if(Debug) {
+				syslog(LOG_DEBUG, "Adding %s with expiration %lu for %s", i.c_str(), exp, Fqdn.c_str());
+			}
+			Ipv4s[IpAddressV4] = exp;
+		} else {
+			if (it->second == exp) {
+				return false;
+			}
+			if(Debug) {
+				syslog(LOG_DEBUG, "Updating expiration for %s %s", i.c_str(), Fqdn.c_str());
+			}
+			Ipv4s[IpAddressV4] = exp;
 		}
-		Ips[i] = exp;
+	} else if (IpAddress.is_v6() == true){
+		boost::asio::ip::address_v6 IpAddressV6 = IpAddress.to_v6();
+		auto it = Ipv6s.find(IpAddressV6);
+		if (it == Ipv6s.end()) {
+			if(Debug) {
+				syslog(LOG_DEBUG, "Adding %s with expiration %lu for %s", i.c_str(), exp, Fqdn.c_str());
+			}
+			Ipv6s[IpAddressV6] = exp;
+		} else {
+			if (it->second == exp) {
+				return false;
+			}
+			if(Debug) {
+				syslog(LOG_DEBUG, "Updating expiration for %s %s", i.c_str(), Fqdn.c_str());
+			}
+			Ipv6s[IpAddressV6] = exp;
+		}
 	} else {
-		if (it->second == exp) {
-			return false;
-		}
-		if(Debug) {
-			syslog(LOG_DEBUG, "Updating expiration for %s %s", i.c_str(), Fqdn.c_str());
-		}
-		Ips[i] = exp;
+		syslog(LOG_NOTICE, "Ips_set: IP Address %s is neither IPv4 or IPv6", i.c_str());
 	}
 	return true;
 }

@@ -32,7 +32,7 @@
 #include "MacAddress.h"
 #include "Config.h"
 
-// #include "boost/asio/ip/address.hpp"
+#include "boost/asio.hpp"
 
 #include "noddos.h"
 
@@ -76,7 +76,7 @@ public:
 	const DeviceProfileMap & DeviceProfiles_getmap() { return dpMap; };
 
 	uint32_t Whitelists_set (const std::unordered_set<std::string>& inIpv4Addresses, const std::unordered_set<std::string>& inIpv6Addresses, const std::unordered_set<std::string>& inMacAddresses);
-	bool isWhitelisted(std::string inAddress) { return (WhitelistedNodes.find(inAddress) != WhitelistedNodes.end()); }
+	bool isWhitelisted(const std::string inAddress) { return (WhitelistedNodes.find(inAddress) != WhitelistedNodes.end()); }
 	bool isWhitelisted(Host &inHost) { return isWhitelisted(inHost.MacAddress_get()) || isWhitelisted(inHost.Ipv4Address_get()) || isWhitelisted(inHost.Ipv6Address_get()); }
 
 	uint32_t Match();

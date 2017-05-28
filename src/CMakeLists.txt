@@ -20,7 +20,8 @@ project (Noddos CXX)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-
+add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
+add_definitions(-DBOOST_SYSTEM_NO_DEPRECATED)
 
 
 # The version number.

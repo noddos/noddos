@@ -126,7 +126,7 @@ std::shared_ptr<Host> HostCache::FindOrCreateHostByIp (const std::string inIp, c
 	} else {
 		Mac.set(it->second);
 	}
-	return FindOrCreateHostByMac (Mac.str(), Uuid, inIp);
+	return FindOrCreateHostByMac (Mac, Uuid, inIp);
 }
 
 std::shared_ptr<Host> HostCache::FindHostByMac (const MacAddress &inMac) {
@@ -741,8 +741,8 @@ bool HostCache::ImportDeviceInfo (json &j) {
 		syslog(LOG_DEBUG, "Importing Device Profile for UUID %s with MacAddress %s", DeviceProfileUuid.c_str(), MacAddressString.c_str());
 	}
 
-	MacAddress m(MacAddressString);
-	auto hit = hC.find(m.Mac);
+	MacAddress Mac(MacAddressString);
+	auto hit = hC.find(Mac.get());
 	if (hit != hC.end()) {
 		std::string uuid = hit->second->Uuid_get();
 		if (uuid != DeviceProfileUuid) {
@@ -750,7 +750,7 @@ bool HostCache::ImportDeviceInfo (json &j) {
 			return false;
 		}
 	}
-	if (not FindOrCreateHostByMac(m.str(), DeviceProfileUuid, IpAddress)) {
+	if (not FindOrCreateHostByMac(Mac, DeviceProfileUuid, IpAddress)) {
 		syslog(LOG_WARNING, "Failed to create Host with MacAddress %s and uuid %s", MacAddressString.c_str(), DeviceProfileUuid.c_str());
 		return false;
 	}

@@ -134,7 +134,8 @@ int main(int argc, char** argv) {
     if (config.User != "" && config.Group != "") {
     	drop_process_privileges(config);
     }
-	uint32_t NextPrune = time(nullptr) + config.PruneInterval + rand() % 15;
+    uint32_t NextMatch = time(nullptr) + config.MatchInterval + rand() % 15;
+    uint32_t NextPrune = time(nullptr) + config.PruneInterval + rand() % 15;
 	uint32_t NextDeviceUpload = time(nullptr) + config.DeviceReportInterval + rand() %5;
 	uint32_t NextTrafficUpload = time(nullptr) + config.TrafficReportInterval + rand() %5;
 
@@ -215,15 +216,19 @@ int main(int argc, char** argv) {
 					i.ProcessEvent(epoll_events[ev]);
 				}
 				auto t = time(nullptr);
-				if (t > NextDeviceUpload) {
+				if (t > NextMatch) {
+					hC.Match();
+					hC.ExportDeviceProfileMatches(config.MatchFile, false);
+					hC.ExportDeviceProfileMatches(config.DumpFile, true);
+				}
+				if (t > NextDeviceUpload && config.DeviceReportInterval > 0) {
 					if (config.Debug) {
 						syslog(LOG_DEBUG, "Starting matching");
 					}
-					hC.Match();
 					hC.UploadDeviceStats(config.ClientApiCertFile, config.ClientApiKeyFile, config.DeviceReportInterval != 0);
 					NextDeviceUpload = t + config.DeviceReportInterval;
 				}
-				if (t > NextTrafficUpload && flowtrack && config.TrafficReportInterval) {
+				if (t > NextTrafficUpload && flowtrack && config.TrafficReportInterval > 0) {
 					if (config.Debug) {
 						syslog(LOG_DEBUG, "Starting traffic upload");
 					}

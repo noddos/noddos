@@ -6,7 +6,7 @@
     "ClientApiKeyFile": "/etc/noddos/noddosapiclient.key",
     "SignatureCertFile": "/etc/noddos/noddossignature.pem",
     "PidFile": "/var/lib/noddos/noddos.pid",
-    "DnsmasqLogFile": "/tmp/dnsmasq.log",
+    "DnsmasqLogFile": "/tmp/system.log",
     "ListenIpAddresses": [],
     "ListenInterfaces": [],
     "DeviceReportInterval": 14400,

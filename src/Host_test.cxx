@@ -57,12 +57,12 @@ int main () {
 	hC.AddByMac (MacAddress("00:00:00:00:00:18"), "192.168.1.224");
 	hC.AddByMac (MacAddress("00:00:00:00:00:19"), "192.168.1.239");
 
-
 	auto sh = std::make_shared<SsdpHost>();
 	sh->IpAddress = "192.168.1.234";
 	sh->Manufacturer = "Amazon.com, Inc.";
 	sh->ModelName = "FireTV";
 	hC.AddSsdpInfo(sh);
+
 
 	auto res = hC.MatchByIpAddress("192.168.1.234");
 	if (res != true) {

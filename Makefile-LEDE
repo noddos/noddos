@@ -123,11 +123,18 @@ define Package/noddos/postinst
 		cd /etc/rc.d
 		/etc/init.d/noddos enable
 	fi
+
+	echo "Setting system log to be written to /etc/system.log"
+	uci set system.@system[0].log_file='/tmp/system.log'
+	uci commit log
+	service log restart
+
 	echo "Adding dnsmasq configuration settings for noddos: logdhcp, logqueries, logfile"
 	uci set "dhcp.@dnsmasq[0].logqueries=1"
 	uci set "dhcp.@dnsmasq[0].logdhcp=1"
 	uci set "dhcp.@dnsmasq[0].logfile=/tmp/dnsmasq.log"
 	uci commit dhcp
+	service dnsmasq restart
 
 	if [ ! -f /var/lib/noddos/DeviceDump.json ]; then
 		echo "[]" >/var/lib/noddos/DeviceDump.json

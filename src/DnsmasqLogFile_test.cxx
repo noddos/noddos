@@ -45,7 +45,7 @@ int main () {
 	hc.AddByMac (MacAddress("00:00:00:00:00:09"), "192.168.1.238");
 	hc.AddByMac (MacAddress("00:00:00:00:00:10"), "192.168.1.234");
 
-	DnsmasqLogFile d ("tests/dnsmasqdnsdata.log", hc, 86400);
+	DnsmasqLogFile d ("tests/dnsmasqdnsdata.log", hc, 86400, true);
 	auto lp = d.LinesParsed();
 	if (lp != 214) {
 		testfail = true;
@@ -67,7 +67,7 @@ int main () {
 		testfail = true;
     }
 	c = hc.HostDnsQueryCount ("192.168.1.241");
-	if (c != 21) {
+	if (c != 20) {
 	    std::cout << "DNS queries by 192.168.1.241: " << c << std::endl;
 		testfail = true;
     }
