@@ -97,6 +97,8 @@ add_test (Curl Curl_test)
 add_executable(Curl_test Curl_test.cxx)
 target_link_libraries(Curl_test curl ssl crypto)
 
+add_executable (PacketSnoop_test PacketSnoop_test.cxx PacketSnoop.cxx)
+
 add_test (Noddos noddos_test)
 add_executable(noddos_test noddos_test.cxx)
 
