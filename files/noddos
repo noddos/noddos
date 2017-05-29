@@ -25,7 +25,10 @@ start_service() {
 
     CONFFILE=/var/etc/noddos.conf
     cp /etc/noddos/noddos.conf-base $CONFFILE
-	dnsmasqlogfile=$(uci get system.@system[0].log_file)
+	dnsmasqlogfile=$(uci get dhcp.@dnsmasq[0].logfile)
+    if [[ -z $dnsmasqlogfile ]] || [ ! -f $dnsmasqlogfile ] ; then
+		dnsmasqlogfile=$(uci get system.@system[0].log_file)
+	fi
     if [[ -n $dnsmasqlogfile ]]; then
         echo '    "DnsmasqLogFile": "'$dnsmasqlogfile'",' >>$CONFFILE
     fi

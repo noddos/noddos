@@ -36,6 +36,13 @@ We need to edit the dnsmasq start-up script to make sure it starts with the para
 - insert after line 602: append_parm "$cfg" "logdhcp" "--log-dhcp"
 - insert after line 670:
 
+	config_get dnsmasqlogfile "$cfg" logfile ""  
+	[ -n dnsmasqlogfile ] && {  
+		xappend "log-facility=$dnsmasqlogfile"  
+	}  
+
+- insert after line 772: procd_add_jail_mount_rw $dnsmasqlogfile
+
 In the Luci UI, change the logging configuration under System -> System -> Logging. Edit the 'Write system log to file' and specify that the logs should be written to '/tmp/system.log'
 
 After restarting the dnsmasq and the log subsystem, there should be a /tmp/system.log file with DNS & DHCP logs:
@@ -83,10 +90,15 @@ Install a cronjob to download the Device Profiles database frequently (please pi
 	crontab -e 
     	23 */3 * * * /usr/bin/getnoddosdeviceprofiles
 
-If you want maximum privacy, create a new client cert every 6 hours or so. That does mean that going forward you may not be able to use some newly developed Noddos portal functions. Create a cronjob for root:
+We're telling dnsmasq to create some log files that can pretty big so we want to wipe them daily:
+
+	crontab -e
+		21 4 * * * echo -n "" >/tmp/dnsmasq.log; /etc/init.d/dnsmasq reload
+
+If you want maximum privacy for uploads, create a new client cert every 12 hours or so. That does mean that going forward you may not be able to use some newly developed Noddos portal functions. Create a cronjob for root:
 
     crontab -e 
-        41 */6 * * * cd /etc/noddos; /usr/bin/makenoddoscert.sh
+        41 */12 * * * cd /etc/noddos; /usr/bin/makenoddoscert.sh
 
 ### Installation for Linux DIY routers
 Sorry, there are no packages yet for Ubuntu / Fedora / CentOS / Gentoo. For now, just compile it from source.
