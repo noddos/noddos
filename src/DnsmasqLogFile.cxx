@@ -228,7 +228,7 @@ bool DnsmasqLogFile::ParseDnsLine (const std::string line) {
 	if (isfrom == "is") {
 		if (ip == "<CNAME>" || ip == "NODATA-IPv6" || ip == "NXDOMAIN") {
 			if(Debug) {
-				syslog(LOG_DEBUG, "Skipping DNS query log doesn't not return IP address");
+				syslog(LOG_DEBUG, "Skipping DNS query log didn't return an IP address");
 			}
 		} else if ( std::isdigit(ip.at(0)) == 0 ) {
 			if(Debug) {
