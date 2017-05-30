@@ -21,6 +21,8 @@
 #include <linux/filter.h>
 #include <linux/if_ether.h>
 
+#include <syslog.h>
+
 #include "PacketSnoop.h"
 
 void ProcessPacket(unsigned char* , int);
@@ -40,7 +42,9 @@ int main()
     struct sockaddr saddr;
          
     unsigned char *buffer = (unsigned char *) malloc(65536); //Its Big!
-     
+
+	openlog("PacketSnoop_test", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
+
     logfile=fopen("log.txt","w");
     if(logfile==NULL) 
     {
@@ -48,7 +52,7 @@ int main()
     }
     printf("Starting...\n");
 
-    PacketSnoop ps;
+    PacketSnoop ps(true);
     int sock_raw = ps.GetFileHandle();
 
 

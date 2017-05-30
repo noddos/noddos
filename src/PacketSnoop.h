@@ -32,18 +32,22 @@ constexpr std::size_t size(const T (&array)[N]) noexcept
 class PacketSnoop : public iDeviceInfoSource {
 private:
 	int sock;
+	bool Debug;
 
 public:
-	PacketSnoop() {
+	PacketSnoop(bool inDebug = false): Debug{inDebug} {
 		Open("");
 	}
 
 	~PacketSnoop() { Close(); };
-
-
+	int PacketSnoop::Open(std::string input, uint32_t inExpiration = 0);
+	int GetFileHandle() { return sock; }
 	bool Close() { close (sock); return false; };
 	bool ProcessEvent(struct epoll_event &event) { return true; }
-	int GetFileHandle() { return sock; }
+	bool PacketSnoop::Parse (unsigned char *frame, size_t size);
+	bool Parse_Dns_Tcp_Packet(unsigned char *payload, size_t size);
+	bool Parse_Dns_Udp_Packet(unsigned char *payload, size_t size);
+	bool Parse_Dhcp_Udp_Packet(unsigned char *payload, size_t size);
 };
 
 #endif /* PACKETSNOOP_H_ */
