@@ -7,42 +7,35 @@
 
 #include "PacketSnoop.h"
 
-struct dnshdr {
-    u_short dns_id;
-    u_short dns_flags;
-    u_short dns_qdc;
-    u_short dns_anc;
-    u_short dns_nsc;
-    u_short dns_arc;
-};
+
 
 int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
 	// DNS port 53 (without specifying UDP or TCP
 	struct sock_filter bpfcode[] = {
-		{ 0x28, 0, 0, 0x0000000c },
-		{ 0x15, 0, 8, 0x000086dd },
-		{ 0x30, 0, 0, 0x00000014 },
-		{ 0x15, 2, 0, 0x00000084 },
-		{ 0x15, 1, 0, 0x00000006 },
-		{ 0x15, 0, 17, 0x00000011 },
-		{ 0x28, 0, 0, 0x00000036 },
-		{ 0x15, 14, 0, 0x00000035 },
-		{ 0x28, 0, 0, 0x00000038 },
-		{ 0x15, 12, 13, 0x00000035 },
-		{ 0x15, 0, 12, 0x00000800 },
-		{ 0x30, 0, 0, 0x00000017 },
-		{ 0x15, 2, 0, 0x00000084 },
-		{ 0x15, 1, 0, 0x00000006 },
-		{ 0x15, 0, 8, 0x00000011 },
-		{ 0x28, 0, 0, 0x00000014 },
-		{ 0x45, 6, 0, 0x00001fff },
-		{ 0xb1, 0, 0, 0x0000000e },
-		{ 0x48, 0, 0, 0x0000000e },
-		{ 0x15, 2, 0, 0x00000035 },
-		{ 0x48, 0, 0, 0x00000010 },
-		{ 0x15, 0, 1, 0x00000035 },
-		{ 0x6, 0, 0, 0x00040000 },
-		{ 0x6, 0, 0, 0x00000000 }
+			{ 0x28, 0, 0, 0x0000000c },
+			{ 0x15, 0, 8, 0x000086dd },
+			{ 0x30, 0, 0, 0x00000014 },
+			{ 0x15, 2, 0, 0x00000084 },
+			{ 0x15, 1, 0, 0x00000006 },
+			{ 0x15, 0, 17, 0x00000011 },
+			{ 0x28, 0, 0, 0x00000036 },
+			{ 0x15, 14, 0, 0x00000035 },
+			{ 0x28, 0, 0, 0x00000038 },
+			{ 0x15, 12, 13, 0x00000035 },
+			{ 0x15, 0, 12, 0x00000800 },
+			{ 0x30, 0, 0, 0x00000017 },
+			{ 0x15, 2, 0, 0x00000084 },
+			{ 0x15, 1, 0, 0x00000006 },
+			{ 0x15, 0, 8, 0x00000011 },
+			{ 0x28, 0, 0, 0x00000014 },
+			{ 0x45, 6, 0, 0x00001fff },
+			{ 0xb1, 0, 0, 0x0000000e },
+			{ 0x48, 0, 0, 0x0000000e },
+			{ 0x15, 2, 0, 0x00000035 },
+			{ 0x48, 0, 0, 0x00000010 },
+			{ 0x15, 0, 1, 0x00000035 },
+			{ 0x6, 0, 0, 0x00040000 },
+			{ 0x6, 0, 0, 0x00000000 }
 	};
 	struct sock_fprog bpf = {
 		.len = size(bpfcode),
@@ -66,11 +59,13 @@ int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
 
 bool PacketSnoop::Parse (unsigned char *frame, size_t size) {
 	// Get the IP Header part of this packet , excluding the ethernet header
-	struct iphdr *iph = (struct iphdr*)(frame + sizeof(struct ethhdr));
+	struct iphdr *iph = (struct iphdr*) (frame + sizeof(struct ethhdr));
 
-	// TODO
-	if ((unsigned int)iph->version != 4) {
-		syslog (LOG_INFO, "Sorry, only support for IPv4 for now");
+	// TODO IPv6 support
+	uint8_t af = 2;
+	if (iph->version != 4) {
+		af = 10;
+		syslog (LOG_INFO, "Sorry, only support for IPv4 for now, not %u", iph->version);
 		return true;
 	}
 
@@ -83,37 +78,54 @@ bool PacketSnoop::Parse (unsigned char *frame, size_t size) {
     memset(&dest, 0, sizeof(dest));
     dest.sin_addr.s_addr = iph->daddr;
 
-	syslog(LOG_DEBUG, "Parsing packed from %s to %s", inet_ntoa(source.sin_addr), inet_ntoa(dest.sin_addr) );
+    //  unsigned char buf[sizeof(struct in6_addr)];
+    char sourcestring[INET6_ADDRSTRLEN], deststring[INET6_ADDRSTRLEN];
+
+    if (inet_ntop(af, &(source.sin_addr), sourcestring, INET6_ADDRSTRLEN) == nullptr) {
+    	syslog (LOG_ERR, "Invalid source IP address");
+    	return false;
+    }
+    if (inet_ntop(af, &(dest.sin_addr), deststring, INET6_ADDRSTRLEN) == nullptr) {
+    	syslog (LOG_ERR, "Invalid source IP address");
+    	return false;
+    }
+
+
+
+	syslog(LOG_DEBUG, "Parsing packet from %s to %s", sourcestring, deststring );
 
 	//Check the Protocol and do accordingly...
 	switch (iph->protocol) {
-    	case 6:  //TCP Protocol
-    		struct tcphdr *tcph=(struct tcphdr*)(frame  + iphdrlen + sizeof(struct ethhdr));
-    	    int header_size =  sizeof(struct ethhdr) + iphdrlen + tcph->doff*4;
-    	    unsigned char *payload = frame + header_size;
+    	case 6: //TCP Protocol
+    		{
+    			struct tcphdr *tcph=(struct tcphdr*)(frame  + iphdrlen + sizeof(struct ethhdr));
+    			int header_size =  sizeof(struct ethhdr) + iphdrlen + tcph->doff*4;
+    			unsigned char *payload = frame + header_size;
 
-    	    syslog (LOG_DEBUG, "TCP source port %u, dest port %u", ntohs(tcph->source), ntohs(tcph->dest));
-    	    if (ntohs(tcph->source) == 53 || ntohs(tcph->dest) == 53 ) {
-    	    	Parse_Dns_Tcp_Packet(payload, size - header_size);
-    		} else {
-    			syslog(LOG_WARNING, "Received PacketSnoop TCP packet with source port %u, destination port %u", ntohs(tcph->source), ntohs(tcph->dest));
+    	    	syslog (LOG_DEBUG, "TCP source port %u, dest port %u", ntohs(tcph->source), ntohs(tcph->dest));
+    	    	if (ntohs(tcph->source) == 53 || ntohs(tcph->dest) == 53 ) {
+    	    		Parse_Dns_Tcp_Packet(payload, size - header_size);
+    			} else {
+    				syslog(LOG_WARNING, "Received PacketSnoop TCP packet with source port %u, destination port %u", ntohs(tcph->source), ntohs(tcph->dest));
+    			}
     		}
     		break;
     	case 17: //UDP Protocol
-    	    struct udphdr *udph = (struct udphdr*)(frame + iphdrlen  + sizeof(struct ethhdr));
-    	    int header_size =  sizeof(struct ethhdr) + iphdrlen + sizeof udph;
-    	    unsigned char *payload = frame + header_size;
+    	    {
+    	    	struct udphdr *udph = (struct udphdr*)(frame + iphdrlen  + sizeof(struct ethhdr));
+    	    	int header_size =  sizeof(struct ethhdr) + iphdrlen + sizeof udph;
+    	    	unsigned char *payload = frame + header_size;
 
-    	    syslog (LOG_DEBUG, "UDP source port %u, dest port %u", ntohs(udph->source), ntohs(udph->dest));
-    	    if (ntohs(udph->source) == 53 || ntohs(udph->dest) == 53) {
-    			Parse_Dns_Udp_Packet(payload, size - header_size);
-    		} else if  (ntohs(udph->source) == 67 || ntohs(udph->dest) == 68 ||
-    				ntohs(udph->source) == 68 || ntohs(udph->dest) == 68) {
-    			Parse_Dhcp_Udp_Packet(payload, size - header_size);
-    		} else {
-    			syslog(LOG_WARNING, "Received PacketSnoop UDP packet with source port %u, destination port %u", ntohs(udph->source), ntohs(udph->dest));
-    		}
-
+    	    	syslog (LOG_DEBUG, "UDP source port %u, dest port %u", ntohs(udph->source), ntohs(udph->dest));
+    	    	if (ntohs(udph->source) == 53 || ntohs(udph->dest) == 53) {
+    	    		Parse_Dns_Udp_Packet(payload, size - header_size);
+    	    	} else if  (ntohs(udph->source) == 67 || ntohs(udph->dest) == 68 ||
+    					ntohs(udph->source) == 68 || ntohs(udph->dest) == 68) {
+    				Parse_Dhcp_Udp_Packet(payload, size - header_size);
+    			} else {
+    				syslog(LOG_WARNING, "Received PacketSnoop UDP packet with source port %u, destination port %u", ntohs(udph->source), ntohs(udph->dest));
+    			}
+    	    }
     		break;
         default: //Some Other Protocol like ARP etc.
         	syslog (LOG_ERR, "PacketSnoop received packet with protocol other than TCP or UDP");
@@ -134,8 +146,15 @@ inline const char * const BoolToString(bool b)
 
 bool PacketSnoop::Parse_Dns_Udp_Packet(unsigned char *payload, size_t size) {
     struct dnshdr *dnsh = (struct dnshdr*) payload;
-    syslog (LOG_DEBUG, "UDP DNS Query with Id %u, queries %u, answers %u, nameservers %u, additional answers %u", dnsh->dns_id,
-    		dnsh->dns_qdc, dnsh->dns_anc, dnsh->dns_nsc, dnsh->dns_arc);
+
+    uint16_t id = ntohs(dnsh->dns_id);
+    uint16_t queries = ntohs(dnsh->dns_qdc);
+    uint16_t answers = ntohs(dnsh->dns_anc);
+    uint16_t nameservers = ntohs(dnsh->dns_nsc);
+    uint16_t additionalanswers = ntohs(dnsh->dns_arc);
+
+    syslog (LOG_DEBUG, "UDP DNS Query with Id %u, queries %u, answers %u, nameservers %u, additional answers %u", id,
+    		queries, answers, nameservers, additionalanswers);
     bool query = (payload[2] & 0x0f) ? true : false;
     uint8_t opcode = (payload[2] & 0x78) >> 3;
     bool aa = (payload[2] & 0x04) ? true : false;
@@ -145,7 +164,7 @@ bool PacketSnoop::Parse_Dns_Udp_Packet(unsigned char *payload, size_t size) {
     uint8_t rcode = payload[3] & 0x0f;
 
     if (Debug == true) {
-    	syslog (LOG_DEBUG, "UDP DNS: query? %s, opcode: %u, authorative? %s, truncated? %s, recursion desired? %s, enabled? %s, rcode: %u"
+    	syslog (LOG_DEBUG, "UDP DNS: query? %s, opcode: %u, authorative? %s, truncated? %s, recursion desired? %s, enabled? %s, rcode: %u",
     		BoolToString(query), opcode, BoolToString(aa), BoolToString(truncated), BoolToString(recursion_desired), BoolToString(recursion_enabled), rcode);
     }
 

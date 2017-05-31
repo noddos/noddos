@@ -67,9 +67,10 @@ int main()
             return 1;
         }
         //Now process the packet
-        ProcessPacket(buffer , data_size);
+        ps.Parse(buffer, data_size);
+        // ProcessPacket(buffer , data_size);
     }
-    close(sock_raw);
+    ps.Close();
     printf("Finished");
     return 0;
 }
