@@ -35,7 +35,6 @@ struct dnshdr {
     uint16_t dns_arc;
 };
 
-
 template <class T, std::size_t N>
 constexpr std::size_t size(const T (&array)[N]) noexcept
 {
@@ -59,7 +58,7 @@ public:
 	bool ProcessEvent(struct epoll_event &event) { return true; }
 	bool Parse (unsigned char *frame, size_t size);
 	bool Parse_Dns_Tcp_Packet(unsigned char *payload, size_t size);
-	bool Parse_Dns_Udp_Packet(unsigned char *payload, size_t size);
+	bool Parse_Dns_Packet(unsigned char *payload, size_t size);
 	bool Parse_Dhcp_Udp_Packet(unsigned char *payload, size_t size);
 };
 

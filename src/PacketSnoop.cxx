@@ -118,7 +118,7 @@ bool PacketSnoop::Parse (unsigned char *frame, size_t size) {
 
     	    	syslog (LOG_DEBUG, "UDP source port %u, dest port %u", ntohs(udph->source), ntohs(udph->dest));
     	    	if (ntohs(udph->source) == 53 || ntohs(udph->dest) == 53) {
-    	    		Parse_Dns_Udp_Packet(payload, size - header_size);
+    	    		Parse_Dns_Packet(payload, size - header_size);
     	    	} else if  (ntohs(udph->source) == 67 || ntohs(udph->dest) == 68 ||
     					ntohs(udph->source) == 68 || ntohs(udph->dest) == 68) {
     				Parse_Dhcp_Udp_Packet(payload, size - header_size);
@@ -144,18 +144,23 @@ inline const char * const BoolToString(bool b)
   return b ? "true" : "false";
 }
 
-bool PacketSnoop::Parse_Dns_Udp_Packet(unsigned char *payload, size_t size) {
-    struct dnshdr *dnsh = (struct dnshdr*) payload;
+bool PacketSnoop::Parse_Dns_Packet(unsigned char *payload, size_t size) {
+    if (size < 12) {
+    	syslog (LOG_WARNING, "Receive DNS packet smaller than 12 bytes");
+    	return true;
+    }
+	struct dnshdr *dnsh = (struct dnshdr*) payload;
+
 
     uint16_t id = ntohs(dnsh->dns_id);
-    uint16_t queries = ntohs(dnsh->dns_qdc);
+    uint16_t questions = ntohs(dnsh->dns_qdc);
     uint16_t answers = ntohs(dnsh->dns_anc);
     uint16_t nameservers = ntohs(dnsh->dns_nsc);
     uint16_t additionalanswers = ntohs(dnsh->dns_arc);
 
-    syslog (LOG_DEBUG, "UDP DNS Query with Id %u, queries %u, answers %u, nameservers %u, additional answers %u", id,
-    		queries, answers, nameservers, additionalanswers);
-    bool query = (payload[2] & 0x0f) ? true : false;
+    syslog (LOG_DEBUG, "DNS Query with Id %u, questions %u, answers %u, nameservers %u, additional answers %u", id,
+    		questions, answers, nameservers, additionalanswers);
+    uint8_t qr= (payload[2] & 0x0f) >> 7;
     uint8_t opcode = (payload[2] & 0x78) >> 3;
     bool aa = (payload[2] & 0x04) ? true : false;
     bool truncated = (payload[2] & 0x02) ? true : false;
@@ -163,10 +168,48 @@ bool PacketSnoop::Parse_Dns_Udp_Packet(unsigned char *payload, size_t size) {
     bool recursion_enabled = (payload[3] & 0x80) ? true : false;
     uint8_t rcode = payload[3] & 0x0f;
 
-    if (Debug == true) {
-    	syslog (LOG_DEBUG, "UDP DNS: query? %s, opcode: %u, authorative? %s, truncated? %s, recursion desired? %s, enabled? %s, rcode: %u",
-    		BoolToString(query), opcode, BoolToString(aa), BoolToString(truncated), BoolToString(recursion_desired), BoolToString(recursion_enabled), rcode);
+    if (qr == 0 && opcode > 0) {
+    	syslog (LOG_DEBUG, "Ignoring reverse DNS lookups and DNS server status requests: %d", opcode);
+    	return false;
+
     }
+    if (qr == 1 && rcode > 0) {
+    	syslog(LOG_INFO, "Received DNS response with rcode %d", rcode);
+    	return true;
+    }
+    if (Debug == true) {
+    	syslog (LOG_DEBUG, "DNS: response? %s, opcode: %u, authorative? %s, truncated? %s, recursion desired? %s, enabled? %s, rcode: %u",
+    		BoolToString(qr), opcode, BoolToString(aa), BoolToString(truncated), BoolToString(recursion_desired), BoolToString(recursion_enabled), rcode);
+    }
+    // DNS packet header that we've just parsed is 12 bytes so now start parsing from position 12.
+    uint16_t pos = 12;
+    for (int q = 0; q < questions; q++) {
+    	std::string qname;
+    	while (*(payload + pos)) {
+    		int len = *(payload + pos);
+    		if (len > 63) {
+    			syslog (LOG_INFO, "Received DNS query with label length > 63");
+    		}
+    		qname.append((char *) payload + pos + 1, len);
+    		qname.append(".");
+    		pos += len + 1;
+       	}
+    	if (qname.length() > 255) {
+    		syslog (LOG_INFO, "Received DNS query for fqdn with length > 255");
+    	}
+    	// Skip terminating '\0'
+    	pos++;
+
+    	// uint16_t qtype = ntohs(*((uint16_t *) payload + pos));
+    	uint16_t qtype = (uint16_t) payload[pos];
+    	pos += 2;
+
+    	// uint16_t qclass = ntohs(*((uint16_t *) payload + pos));
+    	uint16_t qclass = (uint16_t) payload[pos];
+    	pos += 2;
+    	syslog (LOG_DEBUG, "DNS Query %s, qtype %u, qclass %u", qname.c_str(), qtype, qclass);
+    }
+
 
     return false;
 }
