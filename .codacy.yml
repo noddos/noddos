@@ -2,4 +2,5 @@ exclude_paths:
   - src/boost/*
   - src/boost/**
   - src/json.hpp
+  - src/dns*
 

@@ -38,29 +38,20 @@ int tcp=0,udp=0,icmp=0,others=0,igmp=0,total=0,i,j;
  
 int main()
 {
-    int saddr_size , data_size;
-    struct sockaddr saddr;
-         
     unsigned char *buffer = (unsigned char *) malloc(65536); //Its Big!
 
 	openlog("PacketSnoop_test", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
 
-    logfile=fopen("log.txt","w");
-    if(logfile==NULL) 
-    {
-        printf("Unable to create log.txt file.");
-    }
-    printf("Starting...\n");
-
     PacketSnoop ps(true);
     int sock_raw = ps.GetFileHandle();
 
-
     while(1)
     {
-        saddr_size = sizeof saddr;
+        struct sockaddr saddr;
+        int saddr_size = sizeof saddr;
+
         //Receive a packet
-        data_size = recvfrom(sock_raw , buffer , 65536 , 0 , &saddr , (socklen_t*)&saddr_size);
+        int data_size = recvfrom(sock_raw , buffer , 65536 , 0 , &saddr , (socklen_t*)&saddr_size);
         if(data_size <0 )
         {
             printf("Recvfrom error , failed to get packets\n");

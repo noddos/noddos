@@ -195,7 +195,7 @@ bool Host::Match(const MatchCondition& mc) {
 bool Host::Match(const ContainCondition& cc) {
 	if(cc.Key == "DnsQueries") {
 		for (auto fqdn: cc.Values) {
-			if (DnsCache.find(fqdn) != DnsCache.end()) {
+			if (DnsHostCache.find(fqdn) != DnsHostCache.end()) {
 				if(Debug) {
 					syslog(LOG_DEBUG, "Found DnsQuery for %s from host %s", fqdn.c_str(), Mac.c_str());
 				}
@@ -239,7 +239,7 @@ bool Host::DeviceStats(json& j, const uint32_t time_interval, bool force, bool d
 	j["SsdpLocation"] = Ssdp.Location;
 
 	std::string fqdns = "";
-	for (auto &dq: DnsCache) {
+	for (auto &dq: DnsHostCache) {
 		if (detailed) {
 			dq.second->DnsStats(j, time_interval);
 		} else {
@@ -262,7 +262,7 @@ bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportPriva
 	}
 	// This holds reverse lookup table from an IP address to one or more FQDNs.
 	std::map<std::string,std::shared_ptr<std::unordered_set<std::string>>> allIps;
-	for (auto &dq: DnsCache) {
+	for (auto &dq: DnsHostCache) {
 		dq.second->Ips_get(allIps);
 	}
 
@@ -451,15 +451,15 @@ bool Host::FlowEntry_set(const uint16_t inSrcPort, const std::string inDstIp,
 bool Host::DnsLogEntry_set(const std::string inFqdn, const std::string inIpAddress, const uint32_t inExpiration) {
 	iCache::LastSeen = iCache::LastModified = time(nullptr);
 	bool newentry = false;
-	if(DnsCache.find(inFqdn) == DnsCache.end()) {
-		DnsCache[inFqdn] = std::make_shared<DnsLogEntry>(inFqdn);
+	if(DnsHostCache.find(inFqdn) == DnsHostCache.end()) {
+		DnsHostCache[inFqdn] = std::make_shared<DnsLogEntry>(inFqdn);
 		newentry = true;
 		if(Debug) {
-			syslog(LOG_DEBUG, "Creating DnsLogEntry for %s with expiration %lu", inFqdn.c_str(), DnsCache[inFqdn]->Expiration_get());
+			syslog(LOG_DEBUG, "Creating DnsLogEntry for %s with expiration %lu", inFqdn.c_str(), DnsHostCache[inFqdn]->Expiration_get());
 		}
 	}
 
-	DnsCache[inFqdn]->Ips_set(inIpAddress, inExpiration);
+	DnsHostCache[inFqdn]->Ips_set(inIpAddress, inExpiration);
 	return newentry;
 }
 
@@ -599,12 +599,12 @@ uint32_t Host::Prune (bool Force) {
 		}
 	}
 	uint32_t pruned_dnsqueries = 0;
-	for(auto const& dc: DnsCache) {
+	for(auto const& dc: DnsHostCache) {
 		if (Force || dc.second->isExpired()) {
 			if (Debug) {
 				syslog(LOG_DEBUG, "Pruning DNS for %s with expiration %ld while now is %ld", dc.first.c_str(), dc.second->Expiration_get (), time(nullptr));
 			}
-			DnsCache.erase(dc.first);
+			DnsHostCache.erase(dc.first);
 			pruned_dnsqueries++;
 			pruned = true;
 		}

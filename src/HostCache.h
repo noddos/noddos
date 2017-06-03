@@ -31,6 +31,7 @@
 #include "DeviceProfile.h"
 #include "MacAddress.h"
 #include "Config.h"
+#include "DnsCache.h"
 
 #include "boost/asio.hpp"
 
@@ -40,6 +41,7 @@ class HostCache {
 private:
 	std::map<unsigned long long, std::shared_ptr<Host>> hC; 	// map from Mac to Host
 	std::map<std::string, unsigned long long> Ip2MacMap; 	// map from IP to MaC
+	DnsCache dC;
 	DeviceProfileMap dpMap;
 	std::regex arp_rx, dev_rx;
 	std::unordered_set<std::string> WhitelistedNodes;
