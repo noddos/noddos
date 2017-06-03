@@ -197,6 +197,7 @@ int main(int argc, char** argv) {
 					} else if (si.ssi_signo == SIGUSR1) {
 						syslog(LOG_INFO, "Processing signal event SIGUSR1");
 						hC.Match();
+						NextMatch = time(nullptr) + config.MatchInterval;
 						hC.ExportDeviceProfileMatches(config.MatchFile, false);
 						hC.ExportDeviceProfileMatches(config.DumpFile, true);
 					} else if (si.ssi_signo == SIGUSR2) {
@@ -218,6 +219,7 @@ int main(int argc, char** argv) {
 				auto t = time(nullptr);
 				if (t > NextMatch) {
 					hC.Match();
+					NextMatch = time(nullptr) + config.MatchInterval;
 					hC.ExportDeviceProfileMatches(config.MatchFile, false);
 					hC.ExportDeviceProfileMatches(config.DumpFile, true);
 				}

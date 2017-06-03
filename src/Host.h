@@ -43,7 +43,7 @@ using json = nlohmann::json;
 #include "MacAddress.h"
 #include "boost/asio.hpp"
 
-typedef std::map<std::string, std::shared_ptr<DnsLogEntry>> DnsCache;
+typedef std::map<std::string, std::shared_ptr<DnsLogEntry>> DnsHostCache;
 typedef std::list<std::shared_ptr<FlowEntry>> FlowEntryList;
 
 
@@ -51,7 +51,7 @@ typedef std::list<std::shared_ptr<FlowEntry>> FlowEntryList;
 
 class Host : public iCache {
 	private:
-    	std::map<std::string, std::shared_ptr<DnsLogEntry>> DnsCache;
+    	std::map<std::string, std::shared_ptr<DnsLogEntry>> DnsHostCache;
     	std::map<boost::asio::ip::address_v4, std::shared_ptr<FlowEntryList>> FlowCacheIpv4;
     	std::map<boost::asio::ip::address_v6, std::shared_ptr<FlowEntryList>> FlowCacheIpv6;
     	std::string Ipv4Address;
@@ -96,7 +96,7 @@ class Host : public iCache {
 				const uint16_t inDstPort, const uint8_t inProtocol, const uint32_t inExpiration);
 		uint32_t FlowCacheCount () { return FlowCacheIpv4.size() + FlowCacheIpv6.size(); }
 		bool DnsLogEntry_set(const std::string fqdn, const std::string ipaddress, const uint32_t expiration = 86400);
-		uint32_t DnsLogEntryCount () { return DnsCache.size(); }
+		uint32_t DnsLogEntryCount () { return DnsHostCache.size(); }
 		bool Dhcp_set (const std::shared_ptr<DhcpRequest> inDhcp_sptr);
 		bool Dhcp_set (const std::string IpAddress, const MacAddress Mac, const std::string Hostname, const std::string DhcpHostname, const std::string DhcpVendor);
 		bool SsdpInfo_set(const std::shared_ptr<SsdpHost> insHost);

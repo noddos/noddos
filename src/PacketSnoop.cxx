@@ -5,8 +5,10 @@
  *      Author: steven
  */
 
+#include "dns.h"
+#include "dnsmappings.h"
 #include "PacketSnoop.h"
-
+#include "output.h"
 
 
 int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
@@ -65,6 +67,7 @@ bool PacketSnoop::Parse (unsigned char *frame, size_t size) {
 	uint8_t af = 2;
 	if (iph->version != 4) {
 		af = 10;
+		// TODO
 		syslog (LOG_INFO, "Sorry, only support for IPv4 for now, not %u", iph->version);
 		return true;
 	}
@@ -86,12 +89,9 @@ bool PacketSnoop::Parse (unsigned char *frame, size_t size) {
     	return false;
     }
     if (inet_ntop(af, &(dest.sin_addr), deststring, INET6_ADDRSTRLEN) == nullptr) {
-    	syslog (LOG_ERR, "Invalid source IP address");
+    	syslog (LOG_ERR, "Invalid destination IP address");
     	return false;
     }
-
-
-
 	syslog(LOG_DEBUG, "Parsing packet from %s to %s", sourcestring, deststring );
 
 	//Check the Protocol and do accordingly...
@@ -119,6 +119,7 @@ bool PacketSnoop::Parse (unsigned char *frame, size_t size) {
     	    	syslog (LOG_DEBUG, "UDP source port %u, dest port %u", ntohs(udph->source), ntohs(udph->dest));
     	    	if (ntohs(udph->source) == 53 || ntohs(udph->dest) == 53) {
     	    		Parse_Dns_Packet(payload, size - header_size);
+    	    		// Parse_Dns_Packet(frame + sizeof(struct ethhdr) , size - sizeof(struct ethhdr));
     	    	} else if  (ntohs(udph->source) == 67 || ntohs(udph->dest) == 68 ||
     					ntohs(udph->source) == 68 || ntohs(udph->dest) == 68) {
     				Parse_Dhcp_Udp_Packet(payload, size - header_size);
@@ -149,6 +150,58 @@ bool PacketSnoop::Parse_Dns_Packet(unsigned char *payload, size_t size) {
     	syslog (LOG_WARNING, "Receive DNS packet smaller than 12 bytes");
     	return true;
     }
+
+    dns_decoded_t  bufresult[DNS_DECODEBUF_8K];
+    size_t         bufsize = sizeof(bufresult);
+    dns_packet_t reply[DNS_BUFFER_UDP];
+    size_t       replysize = sizeof(reply);
+
+    // int rc = dns_decode(bufresult,&bufsize,reply,replysize);
+    int rc = dns_decode(bufresult,&bufsize,(unsigned long int *) payload,size);
+    if (rc != RCODE_OKAY)
+    {
+      syslog(LOG_INFO, "dns_decode() = (%d) %s",rc,dns_rcode_text((dns_rcode_t)rc));
+      return EXIT_FAILURE;
+    }
+    // TODO: only accept packets with questions > 0 && answers == nameservers == additional_answers == 0 from the LAN
+    // TODO: only accept packets with answers > 0 || additional_answers > 0 from the WAN
+    // dns_print_result((dns_query_t *) bufresult);
+
+    if (Debug == true || true) {
+    	syslog(LOG_DEBUG,"Bytes used: %lu",(unsigned long)bufsize);
+    	dns_query_t *q = (dns_query_t*) bufresult;
+    	syslog(LOG_DEBUG,"Questions: %lu Answers: %lu Additional answers: %lu", q->qdcount, q->ancount, q->arcount);
+    	for (uint16_t i = 0; i < q->qdcount; i++) {
+    		syslog(LOG_DEBUG, "Question %u : %s %s %s", q->id, q->questions[i].name, dns_class_text(q->questions[i].dclass), dns_type_text (q->questions[i].type));
+    	}
+    	for (uint16_t i; i < q->ancount; i++) {
+    		char ipaddr[INET6_ADDRSTRLEN];
+    		if (q->answers[i].generic.type != RR_OPT) {
+    			syslog(LOG_DEBUG, "Answer %u : %-24s %5u %s %s", i, q->answers[i].generic.name, q->answers[i].generic.ttl,
+    				dns_class_text(q->answers[i].generic.dclass), dns_type_text (q->answers[i].generic.type));
+    		} else {
+    			syslog (LOG_DEBUG, "RR OPT");
+    		}
+    	    switch(q->answers[i].generic.type)
+    	    {
+    	      case RR_A:
+    	           inet_ntop(AF_INET,&q->answers[i].a.address,ipaddr,sizeof(ipaddr));
+    	           syslog(LOG_DEBUG, "%s", ipaddr);
+    	           break;
+    	      case RR_AAAA:
+    	           inet_ntop(AF_INET6,&q->answers[i].aaaa.address,ipaddr,sizeof(ipaddr));
+    	           syslog(LOG_DEBUG, "%s", ipaddr);
+    	           break;
+    	      case RR_CNAME:
+    	           syslog(LOG_DEBUG, "%s", q->answers[i].cname.cname);
+    	           break;
+    	      default:
+    	           break;
+    	    }
+    	}
+    }
+
+/*
 	struct dnshdr *dnsh = (struct dnshdr*) payload;
 
 
@@ -209,8 +262,7 @@ bool PacketSnoop::Parse_Dns_Packet(unsigned char *payload, size_t size) {
     	pos += 2;
     	syslog (LOG_DEBUG, "DNS Query %s, qtype %u, qclass %u", qname.c_str(), qtype, qclass);
     }
-
-
+*/
     return false;
 }
 
