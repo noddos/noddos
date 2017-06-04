@@ -26,10 +26,13 @@
 #include "DnsmasqLogFile.h"
 #include "HostCache.h"
 
+#include "noddos.h"
+
 int main () {
 	openlog("DnsmasqLogFile_test", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
 	bool testfail = false;
-	HostCache hc(true);
+	InterfaceMap ifMap;
+	HostCache hc(ifMap, 0, true);
 	// To test we have to add dummy Host entries to make sure
 	// the client IP address translates to a MAC address as
 	// the client ip address in the test colleteral may no longer

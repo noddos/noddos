@@ -59,6 +59,8 @@ public:
 	std::unordered_set<std::string> WhitelistedMacAddresses;
 	std::unordered_set<std::string> ListenIpAddresses;
 	std::unordered_set<std::string> ListenInterfaces;
+	std::unordered_set<std::string> LanInterfaces;
+	std::unordered_set<std::string> WanInterfaces;
 	std::time_t TrafficReportInterval = 3600; // Value in seconds, use 0 if no traffic stats should be uploaded
 	std::time_t DeviceReportInterval = 14400; // Value in seconds, use 0 if no device stats should be uploaded
 	bool ReportTrafficToRfc1918 = false;
@@ -104,6 +106,8 @@ public:
 		std::unordered_set<std::string> newWhitelistedMacAddresses = WhitelistedMacAddresses;
 		std::unordered_set<std::string> newListenIpAddresses = ListenIpAddresses;
 		std::unordered_set<std::string> newListenInterfaces = ListenInterfaces;
+		std::unordered_set<std::string> newLanInterfaces = LanInterfaces;
+		std::unordered_set<std::string> newWanInterfaces = WanInterfaces;
 		time_t newTrafficReportInterval = TrafficReportInterval;
 		time_t newDeviceReportInterval = DeviceReportInterval;
 		bool newReportTrafficToRfc1918 = ReportTrafficToRfc1918;
@@ -164,6 +168,12 @@ public:
 			if (j.count("ListenInterfaces")) {
 				newListenInterfaces = j["ListenInterfaces"].get<std::unordered_set<std::string>>();
 			}
+			if (j.count("LanInterfaces")) {
+				newLanInterfaces = j["LanInterfaces"].get<std::unordered_set<std::string>>();
+			}
+			if (j.count("WanInterfaces")) {
+				newWanInterfaces = j["WanInterfaces"].get<std::unordered_set<std::string>>();
+			}
 			if (j.count("TrafficReportInterval")) {
 				newTrafficReportInterval= j["TrafficReportInterval"].get<uint32_t>();
 			}
@@ -218,6 +228,8 @@ public:
 		WhitelistedMacAddresses = newWhitelistedMacAddresses;
 		ListenIpAddresses = newListenIpAddresses;
 		ListenInterfaces = newListenInterfaces;
+		LanInterfaces = newLanInterfaces;
+		WanInterfaces = newWanInterfaces;
 		TrafficReportInterval = newTrafficReportInterval;
 		DeviceReportInterval = newDeviceReportInterval;
 		ReportTrafficToRfc1918 = newReportTrafficToRfc1918;

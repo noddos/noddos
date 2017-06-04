@@ -34,7 +34,8 @@ static std::string deviceprofilesfile = "tests/DeviceProfiles.json";
 int main () {
 	bool testfailed = false;
 	openlog("Host_test", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
-	HostCache hC;
+	InterfaceMap ifMap;
+	HostCache hC(ifMap);
 	hC.DeviceProfiles_load(deviceprofilesfile);
 	hC.AddByMac (MacAddress("00:00:00:00:00:01"), "192.168.1.232");
 	hC.AddByMac (MacAddress("00:00:00:00:00:02"), "192.168.1.98");

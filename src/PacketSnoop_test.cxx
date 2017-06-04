@@ -23,7 +23,9 @@
 
 #include <syslog.h>
 
+#include "noddos.h"
 #include "PacketSnoop.h"
+#include "HostCache.h"
 
 void ProcessPacket(unsigned char* , int);
 void print_ip_header(unsigned char* , int);
@@ -42,23 +44,25 @@ int main()
 
 	openlog("PacketSnoop_test", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
 
-    PacketSnoop ps(true);
+	InterfaceMap ifMap
+	HostCache hC(ifMap, 0, true);
+    PacketSnoop ps(hc, true);
     int sock_raw = ps.GetFileHandle();
 
     while(1)
     {
-        struct sockaddr saddr;
+        struct sockaddr_ll saddr;
         int saddr_size = sizeof saddr;
 
         //Receive a packet
-        int data_size = recvfrom(sock_raw , buffer , 65536 , 0 , &saddr , (socklen_t*)&saddr_size);
+        int data_size = recvfrom(sock_raw , buffer , 65536 , 0 , (struct sockaddr *) &saddr , (socklen_t*)&saddr_size);
         if(data_size <0 )
         {
             printf("Recvfrom error , failed to get packets\n");
             return 1;
         }
         //Now process the packet
-        ps.Parse(buffer, data_size);
+        ps.Parse(buffer, data_size, saddr, saddr_size);
         // ProcessPacket(buffer , data_size);
     }
     ps.Close();

@@ -41,8 +41,10 @@ class HostCache {
 private:
 	std::map<unsigned long long, std::shared_ptr<Host>> hC; 	// map from Mac to Host
 	std::map<std::string, unsigned long long> Ip2MacMap; 	// map from IP to MaC
-	DnsCache dC;
+	DnsCache <boost::asio::ip::address_v4 >dCv4;
+	DnsCache <boost::asio::ip::address_v6 >dCv6;
 	DeviceProfileMap dpMap;
+	InterfaceMap *ifMap;
 	std::regex arp_rx, dev_rx;
 	std::unordered_set<std::string> WhitelistedNodes;
 	bool Debug;
@@ -51,7 +53,8 @@ private:
 	uint32_t FlowExpiration;
 
 public:
-	HostCache(const uint32_t inFlowExpiration = FLOWDEFAULTEXPIRATION, const bool inDebug = false): Debug{inDebug} {
+	HostCache(InterfaceMap &inifMap, const uint32_t inFlowExpiration = FLOWDEFAULTEXPIRATION, const bool inDebug = false):
+			ifMap{&inifMap}, Debug{inDebug} {
 		if (Debug) {
 			syslog (LOG_DEBUG, "Initializing HostCache instance");
 		}
@@ -100,6 +103,7 @@ public:
 
 	uint32_t Prune (bool Force = false);
 
+	InterfaceMap * getInterfaceMap() { return ifMap; }
 	MacAddress MacLookup (const std::string inIpAddress, const int retries = 1);
 	MacAddress MacLookup (const std::string inIpAddress, const std::string inInterface, const int retries = 1);
 	bool SendUdpPing (const std::string DstIpAddress, const uint16_t DstPort);
