@@ -518,6 +518,10 @@ uint32_t Host::Prune (bool Force) {
 	if(Debug) {
 		syslog(LOG_DEBUG, "Pruning host %s", Mac.c_str());
 	}
+	pruneDnsQueryCache(Force);
+	dCv4.pruneResourceRecords(Force);
+	dCv6.pruneResourceRecords(Force);
+
 	uint32_t pruned_flowentries = 0;
 	uint32_t pruned_flows = 0;
 	// FlowCache is a map, so iterate over it

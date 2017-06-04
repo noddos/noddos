@@ -43,7 +43,7 @@ include_directories("${PROJECT_BINARY_DIR}")
  
 add_executable(noddos noddos.cxx DnsLogEntry.cxx DnsmasqLogFile.cxx Host.cxx 
     HostCache.cxx SsdpServer.cxx SsdpLocation.cxx FlowTrack.cxx Config.cxx
-    opensslfingerprint.cxx)
+    opensslfingerprint.cxx PacketSnoop.cxx dnsmappings.cxx dnscodec.cxx)
 target_link_libraries(noddos libnetfilter_conntrack.so ssl crypto curl)
 
 enable_testing()
@@ -92,13 +92,16 @@ add_executable(SsdpServer_test SsdpServer_test.cxx DnsmasqLogFile.cxx
 target_link_libraries(SsdpServer_test curl ssl crypto)
 
 add_test (MacAddress MacAddress_test)
-add_executable(MacAddress_test MacAddress_test.cxx MacAddress.cxx)
+add_executable(MacAddress_test MacAddress_test.cxx)
 
 add_test (Curl Curl_test)
 add_executable(Curl_test Curl_test.cxx)
 target_link_libraries(Curl_test curl ssl crypto)
 
-add_executable (PacketSnoop_test PacketSnoop_test.cxx PacketSnoop.cxx dnsmappings.cxx dnscodec.cxx)
+add_executable (PacketSnoop_test PacketSnoop_test.cxx PacketSnoop.cxx dnsmappings.cxx dnscodec.cxx
+	HostCache.cxx Host.cxx DnsLogEntry.cxx SsdpServer.cxx SsdpLocation.cxx
+    opensslfingerprint.cxx)
+target_link_libraries(PacketSnoop_test curl ssl crypto)
 
 add_test (Noddos noddos_test)
 add_executable(noddos_test noddos_test.cxx)

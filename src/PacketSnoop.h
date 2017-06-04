@@ -20,6 +20,7 @@
 #include <net/ethernet.h> /* the L2 protocols */
 #include <arpa/inet.h>
 #include <netinet/ip.h>
+#include <linux/ipv6.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
 
@@ -57,10 +58,10 @@ public:
 	int Open(std::string input, uint32_t inExpiration = 0);
 	int GetFileHandle() { return sock; }
 	bool Close() { close (sock); return false; };
-	bool ProcessEvent(struct epoll_event &event) { return true; }
-	bool Parse (unsigned char *frame, size_t size, struct sockaddr_ll saddr, size_t saddr_size);
+	bool ProcessEvent(struct epoll_event &event);
+	bool Parse (unsigned char *frame, size_t size, int ifIndex);
 	bool Parse_Dns_Tcp_Packet(unsigned char *payload, size_t size);
-	bool Parse_Dns_Packet(unsigned char *payload, size_t size);
+	bool Parse_Dns_Packet(unsigned char *payload, size_t size, std::shared_ptr<Host> h, int ifindex);
 	bool Parse_Dhcp_Udp_Packet(unsigned char *payload, size_t size);
 };
 

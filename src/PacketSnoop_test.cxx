@@ -44,9 +44,12 @@ int main()
 
 	openlog("PacketSnoop_test", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
 
-	InterfaceMap ifMap
+	struct sockaddr_ll saddr;
+    int saddr_size = sizeof saddr;
+
+	InterfaceMap ifMap;
 	HostCache hC(ifMap, 0, true);
-    PacketSnoop ps(hc, true);
+    PacketSnoop ps(hC, true);
     int sock_raw = ps.GetFileHandle();
 
     while(1)
@@ -62,7 +65,7 @@ int main()
             return 1;
         }
         //Now process the packet
-        ps.Parse(buffer, data_size, saddr, saddr_size);
+        ps.Parse(buffer, data_size, saddr.sll_ifindex);
         // ProcessPacket(buffer , data_size);
     }
     ps.Close();

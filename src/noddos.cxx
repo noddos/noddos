@@ -53,6 +53,7 @@
 #include "DeviceProfile.h"
 #include "Host.h"
 #include "PacketSnoop.h"
+#include "InterfaceMap.h"
 #include "Config.h"
 #include "noddos.h"
 
@@ -63,7 +64,6 @@ int setup_signal_fd(int sfd);
 bool add_epoll_filehandle(int epfd, std::map<int, iDeviceInfoSource *> & epollmap,  iDeviceInfoSource& i);
 bool daemonize(Config &inConfig);
 bool write_pidfile(std::string pidfile);
-bool loadInterfaceMap(InterfaceMap &inifMap, std::unordered_set<std::string> inLanInterfaces, std::unordered_set<std::string> inWanInterfaces);
 
 void parse_commandline(int argc, char** argv, bool& debug, bool& flowtrack, std::string& configfile, bool& daemon, bool& prune);
 
@@ -89,8 +89,7 @@ int main(int argc, char** argv) {
 		openlog(argv[0], LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
 	}
 	Config config(configfile, debug);
-	InterfaceMap ifMap;
-	loadInterfaceMap(ifMap, config.LanInterfaces,config.WanInterfaces);
+	InterfaceMap ifMap(config.LanInterfaces,config.WanInterfaces);
 
 	if (daemon) {
 		daemonize(config);
@@ -525,41 +524,5 @@ void parse_commandline(int argc, char** argv, bool& debug, bool& flowtrack, std:
 	if (flowtrack_flag == 0) {
 		flowtrack = false;
 	}
-}
-
-bool loadInterfaceMap(InterfaceMap &inifMap,
-		std::unordered_set<std::string> inLanInterfaces,
-		std::unordered_set<std::string> inWanInterfaces) {
-
-	bool failure = false;
-	// We may have received SIGHUP so clear the interface map first
-	if (inifMap.find("LanInterfaces") != inifMap.end()) {
-		inifMap["LanInterfaces"].clear();
-	}
-	if (inifMap.find("WanInterfaces") != inifMap.end()) {
-		inifMap["WanInterfaces"].clear();
-	}
-
-	{
-		for (auto i : inLanInterfaces) {
-			if (auto index = if_nametoindex(i.c_str()) > 0) {
-				inifMap["LanInterfaces"][i] = index;
-			} else {
-				syslog (LOG_ERR, "Can't find LAN interface %s", i.c_str());
-				failure = true;
-			}
-		}
-	}
-	{
-		for (auto i : inWanInterfaces) {
-			if (auto index = if_nametoindex(i.c_str()) > 0) {
-				inifMap["WanInterfaces"][i] = index;
-			} else {
-				syslog (LOG_ERR, "Can't find LAN interface %s", i.c_str());
-				failure = true;
-			}
-		}
-	}
-	return failure;
 }
 

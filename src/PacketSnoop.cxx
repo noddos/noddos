@@ -5,8 +5,11 @@
  *      Author: steven
  */
 
+#include "boost/asio.hpp"
+
 #include "dns.h"
 #include "dnsmappings.h"
+#include "InterfaceMap.h"
 #include "PacketSnoop.h"
 
 
@@ -59,45 +62,88 @@ int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
 	return sock;
 }
 
-bool PacketSnoop::Parse (unsigned char *frame, size_t size, struct sockaddr_ll saddr, size_t saddr_size) {
+bool PacketSnoop::ProcessEvent(struct epoll_event &event) {
+    struct sockaddr_ll saddr;
+    int saddr_size = sizeof saddr;
+    unsigned char buffer[65536]; // It might be big!
+
+    int data_size = recvfrom(sock, buffer , 65536 , 0 , (struct sockaddr *) &saddr , (socklen_t*)&saddr_size);
+    if(data_size <0 ) {
+        syslog(LOG_WARNING, "Recvfrom error , failed to get packets\n");
+        return true;
+    }
+    Parse(buffer, data_size, saddr.sll_ifindex);
+    return false;
+}
+
+bool PacketSnoop::Parse (unsigned char *frame, size_t size, int ifindex) {
 	// Get the IP Header part of this packet , excluding the ethernet header
-	struct iphdr *iph = (struct iphdr*) (frame + sizeof(struct ethhdr));
+    struct ethhdr *ethh = (struct ethhdr *) frame;
 
-	InterfaceMap *ifMap = hC->getInterfaceMap();
+	uint8_t af;
+	unsigned short iphdrlen;
+	unsigned short protocol;
+   	struct sockaddr_storage source, dest;
+   	memset(&source, 0, sizeof(source));
+   	memset(&dest, 0, sizeof(dest));
+	char sourcestring[INET6_ADDRSTRLEN], deststring[INET6_ADDRSTRLEN];
 
-	// TODO IPv6 support
-	uint8_t af = 2;
-	if (iph->version != 4) {
-		af = 10;
-		// TODO
-		syslog (LOG_INFO, "Sorry, only support for IPv4 for now, not %u", iph->version);
+   	if (ethh->h_proto == 0x0800) {
+		af = AF_INET;
+		struct iphdr *iph = (struct iphdr*) (frame + sizeof(struct ethhdr));
+		iphdrlen = iph->ihl*4;
+		protocol = iph->protocol;
+		struct sockaddr_in source, dest;
+	   	memset(&source, 0, sizeof(source));
+	   	memset(&dest, 0, sizeof(dest));
+	   	source.sin_addr.s_addr = iph->saddr;
+	   	dest.sin_addr.s_addr = iph->daddr;
+	   	if (inet_ntop(af, &(source.sin_addr), sourcestring, INET6_ADDRSTRLEN) == nullptr) {
+	   		syslog (LOG_ERR, "Invalid source IP address");
+	   		return false;
+	   	}
+	   	if (inet_ntop(af, &(dest.sin_addr), deststring, INET6_ADDRSTRLEN) == nullptr) {
+	   		syslog (LOG_ERR, "Invalid destination IP address");
+	   		return false;
+	   	}
+   	} else	if (ethh->h_proto == 0x86DD) {
+		af = AF_INET6;
+		iphdrlen = 40;
+		struct ipv6hdr *ipv6h = (struct ipv6hdr*) (frame + sizeof(struct ethhdr));
+		if (ipv6h->nexthdr != 6 && ipv6h->nexthdr != 17) {
+			syslog (LOG_INFO, "Sorry, only support for IPv6 without optional headers for now %u", ipv6h->nexthdr);
+			return true;
+		}
+		protocol = ipv6h->nexthdr;
+ 		// struct sockaddr_in6 source, dest;
+	   	// memset(&source, 0, sizeof(source));
+	   	// memset(&dest, 0, sizeof(dest));
+	   	// source.sin6_addr.s6_addr = ipv6h->saddr.s6_addr;
+	   	// dest.sin6_addr.s6_addr = (uint8_t *) ipv6h->daddr.s6_addr;
+	   	if (inet_ntop(af, &(ipv6h->saddr), sourcestring, INET6_ADDRSTRLEN) == nullptr) {
+	   		syslog (LOG_ERR, "Invalid source IP address");
+	   		return false;
+	   	}
+	   	// if (inet_ntop(af, &(dest.sin6_addr), deststring, INET6_ADDRSTRLEN) == nullptr) {
+	    if (inet_ntop(af, &(ipv6h->daddr), deststring, INET6_ADDRSTRLEN) == nullptr) {
+	    	syslog (LOG_ERR, "Invalid destination IP address");
+	   		return false;
+	   	}
+   	} else {
+		syslog (LOG_INFO, "Received Ethernet packet with unsupported protocol %u", ethh->h_proto);
 		return true;
 	}
 
-    unsigned short iphdrlen = iph->ihl*4;
-
-	struct sockaddr_in source,dest;
-    memset(&source, 0, sizeof(source));
-    source.sin_addr.s_addr = iph->saddr;
-
-    memset(&dest, 0, sizeof(dest));
-    dest.sin_addr.s_addr = iph->daddr;
-
-    //  unsigned char buf[sizeof(struct in6_addr)];
-    char sourcestring[INET6_ADDRSTRLEN], deststring[INET6_ADDRSTRLEN];
-
-    if (inet_ntop(af, &(source.sin_addr), sourcestring, INET6_ADDRSTRLEN) == nullptr) {
-    	syslog (LOG_ERR, "Invalid source IP address");
-    	return false;
+   if (Debug == true) {
+    	syslog(LOG_DEBUG, "Parsing packet from %s to %s", sourcestring, deststring );
     }
-    if (inet_ntop(af, &(dest.sin_addr), deststring, INET6_ADDRSTRLEN) == nullptr) {
-    	syslog (LOG_ERR, "Invalid destination IP address");
-    	return false;
-    }
-	syslog(LOG_DEBUG, "Parsing packet from %s to %s", sourcestring, deststring );
+
+    // Find (or create) the Host instance that send the packet
+    MacAddress Mac (ethh->h_source);
+    std::shared_ptr<Host> h = hC->FindOrCreateHostByMac(Mac, "", sourcestring);
 
 	//Check the Protocol and do accordingly...
-	switch (iph->protocol) {
+	switch (protocol) {
     	case 6: //TCP Protocol
     		{
     			struct tcphdr *tcph=(struct tcphdr*)(frame  + iphdrlen + sizeof(struct ethhdr));
@@ -120,7 +166,7 @@ bool PacketSnoop::Parse (unsigned char *frame, size_t size, struct sockaddr_ll s
 
     	    	syslog (LOG_DEBUG, "UDP source port %u, dest port %u", ntohs(udph->source), ntohs(udph->dest));
     	    	if (ntohs(udph->source) == 53 || ntohs(udph->dest) == 53) {
-    	    		Parse_Dns_Packet(payload, size - header_size);
+    	    		Parse_Dns_Packet(payload, size - header_size, h, ifindex);
     	    		// Parse_Dns_Packet(frame + sizeof(struct ethhdr) , size - sizeof(struct ethhdr));
     	    	} else if  (ntohs(udph->source) == 67 || ntohs(udph->dest) == 68 ||
     					ntohs(udph->source) == 68 || ntohs(udph->dest) == 68) {
@@ -136,22 +182,12 @@ bool PacketSnoop::Parse (unsigned char *frame, size_t size, struct sockaddr_ll s
 	return false;
 }
 
-bool PacketSnoop::Parse_Dns_Tcp_Packet(unsigned char *payload, size_t size) {
-	// TODO
-	syslog (LOG_INFO, "Ignoring DNS TCP packets for now");
-	return false;
-}
-
-inline const char * const BoolToString(bool b)
-{
-  return b ? "true" : "false";
-}
-
-bool PacketSnoop::Parse_Dns_Packet(unsigned char *payload, size_t size) {
+bool PacketSnoop::Parse_Dns_Packet(unsigned char *payload, size_t size, std::shared_ptr<Host> h, int ifIndex) {
     if (size < 12) {
     	syslog (LOG_WARNING, "Receive DNS packet smaller than 12 bytes");
     	return true;
     }
+	InterfaceMap *ifMap = hC->getInterfaceMap();
 
     dns_decoded_t  bufresult[DNS_DECODEBUF_8K];
     size_t         bufsize = sizeof(bufresult);
@@ -160,112 +196,91 @@ bool PacketSnoop::Parse_Dns_Packet(unsigned char *payload, size_t size) {
 
     // int rc = dns_decode(bufresult,&bufsize,reply,replysize);
     int rc = dns_decode(bufresult,&bufsize,(unsigned long int *) payload,size);
-    if (rc != RCODE_OKAY)
-    {
+    if (rc != RCODE_OKAY) {
       syslog(LOG_INFO, "dns_decode() = (%d) %s",rc,dns_rcode_text((dns_rcode_t)rc));
       return EXIT_FAILURE;
     }
-    // TODO: only accept packets with questions > 0 && answers == nameservers == additional_answers == 0 from the LAN
-    // TODO: only accept packets with answers > 0 || additional_answers > 0 from the WAN
-    // dns_print_result((dns_query_t *) bufresult);
+    dns_query_t *q = (dns_query_t*) bufresult;
 
-    if (Debug == true || true) {
+    if (Debug == true) {
     	syslog(LOG_DEBUG,"Bytes used: %lu",(unsigned long)bufsize);
-    	dns_query_t *q = (dns_query_t*) bufresult;
     	syslog(LOG_DEBUG,"Questions: %lu Answers: %lu Additional answers: %lu", q->qdcount, q->ancount, q->arcount);
+    }
+    // From the LAN, only accept packets with no answers
+    // From the WAN, only accept packets with answers
+    if (ifMap->isLanInterface(ifIndex) == true && q->ancount == 0 && q->arcount) {
     	for (uint16_t i = 0; i < q->qdcount; i++) {
-    		syslog(LOG_DEBUG, "Question %u : %s %s %s", q->id, q->questions[i].name, dns_class_text(q->questions[i].dclass), dns_type_text (q->questions[i].type));
+    		if (Debug == true) {
+        		syslog(LOG_DEBUG, "Question %u : %s %s %s", q->id, q->questions[i].name, dns_class_text(q->questions[i].dclass), dns_type_text (q->questions[i].type));
+    		}
+    		h->addorupdateDnsQueryCache(q->questions[i].name);
+    	}
+    	return false;
+    } else if (ifMap->isWanInterface(ifIndex) && q->ancount > 0) {
+    	for (uint16_t i = 0; i < q->qdcount; i++) {
+    		// Only accept an answer if for each question there is a matching FQDN received from the LAN
+    		if (h->inDnsQueryCache(q->questions[i].name) == false) {
+    			syslog(LOG_WARNING, "No matching entry in DnsQueryCache for %s", q->questions[i].name);
+    			return true;
+    		}
     	}
     	for (uint16_t i; i < q->ancount; i++) {
     		char ipaddr[INET6_ADDRSTRLEN];
     		if (q->answers[i].generic.type != RR_OPT) {
-    			syslog(LOG_DEBUG, "Answer %u : %-24s %5u %s %s", i, q->answers[i].generic.name, q->answers[i].generic.ttl,
-    				dns_class_text(q->answers[i].generic.dclass), dns_type_text (q->answers[i].generic.type));
+    			if (Debug == true) {
+    				syslog(LOG_DEBUG, "Answer %u : %-24s %5u %s %s", i, q->answers[i].generic.name, q->answers[i].generic.ttl,
+    					dns_class_text(q->answers[i].generic.dclass), dns_type_text (q->answers[i].generic.type));
+    			}
+        	    switch(q->answers[i].generic.type)
+        	    {
+        	    	case RR_A:
+        	    		{
+        	    			boost::asio::ip::address_v4 ipv4(ntohl(q->answers[i].a.address));
+        	    			h->addorupdateDnsCache(q->answers[i].generic.name, ipv4, q->answers[i].generic.ttl);
+        	    			if (Debug == true) {
+        	    				inet_ntop(AF_INET,&q->answers[i].a.address,ipaddr,sizeof(ipaddr));
+        	    				syslog(LOG_DEBUG, "%s", ipaddr);
+        	    			}
+        	    		}
+        	    		break;
+        	      case RR_AAAA:
+        	      	  {
+        	      		  std::array<unsigned char, 16> v6addr;
+        	      		  for (int c = 0; i < 16; c++) {
+        	      			  v6addr[c] = q->answers[i].aaaa.address.s6_addr[c];
+        	      		  }
+
+						  boost::asio::ip::address_v6 ipv6(v6addr);
+        	          	  // q->answers[i].aaaa.address.s6_addr;
+        	          	  h->addorupdateDnsCache(q->answers[i].generic.name, ipv6, q->answers[i].generic.ttl);
+        	          	  if (Debug == true) {
+        	          		  inet_ntop(AF_INET6,&q->answers[i].aaaa.address,ipaddr,sizeof(ipaddr));
+        	          		  syslog(LOG_DEBUG, "%s", ipaddr);
+        	          	  }
+        	          	  break;
+        	          }
+        	      case RR_CNAME:
+        	    	  if (Debug == true) {
+        	    		  syslog(LOG_DEBUG, "%s", q->answers[i].cname.cname);
+        	    	  }
+        	          break;
+        	      default:
+        	           break;
+        	    }
     		} else {
-    			syslog (LOG_DEBUG, "RR OPT");
+    			if (Debug == true) {
+    				syslog (LOG_DEBUG, "RR OPT");
+    			}
     		}
-    	    switch(q->answers[i].generic.type)
-    	    {
-    	      case RR_A:
-    	           inet_ntop(AF_INET,&q->answers[i].a.address,ipaddr,sizeof(ipaddr));
-    	           syslog(LOG_DEBUG, "%s", ipaddr);
-    	           break;
-    	      case RR_AAAA:
-    	           inet_ntop(AF_INET6,&q->answers[i].aaaa.address,ipaddr,sizeof(ipaddr));
-    	           syslog(LOG_DEBUG, "%s", ipaddr);
-    	           break;
-    	      case RR_CNAME:
-    	           syslog(LOG_DEBUG, "%s", q->answers[i].cname.cname);
-    	           break;
-    	      default:
-    	           break;
-    	    }
     	}
     }
-
-/*
-	struct dnshdr *dnsh = (struct dnshdr*) payload;
-
-
-    uint16_t id = ntohs(dnsh->dns_id);
-    uint16_t questions = ntohs(dnsh->dns_qdc);
-    uint16_t answers = ntohs(dnsh->dns_anc);
-    uint16_t nameservers = ntohs(dnsh->dns_nsc);
-    uint16_t additionalanswers = ntohs(dnsh->dns_arc);
-
-    syslog (LOG_DEBUG, "DNS Query with Id %u, questions %u, answers %u, nameservers %u, additional answers %u", id,
-    		questions, answers, nameservers, additionalanswers);
-    uint8_t qr= (payload[2] & 0x0f) >> 7;
-    uint8_t opcode = (payload[2] & 0x78) >> 3;
-    bool aa = (payload[2] & 0x04) ? true : false;
-    bool truncated = (payload[2] & 0x02) ? true : false;
-    bool recursion_desired = (payload[2] & 0x01) ? true : false;
-    bool recursion_enabled = (payload[3] & 0x80) ? true : false;
-    uint8_t rcode = payload[3] & 0x0f;
-
-    if (qr == 0 && opcode > 0) {
-    	syslog (LOG_DEBUG, "Ignoring reverse DNS lookups and DNS server status requests: %d", opcode);
-    	return false;
-
-    }
-    if (qr == 1 && rcode > 0) {
-    	syslog(LOG_INFO, "Received DNS response with rcode %d", rcode);
-    	return true;
-    }
-    if (Debug == true) {
-    	syslog (LOG_DEBUG, "DNS: response? %s, opcode: %u, authorative? %s, truncated? %s, recursion desired? %s, enabled? %s, rcode: %u",
-    		BoolToString(qr), opcode, BoolToString(aa), BoolToString(truncated), BoolToString(recursion_desired), BoolToString(recursion_enabled), rcode);
-    }
-    // DNS packet header that we've just parsed is 12 bytes so now start parsing from position 12.
-    uint16_t pos = 12;
-    for (int q = 0; q < questions; q++) {
-    	std::string qname;
-    	while (*(payload + pos)) {
-    		int len = *(payload + pos);
-    		if (len > 63) {
-    			syslog (LOG_INFO, "Received DNS query with label length > 63");
-    		}
-    		qname.append((char *) payload + pos + 1, len);
-    		qname.append(".");
-    		pos += len + 1;
-       	}
-    	if (qname.length() > 255) {
-    		syslog (LOG_INFO, "Received DNS query for fqdn with length > 255");
-    	}
-    	// Skip terminating '\0'
-    	pos++;
-
-    	// uint16_t qtype = ntohs(*((uint16_t *) payload + pos));
-    	uint16_t qtype = (uint16_t) payload[pos];
-    	pos += 2;
-
-    	// uint16_t qclass = ntohs(*((uint16_t *) payload + pos));
-    	uint16_t qclass = (uint16_t) payload[pos];
-    	pos += 2;
-    	syslog (LOG_DEBUG, "DNS Query %s, qtype %u, qclass %u", qname.c_str(), qtype, qclass);
-    }
-*/
     return false;
+}
+
+bool PacketSnoop::Parse_Dns_Tcp_Packet(unsigned char *payload, size_t size) {
+	// TODO
+	syslog (LOG_INFO, "Ignoring DNS TCP packets for now");
+	return false;
 }
 
 bool PacketSnoop::Parse_Dhcp_Udp_Packet(unsigned char *payload, size_t size) {

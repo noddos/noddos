@@ -41,6 +41,7 @@ using json = nlohmann::json;
 #include "DeviceProfile.h"
 #include "MatchCondition.h"
 #include "MacAddress.h"
+#include "DnsCache.h"
 #include "boost/asio.hpp"
 
 typedef std::map<std::string, std::shared_ptr<DnsLogEntry>> DnsHostCache;
@@ -51,6 +52,10 @@ typedef std::list<std::shared_ptr<FlowEntry>> FlowEntryList;
 
 class Host : public iCache {
 	private:
+    	DnsCache <boost::asio::ip::address_v4> dCv4;
+    	DnsCache <boost::asio::ip::address_v6> dCv6;
+    	std::map<std::string,time_t> DnsQueryCache;
+
     	std::map<std::string, std::shared_ptr<DnsLogEntry>> DnsHostCache;
     	std::map<boost::asio::ip::address_v4, std::shared_ptr<FlowEntryList>> FlowCacheIpv4;
     	std::map<boost::asio::ip::address_v6, std::shared_ptr<FlowEntryList>> FlowCacheIpv6;
@@ -100,6 +105,32 @@ class Host : public iCache {
 		bool Dhcp_set (const std::shared_ptr<DhcpRequest> inDhcp_sptr);
 		bool Dhcp_set (const std::string IpAddress, const MacAddress Mac, const std::string Hostname, const std::string DhcpHostname, const std::string DhcpVendor);
 		bool SsdpInfo_set(const std::shared_ptr<SsdpHost> insHost);
+
+		// These functions are for the new DnsCache filled by the PacketSnoop class
+		void addorupdateDnsCache(std::string inFqdn, boost::asio::ip::address_v4 inIp, time_t inTtl) {
+			dCv4.addorupdateResourceRecord(inFqdn, inIp, inTtl);
+		}
+		void addorupdateDnsCache(std::string inFqdn, boost::asio::ip::address_v6 inIp, time_t inTtl) {
+			dCv6.addorupdateResourceRecord(inFqdn, inIp, inTtl);
+		}
+		// This is the DnsQueryCache
+		void addorupdateDnsQueryCache (std::string inFqdn) { DnsQueryCache[inFqdn] = time(nullptr) + 15; }
+		bool inDnsQueryCache (std::string inFqdn) { if (DnsQueryCache.find(inFqdn) == DnsQueryCache.end()) { return false; } return true; }
+		uint32_t pruneDnsQueryCache (bool Force = false) {
+			uint32_t deletecount;
+			time_t now = time(nullptr);
+			auto i = DnsQueryCache.begin();
+			while (i != DnsQueryCache.end()) {
+				if (Force || i->second > now) {
+					if (Debug == true) {
+						syslog (LOG_DEBUG, "Deleting %s from DnsQueryCache as %lu is later than %lu", i->first.c_str(), i->second, now);
+					}
+					i = DnsQueryCache.erase(i);
+					deletecount++;
+				}
+			}
+			return deletecount;
+		}
 
 		bool isMatched () { return Uuid != ""; }
 		bool UploadsEnabled ();
