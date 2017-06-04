@@ -47,7 +47,8 @@ int main () {
 		std::cout << "Test failure: do_dpimport_test" << std::endl;
 		testfailure = true;
 	}
-	HostCache hC(0,true);
+	InterfaceMap ifMap;
+	HostCache hC(ifMap, 0, true);
 	// hC.DeviceProfiles_load(deviceprofilesfile);
 	hC.AddByMac (MacAddress("00:00:00:00:00:03"), "192.168.1.99");
 
@@ -84,7 +85,8 @@ int main () {
 }
 
 bool do_dpimport_test() {
-	HostCache hC(0, true);
+	InterfaceMap ifMap;
+	HostCache hC(ifMap, 0, true);
 	auto  matches = hC.ImportDeviceProfileMatches("tests/DeviceMatches.json");
 	if (matches != 9) {
 		std::cout << "Test failure: Expected 9 imported device profiles but got " << matches << std::endl;

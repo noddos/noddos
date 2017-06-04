@@ -22,8 +22,6 @@
 #include <map>
 #include <string>
 
-#include <sys/epoll.h>
-#include <stdlib.h>
 #include <ctime>
 #include <cstring>
 #include <fstream>
@@ -31,6 +29,8 @@
 #include <memory>
 #include <unordered_set>
 #include <csignal>
+#include <sys/epoll.h>
+#include <stdlib.h>
 #include <sys/signalfd.h>
 #include <unistd.h>
 #include <syslog.h>
@@ -39,7 +39,7 @@
 #include <grp.h>
 #include <sys/stat.h>
 #include <stdio.h>
-
+#include <net/if.h>
 #include <getopt.h>
 
 #include <curl/curl.h>
@@ -52,6 +52,7 @@
 #include "iDeviceInfoSource.h"
 #include "DeviceProfile.h"
 #include "Host.h"
+#include "PacketSnoop.h"
 #include "Config.h"
 #include "noddos.h"
 
@@ -62,6 +63,7 @@ int setup_signal_fd(int sfd);
 bool add_epoll_filehandle(int epfd, std::map<int, iDeviceInfoSource *> & epollmap,  iDeviceInfoSource& i);
 bool daemonize(Config &inConfig);
 bool write_pidfile(std::string pidfile);
+bool loadInterfaceMap(InterfaceMap &inifMap, std::unordered_set<std::string> inLanInterfaces, std::unordered_set<std::string> inWanInterfaces);
 
 void parse_commandline(int argc, char** argv, bool& debug, bool& flowtrack, std::string& configfile, bool& daemon, bool& prune);
 
@@ -72,6 +74,13 @@ int main(int argc, char** argv) {
 	bool daemon = true;
 	bool prune = true;
 
+	//
+	// Process management :
+	// - Command line args
+	// - daemonize the process
+	// - load configuration file,
+	// - write pid file
+	//
 	parse_commandline(argc, argv, debug, flowtrack, configfile, daemon, prune);
 
 	if (daemon) {
@@ -80,27 +89,39 @@ int main(int argc, char** argv) {
 		openlog(argv[0], LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
 	}
 	Config config(configfile, debug);
+	InterfaceMap ifMap;
+	loadInterfaceMap(ifMap, config.LanInterfaces,config.WanInterfaces);
 
 	if (daemon) {
 		daemonize(config);
 	}
 	write_pidfile(config.PidFile);
 
+
 	curl_global_init(CURL_GLOBAL_ALL);
 
-	HostCache hC(config.TrafficReportInterval, config.Debug);
-
+	//
+	// Set up HostCache instance
+	//
+	HostCache hC(ifMap, config.TrafficReportInterval, config.Debug);
 	hC.DeviceProfiles_load(config.DeviceProfilesFile);
 	hC.ImportDeviceProfileMatches(config.MatchFile);
 	hC.Whitelists_set(config.WhitelistedIpv4Addresses, config.WhitelistedIpv6Addresses, config.WhitelistedMacAddresses);
-	std::map<int,iDeviceInfoSource *> epollmap;
 
+
+	//
+	// Set up epoll
+	//
+	std::map<int,iDeviceInfoSource *> epollmap;
     int epfd = epoll_create1(0);
     if (epfd < 0) {
     	syslog(LOG_CRIT, "Can't create epoll instance");
     	exit(1);
     }
 
+    //
+    // Signal handler for SIGHUP, SIGUSR1, SIGUSR2, SIGTERM
+    //
     auto sfd = setup_signal_fd(-1);
     if (sfd < 0) {
     	syslog(LOG_ERR, "Setting up signal fd");
@@ -118,6 +139,12 @@ int main(int argc, char** argv) {
         	}
         }
     }
+
+    //
+    // all the DeviceInfoSources
+    //
+    PacketSnoop p(hC, config.Debug);
+    add_epoll_filehandle(epfd, epollmap, p);
 
     DnsmasqLogFile f(config.DnsmasqLogFile, hC, 86400, config.Debug);
     add_epoll_filehandle(epfd, epollmap, f);
@@ -432,6 +459,7 @@ bool write_pidfile(std::string pidfile) {
 	} else {
 		syslog(LOG_ERR, "Error creating PID file %s", pidfile.c_str());
 	}
+	return false;
 
 }
 
@@ -497,5 +525,41 @@ void parse_commandline(int argc, char** argv, bool& debug, bool& flowtrack, std:
 	if (flowtrack_flag == 0) {
 		flowtrack = false;
 	}
+}
+
+bool loadInterfaceMap(InterfaceMap &inifMap,
+		std::unordered_set<std::string> inLanInterfaces,
+		std::unordered_set<std::string> inWanInterfaces) {
+
+	bool failure = false;
+	// We may have received SIGHUP so clear the interface map first
+	if (inifMap.find("LanInterfaces") != inifMap.end()) {
+		inifMap["LanInterfaces"].clear();
+	}
+	if (inifMap.find("WanInterfaces") != inifMap.end()) {
+		inifMap["WanInterfaces"].clear();
+	}
+
+	{
+		for (auto i : inLanInterfaces) {
+			if (auto index = if_nametoindex(i.c_str()) > 0) {
+				inifMap["LanInterfaces"][i] = index;
+			} else {
+				syslog (LOG_ERR, "Can't find LAN interface %s", i.c_str());
+				failure = true;
+			}
+		}
+	}
+	{
+		for (auto i : inWanInterfaces) {
+			if (auto index = if_nametoindex(i.c_str()) > 0) {
+				inifMap["WanInterfaces"][i] = index;
+			} else {
+				syslog (LOG_ERR, "Can't find LAN interface %s", i.c_str());
+				failure = true;
+			}
+		}
+	}
+	return failure;
 }
 

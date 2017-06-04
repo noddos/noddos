@@ -25,6 +25,7 @@
 
 #include "noddos.h"
 #include "iDeviceInfoSource.h"
+#include "HostCache.h"
 
 struct dnshdr {
     uint16_t dns_id;
@@ -45,18 +46,19 @@ class PacketSnoop : public iDeviceInfoSource {
 private:
 	int sock;
 	bool Debug;
+	HostCache *hC;
 
 public:
-	PacketSnoop(bool inDebug = false): Debug{inDebug} {
+	PacketSnoop(HostCache &inHc, bool const inDebug = false):	hC{&inHc}, Debug{inDebug} {
 		Open("");
-	}
+	};
 
-	~PacketSnoop() { Close(); };
+	virtual ~PacketSnoop() { Close(); };
 	int Open(std::string input, uint32_t inExpiration = 0);
 	int GetFileHandle() { return sock; }
 	bool Close() { close (sock); return false; };
 	bool ProcessEvent(struct epoll_event &event) { return true; }
-	bool Parse (unsigned char *frame, size_t size);
+	bool Parse (unsigned char *frame, size_t size, struct sockaddr_ll saddr, size_t saddr_size);
 	bool Parse_Dns_Tcp_Packet(unsigned char *payload, size_t size);
 	bool Parse_Dns_Packet(unsigned char *payload, size_t size);
 	bool Parse_Dhcp_Udp_Packet(unsigned char *payload, size_t size);

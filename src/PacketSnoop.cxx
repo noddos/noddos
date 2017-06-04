@@ -8,7 +8,7 @@
 #include "dns.h"
 #include "dnsmappings.h"
 #include "PacketSnoop.h"
-#include "output.h"
+
 
 
 int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
@@ -59,9 +59,11 @@ int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
 	return sock;
 }
 
-bool PacketSnoop::Parse (unsigned char *frame, size_t size) {
+bool PacketSnoop::Parse (unsigned char *frame, size_t size, struct sockaddr_ll saddr, size_t saddr_size) {
 	// Get the IP Header part of this packet , excluding the ethernet header
 	struct iphdr *iph = (struct iphdr*) (frame + sizeof(struct ethhdr));
+
+	InterfaceMap *ifMap = hC->getInterfaceMap();
 
 	// TODO IPv6 support
 	uint8_t af = 2;
