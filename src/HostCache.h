@@ -32,6 +32,7 @@
 #include "MacAddress.h"
 #include "Config.h"
 #include "DnsCache.h"
+#include "InterfaceMap.h"
 
 #include "boost/asio.hpp"
 
@@ -41,8 +42,7 @@ class HostCache {
 private:
 	std::map<unsigned long long, std::shared_ptr<Host>> hC; 	// map from Mac to Host
 	std::map<std::string, unsigned long long> Ip2MacMap; 	// map from IP to MaC
-	DnsCache <boost::asio::ip::address_v4 >dCv4;
-	DnsCache <boost::asio::ip::address_v6 >dCv6;
+
 	DeviceProfileMap dpMap;
 	InterfaceMap *ifMap;
 	std::regex arp_rx, dev_rx;

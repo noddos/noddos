@@ -33,6 +33,7 @@ using json = nlohmann::json;
 #include "HostCache.h"
 #include "MacAddress.h"
 #include "Host.h"
+#include "InterfaceMap.h"
 
 // static std::string deviceprofilesfile = "tests/DeviceProfiles.json";
 
@@ -47,7 +48,7 @@ int main () {
 		std::cout << "Test failure: do_dpimport_test" << std::endl;
 		testfailure = true;
 	}
-	InterfaceMap ifMap;
+	InterfaceMap ifMap(true);
 	HostCache hC(ifMap, 0, true);
 	// hC.DeviceProfiles_load(deviceprofilesfile);
 	hC.AddByMac (MacAddress("00:00:00:00:00:03"), "192.168.1.99");

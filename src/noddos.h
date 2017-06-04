@@ -30,8 +30,6 @@
 
 enum struct ConfidenceLevel : int { None, none, NONE, Low, low, LOW, Medium, medium, MEDIUM, High, high, HIGH };
 
-// InterfaceMap <[LanInterfaces|WanInterfaces]<[InterfaceName],ifIndex>>
-typedef std::unordered_map<std::string,std::unordered_map<std::string, uint32_t>> InterfaceMap;
 
 size_t curlwriteFunction(void *ptr, size_t size, size_t nmemb, std::string* data);
 

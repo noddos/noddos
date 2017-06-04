@@ -27,6 +27,7 @@
 #include "HostCache.h"
 #include "SsdpHost.h"
 #include "SsdpLocation.h"
+#include "InterfaceMap.h"
 
 int main () {
 	bool testfailure = false;

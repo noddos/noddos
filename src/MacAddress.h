@@ -13,6 +13,7 @@
 #include <iomanip>
 
 #include <stdio.h>
+#include <net/ethernet.h> /* the L2 protocols */
 
 class MacAddress {
 private:
@@ -22,6 +23,15 @@ private:
 public:
 	MacAddress (): Mac{0}, MacString{""} {}
 	MacAddress (const unsigned long long inMac): Mac{inMac} { create_string(); }
+	MacAddress (const unsigned char inMac[ETH_ALEN]) {
+		Mac = uint64_t(inMac[0]) << 40 |
+				uint64_t(inMac[1]) << 32 |
+			    uint64_t(inMac[2]) << 24 |
+			    uint64_t(inMac[3]) << 16 |
+			    uint64_t(inMac[4]) << 8 |
+			    uint64_t(inMac[5]);
+		create_string();
+	}
 	MacAddress(const std::string inMacString) {	set(inMacString); create_string(); }
 	void create_string () {
 		std::ostringstream osstr;

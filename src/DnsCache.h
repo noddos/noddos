@@ -9,17 +9,8 @@
 #define DNSCACHE_H_
 
 #include <map>
-#include <unordered_map>
 #include "syslog.h"
 #include "boost/asio.hpp"
-
-/*
-typedef std::map<std::string, time_t> QueryCache;
-typedef std::map<boost::asio::ip::address_v4, std::unordered_set<std::map<std::string,time_t>>> Dnsv4RevCache;
-typedef std::map<boost::asio::ip::address_v6, std::unordered_set<std::map<std::string,time_t>>> Dnsv6RevCache;
-typedef std::map<std::string, std::unordered_set<std::map<boost::asio::ip::address_v6,time_t>>> Dnsv6Cache;
-typedef std::map<std::string, std::unordered_set<std::map<boost::asio::ip::address_v4,time_t>>> Dnsv4Cache;
-*/
 
 template <class T>
 class DnsCache {
@@ -37,20 +28,21 @@ public:
 		DnsFwdCache[inFqdn][inIpAddress] = now + Ttl;
 		DnsRevCache[inIpAddress][inFqdn] = now + Ttl;
 	}
+
 	uint32_t pruneResourceRecords (bool Force = false) {
 		uint32_t deletecount = 0;
 		auto now = time(nullptr);
 		{
 			auto it_resource = DnsFwdCache.begin();
 			while (it_resource != DnsFwdCache.end()) {
-				auto it_record = it_resource->begin();
-				while (it_record != it_resource->end()) {
+				auto it_record = it_resource->second.begin();
+				while (it_record != it_resource->second.end()) {
 					if (Force || now > (it_record->second + 1)) {
-						it_record = it_resource->erase(it_record);
+						it_record = it_resource->second.erase(it_record);
 						deletecount++;
 					}
 				}
-				if (Force || it_resource.empty()) {
+				if (Force || it_resource->second.empty()) {
 					it_resource = DnsFwdCache.erase(it_resource);
 				}
 			}
@@ -58,14 +50,14 @@ public:
 		{
 			auto it_resource = DnsRevCache.begin();
 			while (it_resource != DnsRevCache.end()) {
-				auto it_record = it_resource->begin();
-				while (it_record != it_resource->end()) {
+				auto it_record = it_resource->second.begin();
+				while (it_record != it_resource->second.end()) {
 					if (Force || now > (it_record->second + 1)) {
-						it_record = it_resource->erase(it_record);
+						it_record = it_resource->second.erase(it_record);
 						deletecount++;
 					}
 				}
-				if (Force || it_resource.empty()) {
+				if (Force || it_resource->second.empty()) {
 					it_resource = DnsRevCache.erase(it_resource);
 				}
 			}
