@@ -43,6 +43,13 @@ private:
 	std::map<unsigned long long, std::shared_ptr<Host>> hC; 	// map from Mac to Host
 	std::map<std::string, unsigned long long> Ip2MacMap; 	// map from IP to MaC
 
+	// This map is used to validate that answers received correspond to queries sent out
+	std::map<uint16_t, time_t> DnsQueryCache;
+
+	DnsCache <boost::asio::ip::address_v4> dCv4;
+	DnsCache <boost::asio::ip::address_v6> dCv6;
+	DnsCache <std::string> dCcname;
+
 	DeviceProfileMap dpMap;
 	InterfaceMap *ifMap;
 	std::regex arp_rx, dev_rx;
@@ -90,7 +97,8 @@ public:
 
 	bool AddByMac (const MacAddress inMacAddress, const std::string inIpAddress = "");
 	bool AddFlow (const std::string srcip, const uint16_t srcport, const std::string dstip, const uint16_t dstport, const uint8_t protocol, const uint32_t expiration);
-	bool AddDnsQueryIp (const std::string clientip, const std::string fqdn, const std::string ip, const uint32_t expire = 86400);
+	// DELETE DNSMASQ
+	// bool AddDnsQueryIp (const std::string clientip, const std::string fqdn, const std::string ip, const uint32_t expire = 86400);
 	bool AddDhcpRequest (const std::shared_ptr<DhcpRequest> inDhcpRequest_sptr);
 	bool AddDhcpRequest (const DhcpRequest &inDhcpRequest);
 	bool AddDhcpRequest (const std::string IpAddress, const MacAddress inMac, const std::string Hostname, const std::string DhcpHostname, const std::string DhcpVendor);
@@ -103,6 +111,20 @@ public:
 
 	uint32_t Prune (bool Force = false);
 
+	void addorupdateDnsQueryCache (uint16_t id);
+	bool inDnsQueryCache (uint16_t id);
+	uint32_t pruneDnsQueryCache (bool Force = false);
+
+	// These functions are for the new DnsCache filled by the PacketSnoop class
+	void addorupdateDnsCache(std::string inFqdn, boost::asio::ip::address_v4 inIp, time_t inTtl) { dCv4.addorupdateResourceRecord(inFqdn, inIp, inTtl); }
+	void addorupdateDnsCache(std::string inFqdn, boost::asio::ip::address_v6 inIp, time_t inTtl) { dCv6.addorupdateResourceRecord(inFqdn, inIp, inTtl);	}
+	void addorupdateDnsCache(std::string inFqdn, std::string inCname, time_t inTtl) { dCcname.addorupdateResourceRecord(inFqdn, inCname, inTtl);	}
+
+	uint32_t pruneDnsCache(bool Force = false) {
+		uint32_t deletecount = 0;
+		deletecount = dCv4.pruneResourceRecords(Force) + dCv6.pruneResourceRecords(Force);
+		return deletecount;
+	}
 	InterfaceMap * getInterfaceMap() { return ifMap; }
 	MacAddress MacLookup (const std::string inIpAddress, const int retries = 1);
 	MacAddress MacLookup (const std::string inIpAddress, const std::string inInterface, const int retries = 1);
@@ -118,7 +140,8 @@ public:
 	bool ImportDeviceInfo (json &j);
 
 	uint32_t HostCount() { return hC.size(); }
-	uint32_t HostDnsQueryCount (std::string IpAddress);
+	// DELETE DNSMASQ
+	// uint32_t HostDnsQueryCount (std::string IpAddress);
 	bool Debug_get() { return Debug; }
 };
 

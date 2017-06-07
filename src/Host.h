@@ -52,9 +52,7 @@ typedef std::list<std::shared_ptr<FlowEntry>> FlowEntryList;
 
 class Host : public iCache {
 	private:
-    	DnsCache <boost::asio::ip::address_v4> dCv4;
-    	DnsCache <boost::asio::ip::address_v6> dCv6;
-    	std::map<std::string,time_t> DnsQueryCache;
+    	std::map<std::string,time_t> DnsQueryList;
 
     	std::map<std::string, std::shared_ptr<DnsLogEntry>> DnsHostCache;
     	std::map<boost::asio::ip::address_v4, std::shared_ptr<FlowEntryList>> FlowCacheIpv4;
@@ -100,32 +98,26 @@ class Host : public iCache {
 		bool FlowEntry_set(const uint16_t inSrcPort, const std::string inDstIp,
 				const uint16_t inDstPort, const uint8_t inProtocol, const uint32_t inExpiration);
 		uint32_t FlowCacheCount () { return FlowCacheIpv4.size() + FlowCacheIpv6.size(); }
-		bool DnsLogEntry_set(const std::string fqdn, const std::string ipaddress, const uint32_t expiration = 86400);
-		uint32_t DnsLogEntryCount () { return DnsHostCache.size(); }
+		// DELETE DNSMASQ
+		// bool DnsLogEntry_set(const std::string fqdn, const std::string ipaddress, const uint32_t expiration = 86400);
+		// uint32_t DnsLogEntryCount () { return DnsHostCache.size(); }
 		bool Dhcp_set (const std::shared_ptr<DhcpRequest> inDhcp_sptr);
 		bool Dhcp_set (const std::string IpAddress, const MacAddress Mac, const std::string Hostname, const std::string DhcpHostname, const std::string DhcpVendor);
 		bool SsdpInfo_set(const std::shared_ptr<SsdpHost> insHost);
 
-		// These functions are for the new DnsCache filled by the PacketSnoop class
-		void addorupdateDnsCache(std::string inFqdn, boost::asio::ip::address_v4 inIp, time_t inTtl) {
-			dCv4.addorupdateResourceRecord(inFqdn, inIp, inTtl);
-		}
-		void addorupdateDnsCache(std::string inFqdn, boost::asio::ip::address_v6 inIp, time_t inTtl) {
-			dCv6.addorupdateResourceRecord(inFqdn, inIp, inTtl);
-		}
 		// This is the DnsQueryCache
-		void addorupdateDnsQueryCache (std::string inFqdn) { DnsQueryCache[inFqdn] = time(nullptr) + 15; }
-		bool inDnsQueryCache (std::string inFqdn) { if (DnsQueryCache.find(inFqdn) == DnsQueryCache.end()) { return false; } return true; }
-		uint32_t pruneDnsQueryCache (bool Force = false) {
+		void addorupdateDnsQueryList (std::string inFqdn) { DnsQueryList[inFqdn] = time(nullptr); }
+		bool inDnsQueryList (std::string inFqdn) { if (DnsQueryList.find(inFqdn) == DnsQueryList.end()) { return false; } return true; }
+		uint32_t pruneDnsQueryList (time_t Expired = 14400, bool Force = false) {
 			uint32_t deletecount;
 			time_t now = time(nullptr);
-			auto i = DnsQueryCache.begin();
-			while (i != DnsQueryCache.end()) {
-				if (Force || i->second > now) {
+			auto i = DnsQueryList.begin();
+			while (i != DnsQueryList.end()) {
+				if (Force || i->second > (now - Expired)) {
 					if (Debug == true) {
-						syslog (LOG_DEBUG, "Deleting %s from DnsQueryCache as %lu is later than %lu", i->first.c_str(), i->second, now);
+						syslog (LOG_DEBUG, "Deleting %s from DnsQueryList as %lu is later than %lu", i->first.c_str(), i->second, now - Expired);
 					}
-					i = DnsQueryCache.erase(i);
+					i = DnsQueryList.erase(i);
 					deletecount++;
 				}
 			}
@@ -135,7 +127,7 @@ class Host : public iCache {
 		bool isMatched () { return Uuid != ""; }
 		bool UploadsEnabled ();
 		std::string Uuid_get () { return Uuid; }
-		// MacAddress MacAddress_get () { return Mac; }
+
 		std::string MacAddress_get () { return Mac.str(); }
 		std::string Ipv4Address_get () { return Ipv4Address; }
 		std::string Ipv6Address_get () { return Ipv6Address; }

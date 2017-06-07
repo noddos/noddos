@@ -89,7 +89,7 @@ int main(int argc, char** argv) {
 		openlog(argv[0], LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
 	}
 	Config config(configfile, debug);
-	InterfaceMap ifMap(config.LanInterfaces,config.WanInterfaces);
+	InterfaceMap ifMap(config.LanInterfaces,config.WanInterfaces, true);
 
 	if (daemon) {
 		daemonize(config);

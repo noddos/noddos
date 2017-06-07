@@ -11,7 +11,11 @@
 #include <map>
 #include "syslog.h"
 #include "boost/asio.hpp"
-
+/*
+class Cname {
+	std::string cname;
+};
+*/
 template <class T>
 class DnsCache {
 private:

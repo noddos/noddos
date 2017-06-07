@@ -10,7 +10,9 @@
 
 #include <unordered_set>
 #include <unordered_map>
+#include <fstream>
 
+#include <net/if.h>
 #include "syslog.h"
 
 class InterfaceMap {
@@ -31,9 +33,10 @@ public:
 		// We may have received SIGHUP so clear the interface map first if interfaces in the system has changed
 		lanInterfaceMap.clear();
 		wanInterfaceMap.clear();
+		uint32_t index;
 		{
 			for (auto i : inLanInterfaces) {
-				if (auto index = if_nametoindex(i.c_str()) > 0) {
+				if ((index = if_nametoindex(i.c_str())) > 0) {
 					if (Debug == true) {
 						syslog(LOG_DEBUG, "Interface: %s -> Index %d", i.c_str(), index);
 					}
@@ -46,13 +49,13 @@ public:
 		}
 		{
 			for (auto i : inWanInterfaces) {
-				if (auto index = if_nametoindex(i.c_str()) > 0) {
+				if ((index = if_nametoindex(i.c_str())) > 0) {
 					if (Debug == true) {
 						syslog(LOG_DEBUG, "Interface: %s -> Index %d", i.c_str(), index);
 					}
 					wanInterfaceMap[index] = i;
 				} else {
-					syslog (LOG_ERR, "Can't find LAN interface %s", i.c_str());
+					syslog (LOG_ERR, "Can't find WAN interface %s", i.c_str());
 					failure = true;
 				}
 			}

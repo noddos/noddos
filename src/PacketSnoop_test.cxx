@@ -25,6 +25,7 @@
 
 #include "noddos.h"
 #include "PacketSnoop.h"
+#include "Config.h"
 #include "HostCache.h"
 
 void ProcessPacket(unsigned char* , int);
@@ -47,7 +48,9 @@ int main()
 	struct sockaddr_ll saddr;
     int saddr_size = sizeof saddr;
 
-	InterfaceMap ifMap;
+	Config config("tests/noddos.conf", false);
+	InterfaceMap ifMap(config.LanInterfaces,config.WanInterfaces, true);
+
 	HostCache hC(ifMap, 0, true);
     PacketSnoop ps(hC, true);
     int sock_raw = ps.GetFileHandle();

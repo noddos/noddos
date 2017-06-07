@@ -127,7 +127,8 @@ public:
     	}
 
     	PruneDhcpRequestMap(true);
-    	PruneDnsQueryMap(true);
+    	// DELETE DNSMASQ
+    	// PruneDnsQueryMap(true);
     }
 
     uint32_t LinesParsed() { return lines_parsed; }
@@ -144,7 +145,9 @@ public:
     time_t Expiration_get () { return iCache::Expires; }
     bool isExpired() { return time(nullptr) >= iCache::Expires; }
     uint32_t Prune (bool Force = false) {
-    	return PruneDhcpRequestMap(Force) + PruneDnsQueryMap(Force);
+    	// DELETE DNSMASQ
+    	// return PruneDhcpRequestMap(Force) + PruneDnsQueryMap(Force);
+    	return PruneDhcpRequestMap(Force);
     }
 };
 

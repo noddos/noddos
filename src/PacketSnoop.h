@@ -61,7 +61,7 @@ public:
 	bool ProcessEvent(struct epoll_event &event);
 	bool Parse (unsigned char *frame, size_t size, int ifIndex);
 	bool Parse_Dns_Tcp_Packet(unsigned char *payload, size_t size);
-	bool Parse_Dns_Packet(unsigned char *payload, size_t size, std::shared_ptr<Host> h, int ifindex);
+	bool Parse_Dns_Packet(const unsigned char *payload, const size_t size, const MacAddress &inMac, const std::string sourceIp, const int ifindex);
 	bool Parse_Dhcp_Udp_Packet(unsigned char *payload, size_t size);
 };
 

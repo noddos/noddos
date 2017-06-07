@@ -443,11 +443,13 @@ bool Host::FlowEntry_set(const uint16_t inSrcPort, const std::string inDstIp,
 	return false;
 }
 
+// DELETE DNSMASQ
 /*
  *  Host::DnsLogwEntry_set
  *  Adds or updates the list of dns log entries for lookups of a FQDN
  *  Returns true if a DnsLogEntry was added, false if existing DnsLogEntry was updated
  */
+/*
 bool Host::DnsLogEntry_set(const std::string inFqdn, const std::string inIpAddress, const uint32_t inExpiration) {
 	iCache::LastSeen = iCache::LastModified = time(nullptr);
 	bool newentry = false;
@@ -462,6 +464,7 @@ bool Host::DnsLogEntry_set(const std::string inFqdn, const std::string inIpAddre
 	DnsHostCache[inFqdn]->Ips_set(inIpAddress, inExpiration);
 	return newentry;
 }
+*/
 
 bool Host::Dhcp_set (const std::shared_ptr<DhcpRequest> inDhcp_sptr) {
 	iCache::LastSeen = time(nullptr);
@@ -518,9 +521,8 @@ uint32_t Host::Prune (bool Force) {
 	if(Debug) {
 		syslog(LOG_DEBUG, "Pruning host %s", Mac.c_str());
 	}
-	pruneDnsQueryCache(Force);
-	dCv4.pruneResourceRecords(Force);
-	dCv6.pruneResourceRecords(Force);
+	pruneDnsQueryList(Force);
+
 
 	uint32_t pruned_flowentries = 0;
 	uint32_t pruned_flows = 0;

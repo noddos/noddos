@@ -63,6 +63,10 @@ uint32_t HostCache::Prune (bool Force) {
 		}
 	}
 	syslog(LOG_INFO, "Pruned %u hosts", prunedhosts);
+	uint32_t count = pruneDnsQueryCache(Force);
+	syslog(LOG_DEBUG, "Pruned %u DNS queries", count);
+	count = pruneDnsCache(Force);
+	syslog(LOG_DEBUG, "Pruned %u DNS cache entries", count);
 	return prunedhosts;
 }
 
@@ -201,6 +205,7 @@ bool HostCache::AddFlow (const std::string srcip, const uint16_t srcport, const 
 	return false;
 }
 
+/* DELETE DNSMASQ
 bool HostCache::AddDnsQueryIp (const std::string clientip, const std::string fqdn, const std::string ip, const uint32_t expire) {
 	if (Debug == true) {
 		syslog(LOG_DEBUG, "Adding dns query for %s for host with IP %s", fqdn.c_str(), clientip.c_str());
@@ -216,6 +221,7 @@ bool HostCache::AddDnsQueryIp (const std::string clientip, const std::string fqd
 	}
 	return false;
 }
+*/
 
 bool HostCache::AddDhcpRequest (const std::shared_ptr<DhcpRequest> inDhcpRequest_sptr) {
 	if (Debug == true) {
@@ -290,6 +296,38 @@ bool HostCache::AddSsdpInfo (const std::shared_ptr<SsdpHost> sHost) {
 		return true;
 	}
 	return false;
+}
+
+// These functions are for DnsQueryCache
+void HostCache::addorupdateDnsQueryCache (uint16_t id) {
+	DnsQueryCache[id] = time(nullptr) + 15;
+}
+
+bool HostCache::inDnsQueryCache (uint16_t id) {
+	if (DnsQueryCache.find(id) == DnsQueryCache.end()) {
+		return false;
+	}
+	// Entry might be in the cache but is already stale
+	if (DnsQueryCache[id] < time(nullptr)) {
+		return false;
+	}
+	return true;
+}
+
+uint32_t HostCache::pruneDnsQueryCache (bool Force) {
+	uint32_t deletecount = 0;
+	time_t now = time(nullptr);
+	auto i = DnsQueryCache.begin();
+	while (i != DnsQueryCache.end()) {
+		if (Force || i->second > now) {
+			if (Debug == true) {
+				syslog (LOG_DEBUG, "Deleting %u from DnsQueryCache as %lu is later than %lu", i->first, i->second, now);
+			}
+			i = DnsQueryCache.erase(i);
+			deletecount++;
+		}
+	}
+	return deletecount;
 }
 
 // TODO: Lookup MAC addresses in ARP table using IOCTL now works but you need to specify the Ethernet interface and we don't have code for that yet
@@ -806,6 +844,8 @@ uint32_t HostCache::Whitelists_set (const std::unordered_set<std::string>& inIpv
 	return WhitelistedNodes.size();
 }
 
+// DELETE DNSMASQ
+/*
 uint32_t HostCache::HostDnsQueryCount (std::string IpAddress) {
 	auto it = Ip2MacMap.find(IpAddress);
 	if ( it == Ip2MacMap.end()) {
@@ -816,3 +856,4 @@ uint32_t HostCache::HostDnsQueryCount (std::string IpAddress) {
 	return h->DnsLogEntryCount();
 
 }
+*/

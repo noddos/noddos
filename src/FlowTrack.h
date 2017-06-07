@@ -80,6 +80,13 @@ public:
             exit(1);
             return -1;
         }
+        int on = 1;
+
+        setsockopt(nfct_fd(h), SOL_NETLINK,
+                   NETLINK_BROADCAST_SEND_ERROR, &on, sizeof(int));
+
+        setsockopt(nfct_fd(h), SOL_NETLINK,
+                   NETLINK_NO_ENOBUFS, &on, sizeof(int));
 
         filter = nfct_filter_create();
         if (!filter) {

@@ -30,7 +30,6 @@
 
 enum struct ConfidenceLevel : int { None, none, NONE, Low, low, LOW, Medium, medium, MEDIUM, High, high, HIGH };
 
-
 size_t curlwriteFunction(void *ptr, size_t size, size_t nmemb, std::string* data);
 
 #endif /* NODDOS_H_ */
