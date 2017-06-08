@@ -297,11 +297,7 @@ bool PacketSnoop::Parse_Dns_Packet(const unsigned char *payload, const size_t si
     return false;
 }
 
-bool PacketSnoop::Parse_Dns_Tcp_Packet(unsigned char *payload, size_t size) {
-	// TODO
-	syslog (LOG_INFO, "Ignoring DNS TCP packets for now");
-	return false;
-}
+
 
 bool PacketSnoop::Parse_Dhcp_Udp_Packet(unsigned char *payload, size_t size) {
 	// TODO
