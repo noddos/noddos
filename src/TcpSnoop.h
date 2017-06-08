@@ -9,7 +9,7 @@
 #define TCPSNOOP_H_
 
 #include <map>
->#include <memory>
+#include <memory>
 #include <netinet/tcp.h>
 
 struct TcpSegment {
@@ -34,15 +34,21 @@ public:
 class TcpSnoop {
 private:
 	std::map<uint32_t,std::shared_ptr<struct TcpSegment>> outPackets, inPackets;
-	uint32_t localPort = 0, remotePort = 0;
+	uint32_t portA = 0, portB = 0;
 	uint16_t firstPacketOffset = 0;
 	uint32_t inFirstSequenceNumber = 0, outFirstSequenceNumber = 0;
 	uint32_t inStreamLength = 0, outStreamLength = 0;
+	time_t Expiration;
 
 public:
-	TcpSnoop(const uint32_t inLocalPort, const uint32_t inRemotePort, const unsigned char *tcpSegment, const uint16_t size, const bool isIncoming):
-			localPort{inLocalPort}, remotePort{inRemotePort} {
-		addPacket(tcpSegment, size, isIncoming);
+	TcpSnoop(const uint32_t inPortA, const uint32_t inPortB): portA{inPortA}, portB{inPortB} {
+		Expiration = time(nullptr) + 120;
+	}
+
+	TcpSnoop(const uint32_t inPortA, const uint32_t inPortB, const unsigned char *tcpSegment, const uint16_t size):
+			portA{inPortA}, portB{inPortB} {
+		Expiration = time(nullptr) + 120;
+		addPacket(inPortA, inPortB, tcpSegment, size);
 	}
 
 	~TcpSnoop() {};
@@ -52,12 +58,12 @@ public:
 	 * input: pointer to TCP Segment, size of TCP segement, whether packet was received or sent by host
 	 * output: bool on whether data is ready for parsing with TcpSnoop:parseStream
 	 */
-	bool addPacket (const unsigned char *tcpSegment, const uint16_t size, const bool isIncoming) {
+	bool addPacket (const uint32_t inPortA, const uint32_t inPortB, const unsigned char *tcpSegment, const uint16_t size) {
 		struct tcphdr *tcph = (struct tcphdr*) tcpSegment;
 
-		std::map<uint32_t, std::shared_ptr<struct TcpSegment>> &p = isIncoming ? inPackets : outPackets;
-		uint32_t &firstSequenceNumber = isIncoming ? inFirstSequenceNumber : outFirstSequenceNumber;
-		uint32_t &streamLength = isIncoming ? inStreamLength : outStreamLength;
+		std::map<uint32_t, std::shared_ptr<struct TcpSegment>> &p = (inPortA == portA) ? inPackets : outPackets;
+		uint32_t &firstSequenceNumber = (inPortA == portA) ? inFirstSequenceNumber : outFirstSequenceNumber;
+		uint32_t &streamLength = (inPortA == portA) ? inStreamLength : outStreamLength;
 
 		bool finFlag = (tcph->th_flags & TH_FIN);
 		bool synFlag = (tcph->th_flags & TH_SYN) >> 1;
@@ -91,6 +97,6 @@ public:
 		}
 		return false;
 	}
-}
+};
 
 #endif /* TCPSNOOP_H_ */

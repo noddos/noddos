@@ -11,7 +11,7 @@
 #include "dnsmappings.h"
 #include "InterfaceMap.h"
 #include "PacketSnoop.h"
-
+#include "TcpSnoop.h"
 
 
 int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
@@ -87,7 +87,7 @@ bool PacketSnoop::Parse (unsigned char *frame, size_t size, int ifindex) {
    	// struct sockaddr_storage source, dest;
    	// memset(&source, 0, sizeof(source));
    	// memset(&dest, 0, sizeof(dest));
-	char sourcestring[INET6_ADDRSTRLEN], deststring[INET6_ADDRSTRLEN];
+	char srcString[INET6_ADDRSTRLEN], destString[INET6_ADDRSTRLEN];
 
    	if (ntohs(ethh->h_proto) == 0x0800) {
 		af = AF_INET;
@@ -99,11 +99,11 @@ bool PacketSnoop::Parse (unsigned char *frame, size_t size, int ifindex) {
 	   	memset(&dest, 0, sizeof(dest));
 	   	source.sin_addr.s_addr = iph->saddr;
 	   	dest.sin_addr.s_addr = iph->daddr;
-	   	if (inet_ntop(af, &(source.sin_addr), sourcestring, INET6_ADDRSTRLEN) == nullptr) {
+	   	if (inet_ntop(af, &(source.sin_addr), srcString, INET6_ADDRSTRLEN) == nullptr) {
 	   		syslog (LOG_ERR, "Invalid source IP address");
 	   		return false;
 	   	}
-	   	if (inet_ntop(af, &(dest.sin_addr), deststring, INET6_ADDRSTRLEN) == nullptr) {
+	   	if (inet_ntop(af, &(dest.sin_addr), destString, INET6_ADDRSTRLEN) == nullptr) {
 	   		syslog (LOG_ERR, "Invalid destination IP address");
 	   		return false;
 	   	}
@@ -116,11 +116,11 @@ bool PacketSnoop::Parse (unsigned char *frame, size_t size, int ifindex) {
 			return true;
 		}
 		protocol = ipv6h->nexthdr;
- 	   	if (inet_ntop(af, &(ipv6h->saddr), sourcestring, INET6_ADDRSTRLEN) == nullptr) {
+ 	   	if (inet_ntop(af, &(ipv6h->saddr), srcString, INET6_ADDRSTRLEN) == nullptr) {
 	   		syslog (LOG_ERR, "Invalid source IP address");
 	   		return false;
 	   	}
-	    if (inet_ntop(af, &(ipv6h->daddr), deststring, INET6_ADDRSTRLEN) == nullptr) {
+	    if (inet_ntop(af, &(ipv6h->daddr), destString, INET6_ADDRSTRLEN) == nullptr) {
 	    	syslog (LOG_ERR, "Invalid destination IP address");
 	   		return false;
 	   	}
@@ -130,7 +130,7 @@ bool PacketSnoop::Parse (unsigned char *frame, size_t size, int ifindex) {
 	}
 
    if (Debug == true) {
-    	syslog(LOG_DEBUG, "Parsing packet from %s to %s", sourcestring, deststring );
+    	syslog(LOG_DEBUG, "Parsing packet from %s to %s", srcString, destString );
     }
 
     MacAddress Mac (ethh->h_source);
@@ -140,12 +140,22 @@ bool PacketSnoop::Parse (unsigned char *frame, size_t size, int ifindex) {
     	case 6: //TCP Protocol
     		{
     			struct tcphdr *tcph=(struct tcphdr*)(frame  + iphdrlen + sizeof(struct ethhdr));
-    			int header_size =  sizeof(struct ethhdr) + iphdrlen + tcph->doff*4;
+    			// We have to pass the TCP header to TcpSnoop so only skip ethernet and IP headers
+    			int header_size =  sizeof(struct ethhdr) + iphdrlen;
     			unsigned char *payload = frame + header_size;
-
-    	    	syslog (LOG_DEBUG, "TCP source port %u, dest port %u", ntohs(tcph->source), ntohs(tcph->dest));
+    			uint16_t srcPort = ntohs(tcph->source);
+    			uint16_t destPort = ntohs(tcph->dest)
+    	    	if (Debug == true) {
+    	    		syslog (LOG_DEBUG, "TCP source port %u, dest port %u", srcPort, destPort);
+    	    	}
     	    	if (ntohs(tcph->source) == 53 || ntohs(tcph->dest) == 53 ) {
-    	    		Parse_Dns_Tcp_Packet(payload, size - header_size);
+    	    		// Parse_Dns_Tcp_Packet(payload, size - header_size);
+    	    		std::shared_ptr<TcpSnoop> *tsPtr = getTcpSnoopInstance(srcString, srcPort, destString, destPort);
+    	    		if (tsPtr == nullptr) {
+    	    			tsPtr = std::make_shared<TcpSnoop>(srcPort, destPort);
+    	    		}
+    	    		if ((*tsPtr)->addPacket(srcPort, destPort, payload, size - header_size)) {
+    	    		}
     			} else {
     				syslog(LOG_WARNING, "Received PacketSnoop TCP packet with source port %u, destination port %u", ntohs(tcph->source), ntohs(tcph->dest));
     			}
@@ -159,7 +169,7 @@ bool PacketSnoop::Parse (unsigned char *frame, size_t size, int ifindex) {
 
     	    	syslog (LOG_DEBUG, "UDP source port %u, dest port %u", ntohs(udph->source), ntohs(udph->dest));
     	    	if (ntohs(udph->source) == 53 || ntohs(udph->dest) == 53) {
-    	    		Parse_Dns_Packet(payload, size - header_size, Mac, sourcestring, ifindex);
+    	    		Parse_Dns_Packet(payload, size - header_size, Mac, srcString, ifindex);
     	    		// Parse_Dns_Packet(frame + sizeof(struct ethhdr) , size - sizeof(struct ethhdr));
     	    	} else if  (ntohs(udph->source) == 67 || ntohs(udph->dest) == 68 ||
     					ntohs(udph->source) == 68 || ntohs(udph->dest) == 68) {
@@ -175,6 +185,9 @@ bool PacketSnoop::Parse (unsigned char *frame, size_t size, int ifindex) {
 	return false;
 }
 
+std::shared_ptr<TcpSnoop> getTcpSnoopInstance(std::string srcString, uint16_t srcPort, std::string destString, uint16_t destPort) {
+	return nullptr;
+}
 bool PacketSnoop::Parse_Dns_Packet(const unsigned char *payload, const size_t size, const MacAddress &inMac, const std::string sourceIp, const int ifIndex) {
     if (size < 12) {
     	syslog (LOG_WARNING, "Receive DNS packet smaller than 12 bytes");

@@ -48,6 +48,7 @@ private:
 	int sock;
 	bool Debug;
 	HostCache *hC;
+	std::map<uint128_t,TcpSnoop> TcpConnections;
 
 public:
 	PacketSnoop(HostCache &inHc, bool const inDebug = false):	hC{&inHc}, Debug{inDebug} {
