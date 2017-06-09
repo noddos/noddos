@@ -10,6 +10,8 @@
 
 #include <cstddef>
 #include <cstring>
+#include <memory>
+
 #include <syslog.h>
 #include <unistd.h>
 
@@ -24,9 +26,12 @@
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
 
+#include "boost/asio.hpp"
+
 #include "noddos.h"
 #include "iDeviceInfoSource.h"
 #include "HostCache.h"
+#include "TcpSnoop.h"
 
 struct dnshdr {
     uint16_t dns_id;
@@ -48,7 +53,7 @@ private:
 	int sock;
 	bool Debug;
 	HostCache *hC;
-	std::map<uint128_t,TcpSnoop> TcpConnections;
+	std::map<boost::asio::ip::address,std::map<uint16_t,std::map<boost::asio::ip::address,std::map<uint16_t,std::shared_ptr<TcpSnoop>>>>> tcpSnoops;
 
 public:
 	PacketSnoop(HostCache &inHc, bool const inDebug = false):	hC{&inHc}, Debug{inDebug} {
@@ -61,9 +66,13 @@ public:
 	bool Close() { close (sock); return false; };
 	bool ProcessEvent(struct epoll_event &event);
 	bool Parse (unsigned char *frame, size_t size, int ifIndex);
-	bool Parse_Dns_Tcp_Packet(unsigned char *payload, size_t size);
-	bool Parse_Dns_Packet(const unsigned char *payload, const size_t size, const MacAddress &inMac, const std::string sourceIp, const int ifindex);
-	bool Parse_Dhcp_Udp_Packet(unsigned char *payload, size_t size);
+	bool parseDnsTcpPacket(unsigned char *payload, size_t size);
+	bool parseDnsPacket(const unsigned char *payload, const size_t size, const MacAddress &inMac, const std::string sourceIp, const int ifindex);
+	bool parseDhcpUdpPacket(unsigned char *payload, size_t size);
+	std::shared_ptr<TcpSnoop> getTcpSnoopInstance(const boost::asio::ip::address inSrc, const uint16_t srcPort,
+			const boost::asio::ip::address inDest, const uint16_t destPort);
+	void addTcpSnoopInstance(const boost::asio::ip::address inSrc, const uint16_t inSrcPort,
+			const boost::asio::ip::address inDest, const uint16_t inDestPort, const std::shared_ptr<TcpSnoop> ts_ptr);
 };
 
 #endif /* PACKETSNOOP_H_ */

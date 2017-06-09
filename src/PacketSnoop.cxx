@@ -66,7 +66,7 @@ int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
 bool PacketSnoop::ProcessEvent(struct epoll_event &event) {
     struct sockaddr_ll saddr;
     int saddr_size = sizeof saddr;
-    unsigned char buffer[65536]; // It might be big!
+    unsigned char buffer[65600]; // It might be big! We also may use it copy a DNS message from TCP flow
 
     int data_size = recvfrom(sock, buffer , 65536 , 0 , (struct sockaddr *) &saddr , (socklen_t*)&saddr_size);
     if(data_size <0 ) {
@@ -144,20 +144,28 @@ bool PacketSnoop::Parse (unsigned char *frame, size_t size, int ifindex) {
     			int header_size =  sizeof(struct ethhdr) + iphdrlen;
     			unsigned char *payload = frame + header_size;
     			uint16_t srcPort = ntohs(tcph->source);
-    			uint16_t destPort = ntohs(tcph->dest)
-    	    	if (Debug == true) {
+    			uint16_t destPort = ntohs(tcph->dest);
+    			boost::asio::ip::address src, dest;
+    			src.from_string(srcString);
+    			dest.from_string(destString);
+
+    			if (Debug == true) {
     	    		syslog (LOG_DEBUG, "TCP source port %u, dest port %u", srcPort, destPort);
     	    	}
     	    	if (ntohs(tcph->source) == 53 || ntohs(tcph->dest) == 53 ) {
-    	    		// Parse_Dns_Tcp_Packet(payload, size - header_size);
-    	    		std::shared_ptr<TcpSnoop> *tsPtr = getTcpSnoopInstance(srcString, srcPort, destString, destPort);
+        			bool finFlag = (tcph->th_flags & TH_FIN);
+        			bool rstFlag = (tcph->th_flags & TH_RST) >> 2;
+    	    		std::shared_ptr<TcpSnoop> tsPtr = getTcpSnoopInstance(src, srcPort, dest, destPort);
     	    		if (tsPtr == nullptr) {
-    	    			tsPtr = std::make_shared<TcpSnoop>(srcPort, destPort);
+    	    			tsPtr = std::make_shared<TcpSnoop>();
+    	    			addTcpSnoopInstance(src, srcPort, dest, destPort, tsPtr);
     	    		}
-    	    		if ((*tsPtr)->addPacket(srcPort, destPort, payload, size - header_size)) {
+    	    		if ((tsPtr)->addPacket(payload, size - header_size)) {
+    	    			uint16_t bytesRead = (tsPtr)->getDnsMessage(frame);
+    	    			parseDnsPacket (frame, bytesRead, Mac, srcString, ifindex);
     	    		}
     			} else {
-    				syslog(LOG_WARNING, "Received PacketSnoop TCP packet with source port %u, destination port %u", ntohs(tcph->source), ntohs(tcph->dest));
+    				syslog(LOG_WARNING, "Received PacketSnoop TCP packet with source port %u, destination port %u", srcPort, destPort);
     			}
     		}
     		break;
@@ -169,11 +177,11 @@ bool PacketSnoop::Parse (unsigned char *frame, size_t size, int ifindex) {
 
     	    	syslog (LOG_DEBUG, "UDP source port %u, dest port %u", ntohs(udph->source), ntohs(udph->dest));
     	    	if (ntohs(udph->source) == 53 || ntohs(udph->dest) == 53) {
-    	    		Parse_Dns_Packet(payload, size - header_size, Mac, srcString, ifindex);
+    	    		parseDnsPacket(payload, size - header_size, Mac, srcString, ifindex);
     	    		// Parse_Dns_Packet(frame + sizeof(struct ethhdr) , size - sizeof(struct ethhdr));
     	    	} else if  (ntohs(udph->source) == 67 || ntohs(udph->dest) == 68 ||
     					ntohs(udph->source) == 68 || ntohs(udph->dest) == 68) {
-    				Parse_Dhcp_Udp_Packet(payload, size - header_size);
+    				parseDhcpUdpPacket(payload, size - header_size);
     			} else {
     				syslog(LOG_WARNING, "Received PacketSnoop UDP packet with source port %u, destination port %u", ntohs(udph->source), ntohs(udph->dest));
     			}
@@ -185,10 +193,33 @@ bool PacketSnoop::Parse (unsigned char *frame, size_t size, int ifindex) {
 	return false;
 }
 
-std::shared_ptr<TcpSnoop> getTcpSnoopInstance(std::string srcString, uint16_t srcPort, std::string destString, uint16_t destPort) {
-	return nullptr;
+std::shared_ptr<TcpSnoop> PacketSnoop::getTcpSnoopInstance(const boost::asio::ip::address inSrc, const uint16_t inSrcPort,
+		const boost::asio::ip::address inDest, const uint16_t inDestPort) {
+	auto sit = tcpSnoops.find(inSrc);
+	if(sit  == tcpSnoops.end()) {
+		return nullptr;
+	}
+	auto spit = tcpSnoops[inSrc].find(inSrcPort);
+	if( spit == tcpSnoops[inSrc].end()) {
+		return nullptr;
+	}
+	auto dit = tcpSnoops[inSrc][inSrcPort].find(inDest);
+	if( dit == tcpSnoops[inSrc][inSrcPort].end()) {
+		return nullptr;
+	}
+	auto dpit = tcpSnoops[inSrc][inSrcPort][inDest].find(inDestPort);
+	if( dpit == tcpSnoops[inSrc][inSrcPort][inDest].end()) {
+		return nullptr;
+	}
+	return dpit->second;
 }
-bool PacketSnoop::Parse_Dns_Packet(const unsigned char *payload, const size_t size, const MacAddress &inMac, const std::string sourceIp, const int ifIndex) {
+
+void PacketSnoop::addTcpSnoopInstance(const boost::asio::ip::address inSrc, const uint16_t inSrcPort,
+		const boost::asio::ip::address inDest, const uint16_t inDestPort, const std::shared_ptr<TcpSnoop> ts_ptr) {
+	tcpSnoops[inSrc][inSrcPort][inDest][inDestPort] = ts_ptr;
+}
+
+bool PacketSnoop::parseDnsPacket(const unsigned char *payload, const size_t size, const MacAddress &inMac, const std::string sourceIp, const int ifIndex) {
     if (size < 12) {
     	syslog (LOG_WARNING, "Receive DNS packet smaller than 12 bytes");
     	return true;
@@ -197,7 +228,7 @@ bool PacketSnoop::Parse_Dns_Packet(const unsigned char *payload, const size_t si
 
     dns_decoded_t  bufresult[DNS_DECODEBUF_8K];
     size_t         bufsize = sizeof(bufresult);
-    dns_packet_t reply[DNS_BUFFER_UDP];
+    dns_packet_t reply[65536];
     size_t       replysize = sizeof(reply);
 
     int rc = dns_decode(bufresult,&bufsize,(unsigned long int *) payload,size);
@@ -299,7 +330,7 @@ bool PacketSnoop::Parse_Dns_Packet(const unsigned char *payload, const size_t si
 
 
 
-bool PacketSnoop::Parse_Dhcp_Udp_Packet(unsigned char *payload, size_t size) {
+bool PacketSnoop::parseDhcpUdpPacket(unsigned char *payload, size_t size) {
 	// TODO
 	syslog (LOG_INFO, "Ignoring DHCP packets for now");
 	return false;

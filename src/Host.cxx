@@ -32,8 +32,7 @@
 #include <syslog.h>
 
 
-// #include <curl/curl.h>
-// #include "log/Log.h"
+
 #include <json.hpp>
 using json = nlohmann::json;
 #include "Host.h"
