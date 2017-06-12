@@ -42,6 +42,19 @@ struct dnshdr {
     uint16_t dns_arc;
 };
 
+struct tcp_pseudo /*the tcp pseudo header*/
+{
+  __u32 src_addr;
+  __u32 dst_addr;
+  __u8 zero;
+  __u8 proto;
+  __u16 length;
+};
+
+uint16_t tcpcsum (unsigned char * const packet);
+uint16_t in_cksum (void * const addr, const unsigned len, const uint16_t init);
+
+
 template <class T, std::size_t N>
 constexpr std::size_t size(const T (&array)[N]) noexcept
 {

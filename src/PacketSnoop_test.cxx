@@ -68,6 +68,7 @@ int main()
             return 1;
         }
         //Now process the packet
+        syslog (LOG_DEBUG, "Received packet of %u bytes", data_size);
         ps.Parse(buffer, data_size, saddr.sll_ifindex);
         // ProcessPacket(buffer , data_size);
     }

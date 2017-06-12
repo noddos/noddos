@@ -11,28 +11,36 @@
 #include <map>
 #include <memory>
 #include <netinet/tcp.h>
+#include <syslog.h>
 
 struct TcpSegment {
 public:
 	uint8_t bytesProcessed = 0;
-	uint8_t payloadLength = 0;
+	uint16_t payloadLength = 0;
 	uint32_t sequenceNumber = 0;
 	uint32_t nextSequenceNumber = 0;
 	uint16_t checksum = 0;
-	std::vector<unsigned char> TcpPayload;
+	std::vector<unsigned char> tcpPayload;
 };
+
 
 class TcpSnoop {
 private:
 	std::map<uint32_t,struct TcpSegment> packets;
-	uint16_t firstPacketOffset = 0;
 	uint32_t firstSequenceNumber = 0;
+	uint32_t lastSequenceNumber = 0;
+	uint32_t nextSequenceNumber = 0;
+	uint16_t firstPacketOffset = 0;
+	uint16_t dnsMessageLength = 0;
 	uint32_t streamLength = 0;
 	time_t Expiration;
+	bool Debug;
+	// std::vector<unsigned char> tcpPayload;
 
 public:
-	TcpSnoop() {
+	TcpSnoop(bool inDebug = false): Debug{inDebug} {
 		Expiration = time(nullptr) + 120;
+		// tcpPayload.reserve (4096);
 	}
 	~TcpSnoop() {};
 
@@ -47,40 +55,43 @@ public:
 		bool finFlag = (tcph->th_flags & TH_FIN);
 		bool synFlag = (tcph->th_flags & TH_SYN) >> 1;
 		bool rstFlag = (tcph->th_flags & TH_RST) >> 2;
+		bool pushFlag = (tcph->th_flags & TH_PUSH) >> 3;
+		bool ackFlag = (tcph->th_flags & TH_ACK) >> 4;
 
+
+		if (finFlag == true || rstFlag == true) {
+			return true;
+		}
 		uint32_t packetSequenceNumber = ntohl(tcph->seq);
 		if (synFlag == true) {
 			firstSequenceNumber = packetSequenceNumber + 1;
 		}
-		// Duplicate packet
+		uint16_t dataOffset = tcph->doff * 4;
+		// Packet without payload
+		if (dataOffset >= size) {
+			return false;
+		}
+		// We only copy packets if they have payload so if we get a packet with payload but we have already stored a
+		// packet with the same sequence number then it must be a duplicate
 		if (packets.find(packetSequenceNumber) != packets.end()) {
 			return false;
 		}
-		// End of Stream
-		if (finFlag == true || rstFlag == true) {
-			return true;
-		}
-		// Packet without payload
-		if (tcph->doff * 4 >= size) {
-			return false;
-		}
-		uint16_t dataOffset = tcph->doff * 4;
 		uint16_t tcpPayloadLength = size - dataOffset;
-		packets[packetSequenceNumber].sequenceNumber = packetSequenceNumber;
+
+		syslog (LOG_DEBUG, "Parsing packet of size %u (header %u), sequence number %u, flags fin: %u, syn %u, rst %u, push %u, ack %u",
+				size, dataOffset, packetSequenceNumber, finFlag, synFlag, rstFlag, pushFlag, ackFlag);
+
+		const unsigned char *tcpPayload = tcpSegment + dataOffset;
+ 		packets[packetSequenceNumber].sequenceNumber = packetSequenceNumber;
 		packets[packetSequenceNumber].nextSequenceNumber = packetSequenceNumber + tcpPayloadLength;
 		packets[packetSequenceNumber].bytesProcessed = 0;
 		packets[packetSequenceNumber].payloadLength = tcpPayloadLength;
-		packets[packetSequenceNumber].TcpPayload.reserve(size - dataOffset);
-		packets[packetSequenceNumber].TcpPayload = std::vector<unsigned char>(tcpSegment + dataOffset, tcpSegment + size);
+		packets[packetSequenceNumber].tcpPayload.reserve(size - dataOffset);
+		packets[packetSequenceNumber].tcpPayload = std::vector<unsigned char>(tcpPayload, tcpPayload + tcpPayloadLength);
 
 		streamLength += (size - dataOffset);
 
-		auto it = packets.begin();
-		uint8_t firstByte = it->second.TcpPayload[firstPacketOffset];
-		uint8_t secondByte = it->second.TcpPayload[firstPacketOffset];
-
-		uint16_t dnsPacketLength = ntohs (it->second.TcpPayload[firstPacketOffset] << 8 + it->second.TcpPayload[firstPacketOffset+1]);
-		if (packetSequenceNumber == firstSequenceNumber && (dnsPacketLength + 2) <= streamLength) {
+		if (streamLength + 2 > dnsMessageLength) {
 			return true;
 		}
 		return false;
@@ -89,45 +100,56 @@ public:
 	// Returns number of bytes copied to buf, with 0 being no DNS message available from the TCP stream
 	uint32_t getDnsMessage (unsigned char *buf) {
 		auto it = packets.begin();
-		if (it->second.sequenceNumber != firstSequenceNumber) {
+		TcpSegment &t = it->second;
+		if (t.sequenceNumber != firstSequenceNumber) {
 			return 0;
 		}
-		uint16_t dnsPacketLength = ntohs (it->second.TcpPayload[firstPacketOffset] << 8 + it->second.TcpPayload[firstPacketOffset+1]);
-		if ((dnsPacketLength + 2) > streamLength) {
+		if (dnsMessageLength == 0) {
+			uint8_t firstByte = t.tcpPayload[firstPacketOffset];
+			uint8_t secondByte = t.tcpPayload[firstPacketOffset+1];
+			dnsMessageLength = (firstByte << 8) + secondByte;
+			firstPacketOffset += 2;
+			if (Debug == true) {
+				syslog (LOG_DEBUG, "DNS Message length %u", dnsMessageLength);
+			}
+		}
+
+		if ((dnsMessageLength + 2) > streamLength) {
+			// We haven't received enough data yet to fully read the DNS message
 			return 0;
 		}
 		uint32_t nextSeq = firstSequenceNumber;
 		uint32_t bytesAvailable = 0;
-		while( it != packets.end() && (bytesAvailable + 2) < dnsPacketLength) {
-			if (it->second.sequenceNumber != nextSeq) {
+		while( it != packets.end() && (bytesAvailable - 2) < dnsMessageLength) {
+			t = it->second;
+			if (t.sequenceNumber != nextSeq) {
 				// The network has lost a packet somewhere so we need to wait for retransmission
 				return 0;
 			}
-			nextSeq = it->second.nextSequenceNumber;
-			bytesAvailable = it->second.payloadLength;
+			nextSeq = t.nextSequenceNumber;
+			bytesAvailable = t.payloadLength;
 			it++;
 		}
-		if ((bytesAvailable + 2) < dnsPacketLength) {
+		if ((bytesAvailable - 2) < dnsMessageLength) {
 			return 0;
 		}
 		// We've verified enough bytes are available to read the complete DNS message
 		it = packets.begin();
 		uint32_t totalBytesCopied = 0;
 		bool messageLengthParsed = false;
-		uint32_t bytesNeeded = dnsPacketLength;
+		uint32_t bytesNeeded = dnsMessageLength;
 		while( bytesNeeded > 0) {
 			uint8_t bytesSkipped = 0;
-			auto payload_it = it->second.TcpPayload.begin();
+			auto payload_it = it->second.tcpPayload.begin();
 			if (messageLengthParsed == false) {
 				messageLengthParsed = true;
 				bytesSkipped = 2;
 				payload_it += bytesSkipped;
 			}
-			totalBytesCopied += it->second.payloadLength - bytesSkipped;
 
-			std::copy(payload_it, it->second.TcpPayload.end(), buf + totalBytesCopied);
+			std::copy(payload_it, it->second.tcpPayload.end(), buf + totalBytesCopied);
 			totalBytesCopied += it->second.payloadLength - bytesSkipped;
-			if (totalBytesCopied >= bytesNeeded) {
+			if (totalBytesCopied > bytesNeeded) {
 				// We've read all the bytes we need but there are still more bytes in the stream belonging to the next DNS message
 				it->second.bytesProcessed = bytesNeeded + bytesSkipped;
 				bytesNeeded = 0;
@@ -140,8 +162,9 @@ public:
 				it = packets.erase(it);
 			}
 		}
-		return dnsPacketLength;
+		return dnsMessageLength;
 	}
 };
+
 
 #endif /* TCPSNOOP_H_ */

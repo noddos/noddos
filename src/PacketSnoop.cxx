@@ -48,6 +48,10 @@ int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
 	};
 
 	// ETH_P_ALL is required to also capture outgoing packets
+	// However, with ETH_P_ALL we get some packets twice with same sequence number but different packet size
+	// https://www.spinics.net/lists/netdev/msg159788.html or something like that
+	// So for now we use ETH_P_IP meaning that for TCP we can't check that an answer matches a query that was sent out if
+	// we're running on a recursive DNS server .
 	sock = socket( AF_PACKET, SOCK_RAW, htons(ETH_P_ALL)) ;
 	//setsockopt(sock_raw , SOL_SOCKET , SO_BINDTODEVICE , "eth0" , strlen("eth0")+ 1 );
 	if(sock < 0) {
@@ -78,12 +82,15 @@ bool PacketSnoop::ProcessEvent(struct epoll_event &event) {
 }
 
 bool PacketSnoop::Parse (unsigned char *frame, size_t size, int ifindex) {
+	syslog (LOG_DEBUG, "Parsing packet of %lu bytes", size);
 	// Get the IP Header part of this packet , excluding the ethernet header
     struct ethhdr *ethh = (struct ethhdr *) frame;
 
 	uint8_t af;
 	unsigned short iphdrlen;
 	unsigned short protocol;
+	uint16_t payloadLength = 0;
+	uint16_t ipPacketLength = 0;
    	// struct sockaddr_storage source, dest;
    	// memset(&source, 0, sizeof(source));
    	// memset(&dest, 0, sizeof(dest));
@@ -93,6 +100,29 @@ bool PacketSnoop::Parse (unsigned char *frame, size_t size, int ifindex) {
 		af = AF_INET;
 		struct iphdr *iph = (struct iphdr*) (frame + sizeof(struct ethhdr));
 		iphdrlen = iph->ihl*4;
+		if (iphdrlen < sizeof(struct iphdr)) {
+		    // Packet is broken!
+		    // IP packets must not be smaller than the mandatory IP header.
+		    return false;
+		}
+		if (in_cksum((void *) iph, iphdrlen, 0) != 0) {
+		    // Packet is broken!
+		    // Checksum of IP header does not verify, thus header is corrupt.
+		    return false;
+		}
+		ipPacketLength = ntohs(iph->tot_len);
+		if (ipPacketLength < iphdrlen) {
+		    // Packet is broken!
+		    // The overall packet cannot be smaller than the header.
+		    return false;
+		}
+		payloadLength = ntohs(iph->tot_len) - iphdrlen;
+		if (payloadLength < sizeof(struct tcphdr)) {
+		    // Packet is broken!
+		    // A TCP header doesn't even fit into the data that follows the IP header.
+		    return false;
+		}
+
 		protocol = iph->protocol;
 		struct sockaddr_in source, dest;
 	   	memset(&source, 0, sizeof(source));
@@ -111,6 +141,7 @@ bool PacketSnoop::Parse (unsigned char *frame, size_t size, int ifindex) {
 		af = AF_INET6;
 		iphdrlen = 40;
 		struct ipv6hdr *ipv6h = (struct ipv6hdr*) (frame + sizeof(struct ethhdr));
+		payloadLength = ntohs(ipv6h->payload_len);
 		if (ipv6h->nexthdr != 6 && ipv6h->nexthdr != 17) {
 			syslog (LOG_INFO, "Sorry, only support for IPv6 without optional headers for now %u", ipv6h->nexthdr);
 			return true;
@@ -140,9 +171,26 @@ bool PacketSnoop::Parse (unsigned char *frame, size_t size, int ifindex) {
     	case 6: //TCP Protocol
     		{
     			struct tcphdr *tcph=(struct tcphdr*)(frame  + iphdrlen + sizeof(struct ethhdr));
+    			if (ipPacketLength < (iphdrlen + tcph->doff * 4)) {
+    				if (Debug == true) {
+    					syslog (LOG_DEBUG, "Invalid packet, IP packet length < ip header + tcp header");
+    				}
+    				return false;
+    			}
+    			if (tcpcsum(frame) != 0) {
+    				if (Debug == true) {
+    					syslog (LOG_DEBUG, "Received TCP packet with invalid checksum");
+    				}
+    				return false;
+    			}
     			// We have to pass the TCP header to TcpSnoop so only skip ethernet and IP headers
     			int header_size =  sizeof(struct ethhdr) + iphdrlen;
     			unsigned char *payload = frame + header_size;
+    			if (tcpcsum(frame) != 0) {
+    				if (Debug == true) {
+    					syslog(LOG_DEBUG, "Received TCP packet with invalid checksum");
+    				}
+    			}
     			uint16_t srcPort = ntohs(tcph->source);
     			uint16_t destPort = ntohs(tcph->dest);
     			boost::asio::ip::address src, dest;
@@ -160,7 +208,7 @@ bool PacketSnoop::Parse (unsigned char *frame, size_t size, int ifindex) {
     	    			tsPtr = std::make_shared<TcpSnoop>();
     	    			addTcpSnoopInstance(src, srcPort, dest, destPort, tsPtr);
     	    		}
-    	    		if ((tsPtr)->addPacket(payload, size - header_size)) {
+    	    		if ((tsPtr)->addPacket(payload, payloadLength)) {
     	    			uint16_t bytesRead = (tsPtr)->getDnsMessage(frame);
     	    			parseDnsPacket (frame, bytesRead, Mac, srcString, ifindex);
     	    		}
@@ -177,11 +225,11 @@ bool PacketSnoop::Parse (unsigned char *frame, size_t size, int ifindex) {
 
     	    	syslog (LOG_DEBUG, "UDP source port %u, dest port %u", ntohs(udph->source), ntohs(udph->dest));
     	    	if (ntohs(udph->source) == 53 || ntohs(udph->dest) == 53) {
-    	    		parseDnsPacket(payload, size - header_size, Mac, srcString, ifindex);
+    	    		parseDnsPacket(payload, payloadLength, Mac, srcString, ifindex);
     	    		// Parse_Dns_Packet(frame + sizeof(struct ethhdr) , size - sizeof(struct ethhdr));
     	    	} else if  (ntohs(udph->source) == 67 || ntohs(udph->dest) == 68 ||
     					ntohs(udph->source) == 68 || ntohs(udph->dest) == 68) {
-    				parseDhcpUdpPacket(payload, size - header_size);
+    				parseDhcpUdpPacket(payload, payloadLength);
     			} else {
     				syslog(LOG_WARNING, "Received PacketSnoop UDP packet with source port %u, destination port %u", ntohs(udph->source), ntohs(udph->dest));
     			}
@@ -266,7 +314,7 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload, const size_t size
     	// can be confirmed to come in response to the query
     	hC->addorupdateDnsQueryCache(q->id);
     } else if (ifMap->isWanInterface(ifIndex) && q->ancount > 0) {
-    	for (uint16_t i = 0; i < q->qdcount; i++) {
+		for (uint16_t i = 0; i < q->qdcount; i++) {
     		// Only accept an answer if for each question there is a matching outgoing query from the DNS server
     		// on which Noddos runs
     		if (hC->inDnsQueryCache(q->id) == false) {
@@ -274,6 +322,7 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload, const size_t size
     			return true;
     		}
     	}
+
     	for (uint16_t i; i < q->ancount; i++) {
     		char ipaddr[INET6_ADDRSTRLEN];
     		if (q->answers[i].generic.type != RR_OPT) {
@@ -335,4 +384,62 @@ bool PacketSnoop::parseDhcpUdpPacket(unsigned char *payload, size_t size) {
 	syslog (LOG_INFO, "Ignoring DHCP packets for now");
 	return false;
 }
+
+// thanx to http://seclists.org/lists/bugtraq/1999/Mar/0057.html
+uint16_t tcpcsum (unsigned char * const packet) {
+  struct tcp_pseudo pseudo;
+
+  const struct iphdr * iph = (const struct iphdr *)(packet + sizeof(struct ethhdr));
+  unsigned ipHdrLen = iph->ihl * 4;
+  uint16_t ipPacketLen = ntohs(iph->tot_len);
+  unsigned ipPayloadLen = ipPacketLen - ipHdrLen;
+
+  // TCP header starts directly after IP header
+  const struct tcphdr * tcp = (const struct tcphdr *)((const u_char *)iph + ipHdrLen);
+
+  // Build the pseudo header and checksum it
+  pseudo.src_addr = iph->saddr;
+  pseudo.dst_addr = iph->daddr;
+  pseudo.zero = 0;
+  pseudo.proto = 6;
+  pseudo.length = htons(ipPayloadLen);
+  uint16_t csum = in_cksum(&pseudo, (unsigned)sizeof(pseudo), 0);
+
+  // Update the checksum by checksumming the TCP header
+  // and data as if those had directly followed the pseudo header
+  csum = in_cksum((void *) tcp, ipPayloadLen, (uint16_t)~csum);
+
+  return csum;
+}
+
+uint16_t in_cksum (void * const addr, const unsigned inlen, const uint16_t init) {
+  uint32_t sum;
+  const uint16_t * word;
+  unsigned len = inlen;
+
+  sum = init;
+  word = (uint16_t *) addr;
+
+  /*
+   * Our algorithm is simple, using a 32 bit accumulator (sum), we add
+   * sequential 16 bit words to it, and at the end, fold back all the
+   * carry bits from the top 16 bits into the lower 16 bits.
+   */
+
+  while (len >= 2) {
+    sum += *(word++);
+    len -= 2;
+  }
+
+  if (len > 0) {
+    uint16_t tmp;
+
+    *(uint8_t *)(&tmp) = *(uint8_t *)word;
+  }
+
+  sum = (sum >> 16) + (sum & 0xffff);
+  sum += (sum >> 16);
+  return ((uint16_t)~sum);
+}
+
 
