@@ -344,13 +344,10 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload, const size_t size
         	    		break;
         	      case RR_AAAA:
         	      	  {
-        	      		  std::array<unsigned char, 16> v6addr;
-        	      		  for (int c = 0; i < 16; c++) {
-        	      			  v6addr[c] = q->answers[i].aaaa.address.s6_addr[c];
-        	      		  }
-
+        	      		  std::array<unsigned char, sizeof (q->answers[i].aaaa.address.s6_addr)> v6addr;
+        	      		  std::memcpy(&v6addr[0], q->answers[i].aaaa.address.s6_addr, sizeof (q->answers[i].aaaa.address.s6_addr));
 						  boost::asio::ip::address_v6 ipv6(v6addr);
-        	          	  // q->answers[i].aaaa.address.s6_addr;
+
         	          	  hC->addorupdateDnsCache(q->answers[i].generic.name, ipv6, q->answers[i].generic.ttl);
         	          	  if (Debug == true) {
         	          		  inet_ntop(AF_INET6,&q->answers[i].aaaa.address,ipaddr,sizeof(ipaddr));
