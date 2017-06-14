@@ -280,6 +280,7 @@ exitprog:
 	hC.Prune();
 	f.Close();
 	s.Close();
+	p.Close();
 	if (flowtrack && t_ptr != nullptr) {
 		t_ptr->Close();
 		// Is this crashing when noddos exits?

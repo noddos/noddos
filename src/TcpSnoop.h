@@ -40,7 +40,9 @@ private:
 public:
 	TcpSnoop(bool inDebug = false): Debug{inDebug} {
 		Expiration = time(nullptr) + 120;
-		// tcpPayload.reserve (4096);
+		if (Debug == true) {
+			syslog(LOG_DEBUG, "Constructing TcpSnoop instance");
+		}
 	}
 	~TcpSnoop() {};
 
@@ -78,8 +80,10 @@ public:
 		}
 		uint16_t tcpPayloadLength = size - dataOffset;
 
-		syslog (LOG_DEBUG, "Parsing packet of size %u (header %u), sequence number %u, flags fin: %u, syn %u, rst %u, push %u, ack %u",
+		if (Debug == true) {
+			syslog (LOG_DEBUG, "Parsing packet of size %u (header %u), sequence number %u, flags fin: %u, syn %u, rst %u, push %u, ack %u",
 				size, dataOffset, packetSequenceNumber, finFlag, synFlag, rstFlag, pushFlag, ackFlag);
+		}
 
 		const unsigned char *tcpPayload = tcpSegment + dataOffset;
  		packets[packetSequenceNumber].sequenceNumber = packetSequenceNumber;

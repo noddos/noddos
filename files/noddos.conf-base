@@ -10,6 +10,8 @@
 	"PruneInterval": 3600,
     "ListenIpAddresses": [],
     "ListenInterfaces": [],
+    "LanInterfaces": ["br-lan"],
+    "WanInterfaces": ["eth1"],
     "ExpireDnsQuery": 86400,
     "ExpireHost": 604800,
     "UploadMode": "Anonymous",

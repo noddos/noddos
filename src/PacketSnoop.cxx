@@ -15,32 +15,30 @@
 
 
 int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
-	// DNS port 53 (without specifying UDP or TCP
+	// '(IP or IP6) and port 53'
 	struct sock_filter bpfcode[] = {
 			{ 0x28, 0, 0, 0x0000000c },
-			{ 0x15, 0, 8, 0x000086dd },
-			{ 0x30, 0, 0, 0x00000014 },
-			{ 0x15, 2, 0, 0x00000084 },
-			{ 0x15, 1, 0, 0x00000006 },
-			{ 0x15, 0, 17, 0x00000011 },
-			{ 0x28, 0, 0, 0x00000036 },
-			{ 0x15, 14, 0, 0x00000035 },
-			{ 0x28, 0, 0, 0x00000038 },
-			{ 0x15, 12, 13, 0x00000035 },
-			{ 0x15, 0, 12, 0x00000800 },
+			{ 0x15, 0, 10, 0x00000800 },
 			{ 0x30, 0, 0, 0x00000017 },
-			{ 0x15, 2, 0, 0x00000084 },
 			{ 0x15, 1, 0, 0x00000006 },
-			{ 0x15, 0, 8, 0x00000011 },
+			{ 0x15, 0, 16, 0x00000011 },
 			{ 0x28, 0, 0, 0x00000014 },
-			{ 0x45, 6, 0, 0x00001fff },
+			{ 0x45, 14, 0, 0x00001fff },
 			{ 0xb1, 0, 0, 0x0000000e },
 			{ 0x48, 0, 0, 0x0000000e },
-			{ 0x15, 2, 0, 0x00000035 },
+			{ 0x15, 10, 0, 0x00000035 },
 			{ 0x48, 0, 0, 0x00000010 },
+			{ 0x15, 8, 9, 0x00000035 },
+			{ 0x15, 0, 8, 0x000086dd },
+			{ 0x30, 0, 0, 0x00000014 },
+			{ 0x15, 1, 0, 0x00000006 },
+			{ 0x15, 0, 5, 0x00000011 },
+			{ 0x28, 0, 0, 0x00000036 },
+			{ 0x15, 2, 0, 0x00000035 },
+			{ 0x28, 0, 0, 0x00000038 },
 			{ 0x15, 0, 1, 0x00000035 },
 			{ 0x6, 0, 0, 0x00040000 },
-			{ 0x6, 0, 0, 0x00000000 }
+			{ 0x6, 0, 0, 0x00000000 },
 	};
 	struct sock_fprog bpf = {
 		.len = size(bpfcode),
@@ -53,16 +51,17 @@ int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
 	// So for now we use ETH_P_IP meaning that for TCP we can't check that an answer matches a query that was sent out if
 	// we're running on a recursive DNS server .
 	sock = socket( AF_PACKET, SOCK_RAW, htons(ETH_P_ALL)) ;
+	if (Debug == true) {
+		syslog (LOG_DEBUG, "Opened AF_PACKET SOCK_RAW with ETH_P_ALL");
+	}
 	//setsockopt(sock_raw , SOL_SOCKET , SO_BINDTODEVICE , "eth0" , strlen("eth0")+ 1 );
 	if(sock < 0) {
 	    //Print the error with proper message
 	 	syslog(LOG_CRIT, "Socket Error");
-	    exit(1);
 	}
 	int ret = setsockopt(sock, SOL_SOCKET, SO_ATTACH_FILTER, &bpf, sizeof(bpf));
 	if (ret < 0) {
 	    syslog (LOG_CRIT, "Setsockopt Error");
-	    exit(1);
 	}
 	return sock;
 }
@@ -82,7 +81,7 @@ bool PacketSnoop::ProcessEvent(struct epoll_event &event) {
 }
 
 bool PacketSnoop::Parse (unsigned char *frame, size_t size, int ifindex) {
-	syslog (LOG_DEBUG, "Parsing packet of %lu bytes", size);
+	syslog (LOG_DEBUG, "Parsing packet of %zu bytes", size);
 	// Get the IP Header part of this packet , excluding the ethernet header
     struct ethhdr *ethh = (struct ethhdr *) frame;
 
@@ -160,11 +159,13 @@ bool PacketSnoop::Parse (unsigned char *frame, size_t size, int ifindex) {
 		return true;
 	}
 
-   if (Debug == true) {
-    	syslog(LOG_DEBUG, "Parsing packet from %s to %s", srcString, destString );
-    }
-
     MacAddress Mac (ethh->h_source);
+
+    if (Debug == true) {
+     	syslog(LOG_DEBUG, "Parsing packet from %s to %s, protocol %u, packet size %u, header length %u from MAC %s",
+     			srcString, destString, protocol, iphdrlen, ipPacketLength, Mac.c_str() );
+     }
+
 
 	//Check the Protocol and do accordingly...
 	switch (protocol) {
@@ -205,7 +206,7 @@ bool PacketSnoop::Parse (unsigned char *frame, size_t size, int ifindex) {
         			bool rstFlag = (tcph->th_flags & TH_RST) >> 2;
     	    		std::shared_ptr<TcpSnoop> tsPtr = getTcpSnoopInstance(src, srcPort, dest, destPort);
     	    		if (tsPtr == nullptr) {
-    	    			tsPtr = std::make_shared<TcpSnoop>();
+    	    			tsPtr = std::make_shared<TcpSnoop>(Debug);
     	    			addTcpSnoopInstance(src, srcPort, dest, destPort, tsPtr);
     	    		}
     	    		if ((tsPtr)->addPacket(payload, payloadLength)) {
@@ -223,7 +224,9 @@ bool PacketSnoop::Parse (unsigned char *frame, size_t size, int ifindex) {
     	    	int header_size =  sizeof(struct ethhdr) + iphdrlen + sizeof udph;
     	    	unsigned char *payload = frame + header_size;
 
-    	    	syslog (LOG_DEBUG, "UDP source port %u, dest port %u", ntohs(udph->source), ntohs(udph->dest));
+    	    	if (Debug == true) {
+    	    		syslog (LOG_DEBUG, "UDP source port %u, dest port %u", ntohs(udph->source), ntohs(udph->dest));
+    	    	}
     	    	if (ntohs(udph->source) == 53 || ntohs(udph->dest) == 53) {
     	    		parseDnsPacket(payload, payloadLength, Mac, srcString, ifindex);
     	    		// Parse_Dns_Packet(frame + sizeof(struct ethhdr) , size - sizeof(struct ethhdr));
@@ -242,7 +245,7 @@ bool PacketSnoop::Parse (unsigned char *frame, size_t size, int ifindex) {
 }
 
 std::shared_ptr<TcpSnoop> PacketSnoop::getTcpSnoopInstance(const boost::asio::ip::address inSrc, const uint16_t inSrcPort,
-		const boost::asio::ip::address inDest, const uint16_t inDestPort) {
+	const boost::asio::ip::address inDest, const uint16_t inDestPort) {
 	auto sit = tcpSnoops.find(inSrc);
 	if(sit  == tcpSnoops.end()) {
 		return nullptr;
@@ -279,7 +282,7 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload, const size_t size
     dns_packet_t reply[65536];
     size_t       replysize = sizeof(reply);
 
-    int rc = dns_decode(bufresult,&bufsize,(unsigned long int *) payload,size);
+    int rc = dns_decode(bufresult,&bufsize,(dns_packet_t *) payload,size);
     if (rc != RCODE_OKAY) {
       syslog(LOG_INFO, "dns_decode() = (%d) %s",rc,dns_rcode_text((dns_rcode_t)rc));
       return true;
@@ -290,7 +293,7 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload, const size_t size
 
     if (Debug == true) {
     	syslog(LOG_DEBUG,"Query ID: %u --- Bytes used: %lu", q->id, (unsigned long)bufsize);
-    	syslog(LOG_DEBUG,"Questions: %lu Answers: %lu Additional answers: %lu", q->qdcount, q->ancount, q->arcount);
+    	syslog(LOG_DEBUG,"Questions: %zu Answers: %zu Additional answers: %zu", q->qdcount, q->ancount, q->arcount);
     }
     // From the LAN, only accept packets with no answers
     // From the WAN, only accept packets with answers

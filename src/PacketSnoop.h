@@ -16,19 +16,15 @@
 #include <unistd.h>
 
 #include <linux/filter.h>
-#include <linux/if_ether.h>
+// #include <linux/if_ether.h>
 
 #include <sys/socket.h>
 #include <linux/if_packet.h>
-#include <net/ethernet.h> /* the L2 protocols */
+// #include <net/ethernet.h> /* the L2 protocols */
 #include <arpa/inet.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
-
-// This might get us a valid build on Travis: https://patchwork.ozlabs.org/patch/425881/
-#define __UAPI_DEF_IN6_PKTINFO		1
-#define __UAPI_DEF_IP6_MTUINFO		1
 
 #include <linux/ipv6.h>
 
@@ -75,7 +71,10 @@ private:
 	std::map<boost::asio::ip::address,std::map<uint16_t,std::map<boost::asio::ip::address,std::map<uint16_t,std::shared_ptr<TcpSnoop>>>>> tcpSnoops;
 
 public:
-	PacketSnoop(HostCache &inHc, bool const inDebug = false):	hC{&inHc}, Debug{inDebug} {
+	PacketSnoop(HostCache &inHc, const bool  inDebug = false):	hC{&inHc}, Debug{inDebug} {
+		if (Debug == true) {
+			syslog (LOG_DEBUG, "Constructing PacketSnoop instance");
+		}
 		Open("");
 	};
 
