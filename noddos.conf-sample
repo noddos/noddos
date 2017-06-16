@@ -17,6 +17,8 @@
     "ReportTrafficToRfc1918": false,
     "ListenIpAddresses": [],
     "ListenInterfaces": [],
+    "LanInterfaces": ["br-lan"],
+    "WanInterfaces": ["eth1"],
     "TrafficReportInterval": 3600,
     "DeviceReportInterval": 14400,
     "ExpireDnsQuery": 86400,

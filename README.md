@@ -33,7 +33,7 @@ If you have a different router, you can either send me a request to build a pack
 
 We need to edit the dnsmasq start-up script to make sure it starts with the parameters that noddos needs
 - (line numbers are based on the file with these modifications being applied)
-- insert after line 602: append_parm "$cfg" "logdhcp" "--log-dhcp"
+- insert after line 602 (only for Lede 17.01.1, this line is not needed for 17.01.2): append_parm "$cfg" "logdhcp" "--log-dhcp"
 - insert after line 670:
 
 	config_get dnsmasqlogfile "$cfg" logfile ""  
@@ -41,13 +41,8 @@ We need to edit the dnsmasq start-up script to make sure it starts with the para
 		xappend "log-facility=$dnsmasqlogfile"  
 	}  
 
-- insert after line 772: procd_add_jail_mount_rw $dnsmasqlogfile
+- insert after line 790 (Lede 17.01.2) or line 772 (Lede 17.01.1): procd_add_jail_mount_rw $dnsmasqlogfile
 
-In the Luci UI, change the logging configuration under System -> System -> Logging. Edit the 'Write system log to file' and specify that the logs should be written to '/tmp/system.log'
-
-After restarting the dnsmasq and the log subsystem, there should be a /tmp/system.log file with DNS & DHCP logs:
-
-	service log restart
 	service dnsmasq restart
 
 We need to modify the menu structure of the Luci web interface to point to the Noddos Client and Configuration pages. First edit the file /usr/lib/lua/luci/controller/admin/status.lua. Insert on line 15:
@@ -74,6 +69,7 @@ To make sure Luci picks up the menu and module changes, execute:
 Now we can install the actual Noddos package you can download from the releases menu on Github
 
 	wget <noddos-package-url-on-github>
+	opkg update
 	opkg install <package>
 
 Go to the Luci -> Network -> Client Firewall page to configure Noddos. Make sure to include the Loopback, WAN and LAN IP- or MAC-addresses of your router. You may also want to whitelist addresses of your PCs that you use daily as collecting traffic statistics for them is of no much use with the traffic they generate to so many destinations. You may also want to add the MAC addresses of phones or tablets. 

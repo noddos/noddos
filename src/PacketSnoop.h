@@ -35,14 +35,6 @@
 #include "HostCache.h"
 #include "TcpSnoop.h"
 
-struct dnshdr {
-    uint16_t dns_id;
-    uint16_t dns_flags;
-    uint16_t dns_qdc;
-    uint16_t dns_anc;
-    uint16_t dns_nsc;
-    uint16_t dns_arc;
-};
 
 struct tcp_pseudo /*the tcp pseudo header*/
 {

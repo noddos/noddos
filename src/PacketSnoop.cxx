@@ -7,6 +7,7 @@
 
 #include "boost/asio.hpp"
 
+// #include "dnslib.h"
 #include "dns.h"
 #include "dnsmappings.h"
 #include "InterfaceMap.h"
@@ -15,23 +16,24 @@
 
 
 int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
-	// '(IP or IP6) and port 53'
+	// '(ip or ip6) and (tcp or udp) and port 53'
 	struct sock_filter bpfcode[] = {
 			{ 0x28, 0, 0, 0x0000000c },
 			{ 0x15, 0, 10, 0x00000800 },
 			{ 0x30, 0, 0, 0x00000017 },
 			{ 0x15, 1, 0, 0x00000006 },
-			{ 0x15, 0, 16, 0x00000011 },
+			{ 0x15, 0, 17, 0x00000011 },
 			{ 0x28, 0, 0, 0x00000014 },
-			{ 0x45, 14, 0, 0x00001fff },
+			{ 0x45, 15, 0, 0x00001fff },
 			{ 0xb1, 0, 0, 0x0000000e },
 			{ 0x48, 0, 0, 0x0000000e },
-			{ 0x15, 10, 0, 0x00000035 },
+			{ 0x15, 11, 0, 0x00000035 },
 			{ 0x48, 0, 0, 0x00000010 },
-			{ 0x15, 8, 9, 0x00000035 },
-			{ 0x15, 0, 8, 0x000086dd },
+			{ 0x15, 9, 10, 0x00000035 },
+			{ 0x15, 0, 9, 0x000086dd },
 			{ 0x30, 0, 0, 0x00000014 },
-			{ 0x15, 1, 0, 0x00000006 },
+			{ 0x15, 2, 0, 0x00000006 },
+			{ 0x15, 6, 0, 0x0000002c },
 			{ 0x15, 0, 5, 0x00000011 },
 			{ 0x28, 0, 0, 0x00000036 },
 			{ 0x15, 2, 0, 0x00000035 },

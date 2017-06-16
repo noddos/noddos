@@ -1,3 +1,18 @@
+___Noddos v0.2.3 - 6/14/2017___
+
+Minor bug fix to run the Device Match algorithm periodically instead of constantly.
+
+___Noddos v0.2.2 - 5/31/2017___
+
+Unfortunately, the move on Lede firmware to not configure a custom log file for dnsmasq but configure logd to write to a system log file did not work out so reverting this until we can get a more permanent solution
+
+___Noddos v0.2.1 - 5/27/2017___
+
+Bug fixes:
+* Allows Device Report uploads to be disabled.
+* Improves efficiency by storing mac addresses and IP addresses as integers (mac- and ipv4 addresses) or byte arrays (ipv6 addresses) instead of std::strings.
+* Fixes the LEDE installation instructions as an incorrect file was being referenced.
+
 ___Noddos v0.2.0 - 5/21/2017___
 
 This release of Noddos adds integration with the Luci web-interface and its configuration management interface.
