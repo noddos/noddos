@@ -30,6 +30,7 @@
 
 #include "boost/asio.hpp"
 
+#include "dns.h"
 #include "noddos.h"
 #include "iDeviceInfoSource.h"
 #include "HostCache.h"

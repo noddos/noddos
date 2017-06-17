@@ -1,0 +1,53 @@
+version: 1.0.{build}
+configuration:
+- debug
+- release
+platform: 
+- Win32
+- x64
+environment:
+  matrix:
+    - compiler: vs2013
+    - compiler: vs2015
+  BOOST_ROOT: C:\Libraries\boost
+clone_depth: 1
+install:
+- git clone https://github.com/mfontanini/winpcap-installer.git
+- cd winpcap-installer
+- winpcap-boundary-meter-4.1.3.exe /S
+- cd ..
+- appveyor DownloadFile http://www.winpcap.org/install/bin/WpdPack_4_1_2.zip
+- 7z x .\WpdPack_4_1_2.zip -oc:\
+- git submodule init
+- git submodule update
+before_build:
+- mkdir build
+- cd build
+- if "%compiler%"=="vs2013" (set VS_VERSION=12) else (set VS_VERSION=14)
+- set VS=Visual Studio %VS_VERSION%
+- if "%platform%"=="Win32" (set GENERATOR="%VS%" & set ARCH_BITS=32)
+- if "%platform%"=="x64" (set GENERATOR="%VS% Win64" & set ARCH_BITS=64)
+- set BOOST_LIBRARYDIR=C:\Libraries\boost\lib%ARCH_BITS%-msvc-%VS_VERSION%.0
+- cmake .. -G %GENERATOR% -DPCAP_ROOT_DIR=c:\WpdPack -DLIBTINS_BUILD_SHARED=0 -DLIBTINS_ENABLE_WPA2=0 -DBOOST_ROOT="%BOOST_ROOT%" -DBOOST_LIBRARYDIR="%BOOST_LIBRARYDIR%" -DBoost_USE_STATIC_LIBS="ON"
+build:
+  project: C:/projects/libtins/build/libtins.sln
+  verbosity: minimal
+after_build:
+- mkdir install\libtins\include
+- mkdir install\libtins\lib
+- cd install\libtins
+- copy C:\projects\libtins\build\lib\%Configuration%\tins.lib lib
+- xcopy C:\projects\libtins\include include /s /e
+- del include\CMakeLists.txt
+- del include\tins\CMakeLists.txt
+- del include\tins\config.h.in
+- del include\tins\dot11\CMakeLists.txt
+- cd ..\
+- 7z a libtins-%compiler%-%platform%-%Configuration%.zip libtins
+test_script:
+- cd c:\projects\libtins\build
+- ctest -C %Configuration% -V
+deploy_script:
+- ps: Push-AppveyorArtifact "install\libtins-$env:Compiler-$env:Platform-$env:Configuration.zip"
+skip_commits:
+  message: /Update documentation.*/

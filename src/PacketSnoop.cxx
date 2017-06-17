@@ -8,8 +8,6 @@
 #include "boost/asio.hpp"
 
 // #include "dnslib.h"
-#include "dns.h"
-#include "dnsmappings.h"
 #include "InterfaceMap.h"
 #include "PacketSnoop.h"
 #include "TcpSnoop.h"
@@ -165,7 +163,7 @@ bool PacketSnoop::Parse (unsigned char *frame, size_t size, int ifindex) {
 
     if (Debug == true) {
      	syslog(LOG_DEBUG, "Parsing packet from %s to %s, protocol %u, packet size %u, header length %u from MAC %s",
-     			srcString, destString, protocol, iphdrlen, ipPacketLength, Mac.c_str() );
+     			srcString, destString, protocol, ipPacketLength, iphdrlen, Mac.c_str() );
      }
 
 
@@ -277,93 +275,91 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload, const size_t size
     	syslog (LOG_WARNING, "Receive DNS packet smaller than 12 bytes");
     	return true;
     }
+    Tins::DNS *q;
 	InterfaceMap *ifMap = hC->getInterfaceMap();
-
-    dns_decoded_t  bufresult[DNS_DECODEBUF_8K];
-    size_t         bufsize = sizeof(bufresult);
-    dns_packet_t reply[65536];
-    size_t       replysize = sizeof(reply);
-
-    int rc = dns_decode(bufresult,&bufsize,(dns_packet_t *) payload,size);
-    if (rc != RCODE_OKAY) {
-      syslog(LOG_INFO, "dns_decode() = (%d) %s",rc,dns_rcode_text((dns_rcode_t)rc));
-      return true;
-    }
-    dns_query_t *q = (dns_query_t*) bufresult;
+	try {
+		q = new Tins::DNS(payload, size);
+	}
+	catch (const Tins::malformed_packet &e) {
+		return true;
+	}
 
     // Note, additional resources section is not processed as this is not information a non-resursive DNS client would use
 
     if (Debug == true) {
-    	syslog(LOG_DEBUG,"Query ID: %u --- Bytes used: %lu", q->id, (unsigned long)bufsize);
-    	syslog(LOG_DEBUG,"Questions: %zu Answers: %zu Additional answers: %zu", q->qdcount, q->ancount, q->arcount);
+    	syslog(LOG_DEBUG,"Query ID: %u on interface %u", q->id(), ifIndex);
+    	syslog(LOG_DEBUG,"Questions: %u Answers: %u Additional answers: %u", q->questions_count(), q->answers_count(), q->additional_count());
     }
     // From the LAN, only accept packets with no answers
     // From the WAN, only accept packets with answers
-    if (ifMap->isLanInterface(ifIndex) == true && q->ancount == 0 && q->arcount == 0) {
-    	for (uint16_t i = 0; i < q->qdcount; i++) {
+    if (ifMap->isLanInterface(ifIndex) == true && q->answers_count() == 0 && q->additional_count() == 0) {
+    	for (auto it: q->queries()) {
     		if (Debug == true) {
-        		syslog(LOG_DEBUG, "Question %u : %s %s %s", q->id, q->questions[i].name,
-        				dns_class_text(q->questions[i].dclass), dns_type_text (q->questions[i].type));
+        		syslog(LOG_DEBUG, "Question %u : %s %u %u", q->id(), it.dname().c_str(),
+        				it.query_class(), it.query_type());
     		}
     		// Here we track which DNS queries each Host has executed so when we report traffic stats, we can
     		// look at the reverse DNS path from IP address and match that to the original DNS query. As multiple
     		// FQDNs may resolve to the same IP address and the reverse path may thus result in multiple FQDNs,
     		// we need to keep track which of those FQDNs were queried by the Host.
     	    std::shared_ptr<Host> h = hC->FindOrCreateHostByMac(inMac, "", sourceIp);
-    		h->addorupdateDnsQueryList(q->questions[i].name);
+    		h->addorupdateDnsQueryList(it.dname());
     	}
+    	delete q;
     	return false;
-    } else if (ifMap->isWanInterface(ifIndex) && q->ancount == 0) {
+    } else if (ifMap->isWanInterface(ifIndex) && q->answers_count() == 0) {
     	// This is an outgoing query or an response to client without answers
     	// Store the Query ID in a short-term cache so that incoming answers
     	// can be confirmed to come in response to the query
-    	hC->addorupdateDnsQueryCache(q->id);
-    } else if (ifMap->isWanInterface(ifIndex) && q->ancount > 0) {
-		for (uint16_t i = 0; i < q->qdcount; i++) {
-    		// Only accept an answer if for each question there is a matching outgoing query from the DNS server
-    		// on which Noddos runs
-    		if (hC->inDnsQueryCache(q->id) == false) {
-    			syslog(LOG_WARNING, "No matching entry in DnsQueryCache for %u", q->id);
-    			return true;
-    		}
+    	// TODO: prune this cache!
+    	hC->addorupdateDnsQueryCache(q->id());
+    } else if (ifMap->isWanInterface(ifIndex) && q->answers_count() > 0) {
+   		// Only accept an answer if for each question there is a matching outgoing query from the DNS server
+   		// on which Noddos runs
+   		if (hC->inDnsQueryCache(q->id()) == false) {
+   			syslog(LOG_WARNING, "No matching entry in DnsQueryCache for %u", q->id());
+   			delete q;
+   			return true;
     	}
 
-    	for (uint16_t i; i < q->ancount; i++) {
+    	for (auto it: q->answers()) {
+    		uint16_t i = 0;
     		char ipaddr[INET6_ADDRSTRLEN];
-    		if (q->answers[i].generic.type != RR_OPT) {
+    		if (it.query_type() != 41) { // OPT pseudo-RR
     			if (Debug == true) {
-    				syslog(LOG_DEBUG, "Answer %u : %-24s %5u %s %s", i, q->answers[i].generic.name, q->answers[i].generic.ttl,
-    					dns_class_text(q->answers[i].generic.dclass), dns_type_text (q->answers[i].generic.type));
+    				syslog(LOG_DEBUG, "Answer %u : %-24s %5u %u %u", ++i, it.dname().c_str(), it.ttl(),
+    					it.query_class(), it.query_type());
     			}
-        	    switch(q->answers[i].generic.type)
+    			std::string dnsdata = it.data();
+        	    switch(it.query_type())
         	    {
-        	    	case RR_A:
+        	    	case Tins::DNS::QueryType::A:
         	    		{
-        	    			boost::asio::ip::address_v4 ipv4(ntohl(q->answers[i].a.address));
-        	    			hC->addorupdateDnsCache(q->answers[i].generic.name, ipv4, q->answers[i].generic.ttl);
+        	    			boost::asio::ip::address_v4::bytes_type addr4;
+        	    			std::copy(&dnsdata[0], &dnsdata[0]+ addr4.size(), addr4.data());
+        	    			boost::asio::ip::address_v4 ipv4(addr4);
+        	    			hC->addorupdateDnsCache(it.dname(), ipv4, it.ttl());
         	    			if (Debug == true) {
-        	    				inet_ntop(AF_INET,&q->answers[i].a.address,ipaddr,sizeof(ipaddr));
-        	    				syslog(LOG_DEBUG, "%s", ipaddr);
+        	    				syslog(LOG_DEBUG, "A record: %s", ipv4.to_string().c_str());
         	    			}
         	    		}
         	    		break;
-        	      case RR_AAAA:
+        	      case Tins::DNS::QueryType::AAAA:
         	      	  {
-        	      		  std::array<unsigned char, sizeof (q->answers[i].aaaa.address.s6_addr)> v6addr;
-        	      		  std::memcpy(&v6addr[0], q->answers[i].aaaa.address.s6_addr, sizeof (q->answers[i].aaaa.address.s6_addr));
-						  boost::asio::ip::address_v6 ipv6(v6addr);
+        	      		  boost::asio::ip::address_v6::bytes_type addr6;
+        	      		  std::copy(&dnsdata[0], &dnsdata[0] + addr6.size(), addr6.data());
+        	      		  boost::asio::ip::address_v6 ipv6(addr6);
 
-        	          	  hC->addorupdateDnsCache(q->answers[i].generic.name, ipv6, q->answers[i].generic.ttl);
+        	          	  hC->addorupdateDnsCache(it.dname(), ipv6, it.ttl());
         	          	  if (Debug == true) {
-        	          		  inet_ntop(AF_INET6,&q->answers[i].aaaa.address,ipaddr,sizeof(ipaddr));
-        	          		  syslog(LOG_DEBUG, "%s", ipaddr);
+        	          		  syslog(LOG_DEBUG, "AAAA record: %s", ipv6.to_string().c_str());
         	          	  }
         	          	  break;
         	          }
-        	      case RR_CNAME:
-        	    	  hC->addorupdateDnsCache(q->answers[i].generic.name, q->answers[i].cname.cname, q->answers[i].generic.ttl);
+        	      case Tins::DNS::QueryType::CNAME:
+        	    	  hC->addorupdateDnsCache(it.dname(), dnsdata, it.ttl());
         	    	  if (Debug == true) {
-        	    		  syslog(LOG_DEBUG, "%s", q->answers[i].cname.cname);
+        	    		  syslog(LOG_DEBUG, "CNAME record: %s", dnsdata.c_str());
         	    	  }
         	          break;
         	      default:
@@ -376,6 +372,7 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload, const size_t size
     		}
     	}
     }
+    delete q;
     return false;
 }
 

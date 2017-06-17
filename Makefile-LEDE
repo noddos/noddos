@@ -129,7 +129,7 @@ define Package/noddos/postinst
 	#uci commit system
 	#/etc/init.d/log restart
 
-	echo "Adding dnsmasq configuration settings for noddos: logdhcp, logqueries"
+	echo "Adding dnsmasq configuration settings for noddos: logdhcp"
 	#uci set "dhcp.@dnsmasq[0].logqueries=1"
 	uci set "dhcp.@dnsmasq[0].logdhcp=1"
 	uci set "dhcp.@dnsmasq[0].logfile=/tmp/dnsmasq.log"

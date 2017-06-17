@@ -22,8 +22,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
 add_definitions(-DBOOST_SYSTEM_NO_DEPRECATED)
-#add_definitions(-D__cplusplus)
 
+include_directories("/usr/include/tins")
+#link_directories("libtins-3.5/lib")
+
+#add_subdirectory("libtins-3.5")
 
 # The version number.
 set (noddos_VERSION_MAJOR 0)
@@ -43,8 +46,8 @@ include_directories("${PROJECT_BINARY_DIR}")
  
 add_executable(noddos noddos.cxx DnsLogEntry.cxx DnsmasqLogFile.cxx Host.cxx 
     HostCache.cxx SsdpServer.cxx SsdpLocation.cxx FlowTrack.cxx Config.cxx
-    opensslfingerprint.cxx PacketSnoop.cxx dnsmappings.cxx dnscodec.cxx)
-target_link_libraries(noddos libnetfilter_conntrack.so ssl crypto curl)
+    opensslfingerprint.cxx PacketSnoop.cxx)
+target_link_libraries(noddos libnetfilter_conntrack.so ssl crypto curl tins)
 
 enable_testing()
 
@@ -98,10 +101,10 @@ add_test (Curl Curl_test)
 add_executable(Curl_test Curl_test.cxx)
 target_link_libraries(Curl_test curl ssl crypto)
 
-add_executable (PacketSnoop_test PacketSnoop_test.cxx PacketSnoop.cxx dnsmappings.cxx dnscodec.cxx
+add_executable (PacketSnoop_test PacketSnoop_test.cxx PacketSnoop.cxx 
 	HostCache.cxx Host.cxx DnsLogEntry.cxx SsdpServer.cxx SsdpLocation.cxx
     opensslfingerprint.cxx)
-target_link_libraries(PacketSnoop_test curl ssl crypto)
+target_link_libraries(PacketSnoop_test curl ssl crypto tins)
 
 add_test (Noddos noddos_test)
 add_executable(noddos_test noddos_test.cxx)

@@ -1,6 +1,5 @@
 [![Noddos Intro](https://www.noddos.io/assets/images/noddos-slide.gif)](https://www.noddos.io)
 [![Build Status](https://travis-ci.org/noddos/noddos.svg?branch=master)](https://travis-ci.org/noddos/noddos)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/97e9282c128543edab63fcb92f576fd7)](https://www.codacy.com/app/noddos/noddos?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=noddos/noddos&amp;utm_campaign=Badge_Grade)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/879/badge)](https://bestpractices.coreinfrastructure.org/projects/879)
 [![SSL Rating](https://sslbadge.org/?domain=www.noddos.io)](https://www.ssllabs.com/ssltest/analyze.html?d=www.noddos.io)
 
@@ -26,7 +25,8 @@ Here are instructions for installing Noddos on Home Gateways running Lede firmwa
 - Linksys WRT AC series running using the [ARM Cortex A9 vfpv3 package architecture](https://lede-project.org/docs/instructionset/arm_cortex-a9_vfpv3)
 - Various routers from Asus RT-AC56/68/87U, Buffalo, D-Link DIR-885L, Linksys EA6xxx, Netgear R6250/6300/7000/8000/9000 and TPlink Archer C5, C8, C9 using the [arm_cortex_A9 package architecture](https://lede-project.org/docs/instructionset/arm_cortex-a9)
 
-If you have a different router, you can either send me a request to build a package for that router or you can follow the instructions to create your own package. If someone wants a package for a router running OpenWRT then please ping me and I'll attempt to build a package for that firmware.
+If you have a different router, you can either send me a request to build a package for that router or you can follow the instructions to create your own package. If someone wants a package for a router running OpenWRT then please ping me and I'll attempt to build a package for that firmware. 
+
     
     ssh root@<HGW-IP>
     vi /etc/init.d/dnsmasq
@@ -66,11 +66,13 @@ To make sure Luci picks up the menu and module changes, execute:
 	rm /tmp/luci-modulecache 
     rm /tmp/luci-indexcache
 
-Now we can install the actual Noddos package you can download from the releases menu on Github
+Now we can install the actual Noddos package (and the libtins package that is also needed) that  you can download from the releases menu on Github
 
 	wget <noddos-package-url-on-github>
+	wget <libtins-package-url-on-github>
 	opkg update
-	opkg install <package>
+	opkg install <libtins-package>
+	opkg install <noddos-package>
 
 Go to the Luci -> Network -> Client Firewall page to configure Noddos. Make sure to include the Loopback, WAN and LAN IP- or MAC-addresses of your router. You may also want to whitelist addresses of your PCs that you use daily as collecting traffic statistics for them is of no much use with the traffic they generate to so many destinations. You may also want to add the MAC addresses of phones or tablets. 
 
@@ -158,12 +160,13 @@ Install development packages for libcurl, libopenssl and libnetfilter_conntrack
     sudo apt install libssl-dev
     sudo apt install libnetfilter-conntrack-dev
     sudo apt install libcurl4-openssl-dev
+	sudo apt install libtins-dev
 
     git clone https://github.com/noddos/noddos
     cd noddos/src
     cmake .
     make
-    sudo apt install openssl ssl libcurl3 brotli wget libnetfilter-conntrack3 ca-certificates
+    sudo apt install openssl ssl libcurl3 libtins3.4 brotli wget libnetfilter-conntrack3 ca-certificates
     make test
 
 ### Install noddos
@@ -212,7 +215,6 @@ Noddos leverages dnsmasq logs. Look at what is installed on your router to make 
     sudo apt install dnsmasq
     
     cat >>/etc/dnsmasq.conf <<EOF
-    log-queries=extra
     log-facility=/var/log/dnsmasq.log
     log-dhcp
     EOF
