@@ -81,7 +81,7 @@ bool PacketSnoop::ProcessEvent(struct epoll_event &event) {
 }
 
 bool PacketSnoop::Parse (unsigned char *frame, size_t size, int ifindex) {
-	syslog (LOG_DEBUG, "Parsing packet of %zu bytes", size);
+	syslog (LOG_DEBUG, "Parsing packet of %zu bytes on interface %d", size, ifindex);
 	// Get the IP Header part of this packet , excluding the ethernet header
     struct ethhdr *ethh = (struct ethhdr *) frame;
 
@@ -275,12 +275,33 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload, const size_t size
     	syslog (LOG_WARNING, "Receive DNS packet smaller than 12 bytes");
     	return true;
     }
+    DnsDecode d((uint8_t *) payload, size);
+    uint16_t dnsId = d.get16Bits();
+    uint16_t dnsFlags = d.get16Bits();
+    uint16_t dnsQuestions = d.get16Bits();
+    uint16_t dnsAnswers = d.get16Bits();
+    uint16_t dnsAuth = d.get16Bits();
+    uint16_t dnsAdditional = d.get16Bits();
+    bool dnsIsResponse = d.getFlag(dnsFlags, 0);
+    uint8_t dnsOpcode = d.getBits(dnsFlags, 1, 4);
+    bool dnsIsAuth = d.getFlag(dnsFlags, 5);
+    bool dnsIsTrunc = d.getFlag(dnsFlags, 6);
+    bool dnsIsRecReq = d.getFlag(dnsFlags, 7);
+    bool dnsIsRecAvail = d.getFlag(dnsFlags, 8);
+    uint8_t dnsRcode = d.getBits(dnsFlags, 12, 15);
+    if (Debug == true) {
+    	syslog(LOG_DEBUG, "Own decode of %zu bytes: %u, Q: %u, A: %u, NS: %u, Add: %u, Response: %u, Opcode: %u, Rcode: %u",
+    			size, dnsId, dnsQuestions, dnsAnswers, dnsAuth, dnsAdditional, dnsIsResponse, dnsOpcode, dnsRcode);
+    }
     Tins::DNS *q;
 	InterfaceMap *ifMap = hC->getInterfaceMap();
 	try {
 		q = new Tins::DNS(payload, size);
 	}
 	catch (const Tins::malformed_packet &e) {
+		if (Debug == true) {
+			syslog(LOG_DEBUG, "Malformed DNS packet");
+		}
 		return true;
 	}
 
