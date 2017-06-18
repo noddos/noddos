@@ -14,6 +14,7 @@
 
 #include <syslog.h>
 #include <unistd.h>
+#include <stdexcept>
 
 #include <linux/filter.h>
 // #include <linux/if_ether.h>
