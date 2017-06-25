@@ -60,12 +60,9 @@ int DnsmasqLogFile::GetLogLine () {
 		syslog(LOG_DEBUG, "%s", line.c_str());
 	}
 
-	// DNSMASQ DELETE
-	/*
 	if (ParseDnsLine(line)) {
 		return 1;
     }
-	 */
 
 	if (ParseDhcpLine(line)) {
 		return 1;
@@ -187,9 +184,9 @@ uint32_t DnsmasqLogFile::PruneDhcpRequestMap (bool Force) {
 	}
 	return deletecount;
 }
-// DNSMASQ DELETE
+
 //! Parse DNS data from a line from a dnsmasq log file
-/*
+
 
 bool DnsmasqLogFile::ParseDnsLine (const std::string line) {
 	std::smatch m;
@@ -270,12 +267,15 @@ uint32_t DnsmasqLogFile::PruneDnsQueryMap (bool Force) {
 	}
 	return deletecount;
 }
-*/
+
 
 //! Open the dnsmasq log file
 int DnsmasqLogFile::Open(std::string inFileName, uint32_t inExpiration) {
 	if(Debug) {
 		syslog(LOG_DEBUG, "Opening dnsmasq logfile at %s", inFileName.c_str());
+	}
+	if (inFileName == "") {
+		return -1;
 	}
 	if ((fp = fopen (inFileName.c_str(),"r")) != NULL) {
 		FileName = inFileName;

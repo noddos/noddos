@@ -109,15 +109,12 @@ public:
    	    }
    	    if (Open(inFileName, inCacheExpiration) < 0) {
 			syslog(LOG_ERR, "Opening log file failed");
-			perror ("Opening dnsmasq logfile");
-			exit(1);
    	    }
    	    int flags;
    	    if (-1 == (flags = fcntl(inotify_fd, F_GETFL, 0)))
    	    	flags = 0;
    	    if (fcntl(inotify_fd, F_SETFL, flags | O_NONBLOCK) == -1) {
    	    	syslog(LOG_ERR, "Set O_NONBLOCK on log file");
-   	    	perror ("O_NONBLOCK");
    	    }
    	}
     virtual ~DnsmasqLogFile() {
@@ -127,8 +124,7 @@ public:
     	}
 
     	PruneDhcpRequestMap(true);
-    	// DELETE DNSMASQ
-    	// PruneDnsQueryMap(true);
+    	PruneDnsQueryMap(true);
     }
 
     uint32_t LinesParsed() { return lines_parsed; }
@@ -144,11 +140,7 @@ public:
     }
     time_t Expiration_get () { return iCache::Expires; }
     bool isExpired() { return time(nullptr) >= iCache::Expires; }
-    uint32_t Prune (bool Force = false) {
-    	// DELETE DNSMASQ
-    	// return PruneDhcpRequestMap(Force) + PruneDnsQueryMap(Force);
-    	return PruneDhcpRequestMap(Force);
-    }
+    uint32_t Prune (bool Force = false) { return PruneDhcpRequestMap(Force) + PruneDnsQueryMap(Force); }
 };
 
 

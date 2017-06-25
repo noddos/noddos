@@ -382,7 +382,7 @@ bool Host::FlowEntry_set(const uint16_t inSrcPort, const std::string inDstIp,
 			FlowCacheIpv4[dstIpv4Address] = std::make_shared<FlowEntryList>();
 			FlowCacheIpv4[dstIpv4Address]->push_back(f);
 			if(Debug) {
-				syslog(LOG_DEBUG, "Adding to FlowCache with destination %s : %u Protocol %u", inDstIp.c_str(),
+				syslog(LOG_DEBUG, "Adding to IPv4 FlowCache with destination %s : %u Protocol %u", inDstIp.c_str(),
 					inDstPort, inProtocol);
 			}
 			return true;
@@ -393,7 +393,7 @@ bool Host::FlowEntry_set(const uint16_t inSrcPort, const std::string inDstIp,
 			// Update existing flow it it matches incoming flow (ignoring Expiration)
 			if (**existingflow == *f) {
 				if(Debug) {
-					syslog(LOG_DEBUG, "Updating expiration of existing FlowEntry in FlowCache for destination %s",
+					syslog(LOG_DEBUG, "Updating expiration of existing FlowEntry in IPv4 FlowCache for destination %s",
 						inDstIp.c_str());
 				}
 				(*existingflow)->Expiration_set(inExpiration);
@@ -402,7 +402,7 @@ bool Host::FlowEntry_set(const uint16_t inSrcPort, const std::string inDstIp,
 		}
 		// This flow doesn't match any of the existing flows
 		if(Debug) {
-			syslog(LOG_DEBUG, "Adding FlowEntry to FlowCache for destination %s", inDstIp.c_str());
+			syslog(LOG_DEBUG, "Adding FlowEntry to IPv4 FlowCache for destination %s", inDstIp.c_str());
 		}
 		FlowCacheIpv4[dstIpv4Address]->push_back(f);
 		return true;
@@ -413,7 +413,7 @@ bool Host::FlowEntry_set(const uint16_t inSrcPort, const std::string inDstIp,
 			FlowCacheIpv6[dstIpv6Address] = std::make_shared<FlowEntryList>();
 			FlowCacheIpv6[dstIpv6Address]->push_back(f);
 			if(Debug) {
-				syslog(LOG_DEBUG, "Adding to FlowCache with destination %s : %u Protocol %u", inDstIp.c_str(),
+				syslog(LOG_DEBUG, "Adding to IPv6 FlowCache with destination %s : %u Protocol %u", inDstIp.c_str(),
 					inDstPort, inProtocol);
 			}
 			return true;
@@ -424,7 +424,7 @@ bool Host::FlowEntry_set(const uint16_t inSrcPort, const std::string inDstIp,
 			// Update existing flow it it matches incoming flow (ignoring Expiration)
 			if (**existingflow == *f) {
 				if(Debug) {
-					syslog(LOG_DEBUG, "Updating expiration of existing FlowEntry in FlowCache for destination %s",
+					syslog(LOG_DEBUG, "Updating expiration of existing FlowEntry in IPv6 FlowCache for destination %s",
 						inDstIp.c_str());
 				}
 				(*existingflow)->Expiration_set(inExpiration);
@@ -433,7 +433,7 @@ bool Host::FlowEntry_set(const uint16_t inSrcPort, const std::string inDstIp,
 		}
 		// This flow doesn't match any of the existing flows
 		if(Debug) {
-			syslog(LOG_DEBUG, "Adding FlowEntry to FlowCache for destination %s", inDstIp.c_str());
+			syslog(LOG_DEBUG, "Adding FlowEntry to IPv6 FlowCache for destination %s", inDstIp.c_str());
 		}
 		FlowCacheIpv6[dstIpv6Address]->push_back(f);
 		return true;
@@ -442,13 +442,11 @@ bool Host::FlowEntry_set(const uint16_t inSrcPort, const std::string inDstIp,
 	return false;
 }
 
-// DELETE DNSMASQ
 /*
  *  Host::DnsLogwEntry_set
  *  Adds or updates the list of dns log entries for lookups of a FQDN
  *  Returns true if a DnsLogEntry was added, false if existing DnsLogEntry was updated
  */
-/*
 bool Host::DnsLogEntry_set(const std::string inFqdn, const std::string inIpAddress, const uint32_t inExpiration) {
 	iCache::LastSeen = iCache::LastModified = time(nullptr);
 	bool newentry = false;
@@ -456,14 +454,14 @@ bool Host::DnsLogEntry_set(const std::string inFqdn, const std::string inIpAddre
 		DnsHostCache[inFqdn] = std::make_shared<DnsLogEntry>(inFqdn);
 		newentry = true;
 		if(Debug) {
-			syslog(LOG_DEBUG, "Creating DnsLogEntry for %s with expiration %lu", inFqdn.c_str(), DnsHostCache[inFqdn]->Expiration_get());
+			syslog(LOG_DEBUG, "Creating DnsLogEntry for %s with IP address %s and expiration %lu",
+					inFqdn.c_str(), inIpAddress.c_str(), DnsHostCache[inFqdn]->Expiration_get());
 		}
 	}
 
 	DnsHostCache[inFqdn]->Ips_set(inIpAddress, inExpiration);
 	return newentry;
 }
-*/
 
 bool Host::Dhcp_set (const std::shared_ptr<DhcpRequest> inDhcp_sptr) {
 	iCache::LastSeen = time(nullptr);
@@ -539,7 +537,7 @@ uint32_t Host::Prune (bool Force) {
 			while (it != fel.end()) {
 				if (Force || (*it)->isExpired()) {
 					if (Debug) {
-						syslog(LOG_DEBUG, "Pruning FlowEntry to %s for DstPort %u with expiration %ld while now is %ld",
+						syslog(LOG_DEBUG, "Pruning IPv4 FlowEntry to %s for DstPort %u with expiration %ld while now is %ld",
 								fc->first.to_string().c_str(), (*it)->DstPort, (*it)->Expiration_get (), time(nullptr));
 					}
 					// Remove element from list
@@ -576,7 +574,7 @@ uint32_t Host::Prune (bool Force) {
 			while (it != fel.end()) {
 				if (Force || (*it)->isExpired()) {
 					if (Debug) {
-						syslog(LOG_DEBUG, "Pruning FlowEntry to %s for DstPort %u with expiration %ld while now is %ld",
+						syslog(LOG_DEBUG, "Pruning IPv6 FlowEntry to %s for DstPort %u with expiration %ld while now is %ld",
 								fc->first.to_string().c_str(), (*it)->DstPort, (*it)->Expiration_get (), time(nullptr));
 					}
 					// Remove element from list

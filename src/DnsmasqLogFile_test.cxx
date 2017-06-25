@@ -48,8 +48,6 @@ int main () {
 	hc.AddByMac (MacAddress("00:00:00:00:00:09"), "192.168.1.238");
 	hc.AddByMac (MacAddress("00:00:00:00:00:10"), "192.168.1.234");
 
-	// DNSMASQ DELETE
-	/*
 	DnsmasqLogFile d ("tests/dnsmasqdnsdata.log", hc, 86400, true);
 	auto lp = d.LinesParsed();
 	if (lp != 214) {
@@ -61,9 +59,7 @@ int main () {
 	    std::cout << "Hosts found: " << c << std::endl;
 		testfail = true;
     }
-    */
-	// DNSMASQ DELETE
-	/*
+
 	c = hc.HostDnsQueryCount ("192.168.1.232");
 	if (c != 4) {
 	    std::cout << "DNS queries by 192.168.1.232: " << c << std::endl;
@@ -99,10 +95,8 @@ int main () {
 	    std::cout << "DNS queries by 192.168.1.251: " << c << std::endl;
 		testfail = true;
     }
-    */
 	if(testfail) {
-	    // DELETE DNSMASQ
-		// std::cout << "Lines parsed: " << lp << std::endl;
+		std::cout << "Lines parsed: " << lp << std::endl;
 		exit(1);
     }
 	exit(0);

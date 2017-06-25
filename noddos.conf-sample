@@ -7,6 +7,7 @@
     "SignatureCertFile": "/etc/noddos/noddossignature.pem",
     "PidFile": "/var/lib/noddos/noddos.pid",
     "DnsmasqLogFile": "/var/log/dnsmasq.log",
+	"UseAfPacket": true,
     "User": "noddos",
     "Group": "noddos",
     "WhitelistedIpv4Addresses": [

@@ -98,9 +98,8 @@ class Host : public iCache {
 		bool FlowEntry_set(const uint16_t inSrcPort, const std::string inDstIp,
 				const uint16_t inDstPort, const uint8_t inProtocol, const uint32_t inExpiration);
 		uint32_t FlowCacheCount () { return FlowCacheIpv4.size() + FlowCacheIpv6.size(); }
-		// DELETE DNSMASQ
-		// bool DnsLogEntry_set(const std::string fqdn, const std::string ipaddress, const uint32_t expiration = 86400);
-		// uint32_t DnsLogEntryCount () { return DnsHostCache.size(); }
+		bool DnsLogEntry_set(const std::string fqdn, const std::string ipaddress, const uint32_t expiration = 86400);
+		uint32_t DnsLogEntryCount () { return DnsHostCache.size(); }
 		bool Dhcp_set (const std::shared_ptr<DhcpRequest> inDhcp_sptr);
 		bool Dhcp_set (const std::string IpAddress, const MacAddress Mac, const std::string Hostname, const std::string DhcpHostname, const std::string DhcpVendor);
 		bool SsdpInfo_set(const std::shared_ptr<SsdpHost> insHost);

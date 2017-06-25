@@ -114,9 +114,9 @@ constexpr std::size_t size(const T (&array)[N]) noexcept
 
 class PacketSnoop : public iDeviceInfoSource {
 private:
-	int sock;
-	bool Debug;
-	HostCache *hC;
+	int sock  = -1;
+	bool Debug = false;
+	HostCache *hC = nullptr;
 	std::map<boost::asio::ip::address,std::map<uint16_t,std::map<boost::asio::ip::address,std::map<uint16_t,std::shared_ptr<TcpSnoop>>>>> tcpSnoops;
 
 public:
@@ -124,7 +124,6 @@ public:
 		if (Debug == true) {
 			syslog (LOG_DEBUG, "Constructing PacketSnoop instance");
 		}
-		Open("");
 	};
 
 	virtual ~PacketSnoop() { Close(); };

@@ -96,7 +96,12 @@ bool DnsLogEntry::Ips_set(const std::string i, uint32_t inExpirationSeconds) {
 	// DNS record expires at now (in epoch seconds) + seconds after which record must be expired
 	time_t exp = time(nullptr) + inExpirationSeconds;
 	boost::asio::ip::address IpAddress;
-	IpAddress.from_string(i);
+	try {
+		IpAddress.from_string(i);
+	}
+	catch (...) {
+		return false;
+	}
 	if (IpAddress.is_v4() == true) {
 		boost::asio::ip::address_v4 IpAddressV4 = IpAddress.to_v4();
 		auto it = Ipv4s.find(IpAddressV4);

@@ -74,7 +74,7 @@ Now we can install the actual Noddos package (and the libtins package that is al
 	opkg install <libtins-package>
 	opkg install <noddos-package>
 
-Go to the Luci -> Network -> Client Firewall page to configure Noddos. Make sure to include the Loopback, WAN and LAN IP- or MAC-addresses of your router. You may also want to whitelist addresses of your PCs that you use daily as collecting traffic statistics for them is of no much use with the traffic they generate to so many destinations. You may also want to add the MAC addresses of phones or tablets. 
+Go to the Luci -> Network -> Client Firewall page to configure Noddos. Make sure to include the Loopback, WAN and LAN IP- or MAC-addresses of your router. You may also want to whitelist addresses of your PCs that you use daily as collecting traffic statistics for them is of not much use with the traffic they generate to so many destinations. You may also want to add the MAC addresses of phones or tablets. 
 
 	service noddos start
 

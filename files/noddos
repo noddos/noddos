@@ -51,10 +51,11 @@ start_service() {
         if [ "$firstentry" -eq "0" ]; then
             firstentry=1
         else
-            echo '        ,' >>$CONFFILE
+            echo ',' >>$CONFFILE
         fi
-        echo '        "'$ipv4'"' >>$CONFFILE
+        echo -n '        "'$ipv4'"' >>$CONFFILE
     done
+	echo '' >>$CONFFILE
     echo '    ],' >>$CONFFILE
 
     echo '    "WhitelistedIpv6Addresses": [' >> $CONFFILE
@@ -64,11 +65,12 @@ start_service() {
         if [ "$firstentry" -eq "0" ]; then
             firstentry=1
         else
-            echo '        ,' >>$CONFFILE
+            echo ',' >>$CONFFILE
         fi
 
-       echo '        "'$ipv6'"' >>$CONFFILE
+       echo -n '        "'$ipv6'"' >>$CONFFILE
     done
+	echo '' >>$CONFFILE
     echo '    ],' >>$CONFFILE
 
     echo '    "WhitelistedMacAddresses": [' >> $CONFFILE
@@ -78,10 +80,11 @@ start_service() {
         if [ "$firstentry" -eq "0" ]; then
             firstentry=1
         else
-            echo '        ,' >>$CONFFILE
+            echo ',' >>$CONFFILE
         fi
-        echo '        "'$mac'"' >>$CONFFILE
+        echo -n '        "'$mac'"' >>$CONFFILE
     done
+	echo '' >>$CONFFILE
     echo '    ]' >>$CONFFILE
     echo '}' >>$CONFFILE
 

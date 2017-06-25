@@ -33,10 +33,10 @@ int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
 	// https://www.spinics.net/lists/netdev/msg159788.html or something like that
 	// So for now we use ETH_P_IP meaning that for TCP we can't check that an answer matches a query that was sent out if
 	// we're running on a recursive DNS server .
-	// sock = socket( AF_PACKET, SOCK_RAW, htons(ETH_P_ALL)) ;
-	sock = socket( AF_PACKET, SOCK_RAW, htons(ETH_P_IP));
+	sock = socket( AF_PACKET, SOCK_RAW, htons(ETH_P_ALL)) ;
+	// sock = socket( AF_PACKET, SOCK_RAW, htons(ETH_P_IP));
 	if (Debug == true) {
-		syslog(LOG_DEBUG, "Opened AF_PACKET SOCK_RAW with ETH_P_IP");
+		syslog(LOG_DEBUG, "Opened AF_PACKET SOCK_RAW with ETH_P_ALL");
 	}
 	//setsockopt(sock_raw , SOL_SOCKET , SO_BINDTODEVICE , "eth0" , strlen("eth0")+ 1 );
 	if (sock < 0) {
@@ -107,7 +107,11 @@ bool PacketSnoop::Parse(unsigned char *frame, size_t size, int ifindex) {
 			// A TCP header doesn't even fit into the data that follows the IP header.
 			return false;
 		}
-
+		uint8_t ipFlags = (uint8_t) (iph->frag_off >> 13);
+		if ((ipFlags & 1) == 1) {
+			syslog (LOG_NOTICE, "Fragmented IPv4 packets are not supported, discarding");
+			return false;
+		}
 		protocol = iph->protocol;
 		struct sockaddr_in source, dest;
 		memset(&source, 0, sizeof(source));

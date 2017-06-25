@@ -65,11 +65,10 @@ bool add_epoll_filehandle(int epfd, std::map<int, iDeviceInfoSource *> & epollma
 bool daemonize(Config &inConfig);
 bool write_pidfile(std::string pidfile);
 
-void parse_commandline(int argc, char** argv, bool& debug, bool& flowtrack, std::string& configfile, bool& daemon, bool& prune);
+void parse_commandline(int argc, char** argv, bool& debug, std::string& configfile, bool& daemon, bool& prune);
 
 int main(int argc, char** argv) {
     bool debug = false;
-    bool flowtrack = true;
 	std::string configfile = "/etc/noddos/noddos.conf";
 	bool daemon = true;
 	bool prune = true;
@@ -81,7 +80,7 @@ int main(int argc, char** argv) {
 	// - load configuration file,
 	// - write pid file
 	//
-	parse_commandline(argc, argv, debug, flowtrack, configfile, daemon, prune);
+	parse_commandline(argc, argv, debug, configfile, daemon, prune);
 
 	if (daemon) {
 		openlog(argv[0], LOG_NOWAIT | LOG_PID, LOG_UUCP);
@@ -143,19 +142,22 @@ int main(int argc, char** argv) {
     // all the DeviceInfoSources
     //
     PacketSnoop p(hC, config.Debug);
-    add_epoll_filehandle(epfd, epollmap, p);
+    if (config.UseAfPacket == true) {
+    	p.Open("");
+    	add_epoll_filehandle(epfd, epollmap, p);
+    } else {
+    	syslog (LOG_NOTICE, "AF_PACKET disabled through configuration");
+    }
 
-    DnsmasqLogFile f(config.DnsmasqLogFile, hC, 86400, config.Debug);
-    add_epoll_filehandle(epfd, epollmap, f);
+   	DnsmasqLogFile f(config.DnsmasqLogFile, hC, 86400, config.Debug);
+   	add_epoll_filehandle(epfd, epollmap, f);
 
     SsdpServer s(hC, 86400, "", config.Debug);
     add_epoll_filehandle(epfd, epollmap, s);
 
-    FlowTrack *t_ptr = nullptr;
-    if (flowtrack) {
-    	t_ptr = new FlowTrack(hC, config);
-    	add_epoll_filehandle(epfd, epollmap, *t_ptr);
-    }
+    FlowTrack ft(hC, config) ;
+    ft.Open();
+   	add_epoll_filehandle(epfd, epollmap, ft);
 
     if (config.User != "" && config.Group != "") {
     	drop_process_privileges(config);
@@ -185,10 +187,10 @@ int main(int argc, char** argv) {
                     (not epoll_events[ev].events & EPOLLIN)) {
 				syslog(LOG_ERR, "Epoll event error for FD %d", epoll_events[ev].data.fd);
 				epollmap.erase(epoll_events[ev].data.fd);
-				if (epoll_events[ev].data.fd == t_ptr->GetFileHandle() && t_ptr != nullptr && geteuid() == 0) {
-					t_ptr->Close();
-					t_ptr->Open();
-			    	add_epoll_filehandle(epfd, epollmap, *t_ptr);
+				if (epoll_events[ev].data.fd == ft.GetFileHandle() && geteuid() == 0) {
+					ft.Close();
+					ft.Open();
+			    	add_epoll_filehandle(epfd, epollmap, ft);
 				} else if (epoll_events[ev].data.fd == f.GetFileHandle()) {
 					f.Close();
 					f.Open(config.DnsmasqLogFile, 0); // 0: do not read file, just jump to the end and listen for writes to it
@@ -256,7 +258,7 @@ int main(int argc, char** argv) {
 					hC.UploadDeviceStats(config.ClientApiCertFile, config.ClientApiKeyFile, config.DeviceReportInterval != 0);
 					NextDeviceUpload = t + config.DeviceReportInterval;
 				}
-				if (t > NextTrafficUpload && flowtrack && config.TrafficReportInterval > 0) {
+				if (t > NextTrafficUpload && config.TrafficReportInterval > 0) {
 					if (config.Debug) {
 						syslog(LOG_DEBUG, "Starting traffic upload");
 					}
@@ -281,11 +283,7 @@ exitprog:
 	f.Close();
 	s.Close();
 	p.Close();
-	if (flowtrack && t_ptr != nullptr) {
-		t_ptr->Close();
-		// Is this crashing when noddos exits?
-		delete t_ptr;
-	}
+	ft.Close();
 	close (epfd);
 	close (sfd);
 	closelog();
@@ -463,18 +461,16 @@ bool write_pidfile(std::string pidfile) {
 
 }
 
-void parse_commandline(int argc, char** argv, bool& debug, bool& flowtrack, std::string& configfile, bool& daemon, bool& prune) {
+void parse_commandline(int argc, char** argv, bool& debug, std::string& configfile, bool& daemon, bool& prune) {
 	int debug_flag = 0;
 	int daemon_flag = 1;
 	int prune_flag = 1;
-	int flowtrack_flag = 1;
 	int help_flag = 0;
 	while (1) {
 		static struct option long_options[] = {
 	        {"debug",       no_argument,       &debug_flag, 1},
 	        {"nodaemon",    no_argument,       &daemon_flag, 0},
 	        {"noprune",     no_argument,       &prune_flag, 0},
-	        {"noflowtrack", no_argument,       &flowtrack_flag, 0},
 	        {"help",        no_argument,       &help_flag, 0},
 	        {"configfile",  required_argument, 0, 'c'},
 	        {0, 0, 0, 0}
@@ -499,9 +495,6 @@ void parse_commandline(int argc, char** argv, bool& debug, bool& flowtrack, std:
 	        case 'p':
 	        	prune_flag = 0;
 	        	break;
-	        case 'f':
-	        	flowtrack_flag = 0;
-	        	break;
 	        case 'c':
 	        	configfile = optarg;
 	        	break;
@@ -509,7 +502,7 @@ void parse_commandline(int argc, char** argv, bool& debug, bool& flowtrack, std:
 	        	break;
 	        case 'h':
 	        default:
-	        	printf ("Noddos usage: -d/--debug -n/--nodaemon -c/--configfile <filename> -f/--noflowtrack\n");
+	        	printf ("Noddos usage: -d/--debug -n/--nodaemon -c/--configfile <filename>\n");
 	        	exit (0);
 	    }
     }
@@ -521,9 +514,6 @@ void parse_commandline(int argc, char** argv, bool& debug, bool& flowtrack, std:
        }
 	if (prune_flag == 0) {
 		prune = false;
-	}
-	if (flowtrack_flag == 0) {
-		flowtrack = false;
 	}
 }
 

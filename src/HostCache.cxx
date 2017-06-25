@@ -205,7 +205,7 @@ bool HostCache::AddFlow (const std::string srcip, const uint16_t srcport, const 
 	return false;
 }
 
-/* DELETE DNSMASQ
+
 bool HostCache::AddDnsQueryIp (const std::string clientip, const std::string fqdn, const std::string ip, const uint32_t expire) {
 	if (Debug == true) {
 		syslog(LOG_DEBUG, "Adding dns query for %s for host with IP %s", fqdn.c_str(), clientip.c_str());
@@ -221,7 +221,6 @@ bool HostCache::AddDnsQueryIp (const std::string clientip, const std::string fqd
 	}
 	return false;
 }
-*/
 
 bool HostCache::AddDhcpRequest (const std::shared_ptr<DhcpRequest> inDhcpRequest_sptr) {
 	if (Debug == true) {
@@ -280,7 +279,7 @@ bool HostCache::AddDhcpRequest (const std::string IpAddress, const MacAddress in
 
 bool HostCache::AddSsdpInfo (const std::shared_ptr<SsdpHost> sHost) {
 	if (Debug == true) {
-		syslog(LOG_DEBUG, "Adding SSPDP info for host with IP %s", sHost->IpAddress.c_str());
+		syslog(LOG_DEBUG, "Adding SSDP info for host with IP %s", sHost->IpAddress.c_str());
 	}
 	if (sHost->IpAddress == "") {
 		syslog(LOG_WARNING, "AddSsdpInfo: no IP address provided");
@@ -844,8 +843,6 @@ uint32_t HostCache::Whitelists_set (const std::unordered_set<std::string>& inIpv
 	return WhitelistedNodes.size();
 }
 
-// DELETE DNSMASQ
-/*
 uint32_t HostCache::HostDnsQueryCount (std::string IpAddress) {
 	auto it = Ip2MacMap.find(IpAddress);
 	if ( it == Ip2MacMap.end()) {
@@ -856,4 +853,3 @@ uint32_t HostCache::HostDnsQueryCount (std::string IpAddress) {
 	return h->DnsLogEntryCount();
 
 }
-*/

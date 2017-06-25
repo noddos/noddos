@@ -51,7 +51,8 @@ public:
 	// std::string ClientApiCertFingerprint = "";
 	std::string SignatureCertFile = "/etc/noddos/noddossignature.pem";
 	std::string PidFile = "/var/lib/noddos/noddos.pid";
-	std::string DnsmasqLogFile = "/var/log/dnsmasq.log";
+	std::string DnsmasqLogFile = "";
+	bool UseAfPacket = true;
 	std::string User = "";
 	std::string Group = "";
 	std::unordered_set<std::string> WhitelistedIpv4Addresses;
@@ -99,6 +100,7 @@ public:
 		std::string newSignatureCertFile = SignatureCertFile;
 		std::string newPidFile = PidFile;
 		std::string newDnsmasqLogFile = DnsmasqLogFile;
+		bool newUseAfPacket = UseAfPacket;
 		std::string newUser = User;
 		std::string newGroup = Group;
 		std::unordered_set<std::string> newWhitelistedIpv4Addresses = WhitelistedIpv4Addresses;
@@ -144,6 +146,9 @@ public:
 			}
 			if (j.count("DnsmasqLogFile")) {
 				newDnsmasqLogFile = j["DnsmasqLogFile"].get<std::string>();
+			}
+			if (j.count("UseAfPacket")) {
+				newUseAfPacket = j["UseAfPacket"].get<bool>();
 			}
 			if (j.count("User")) {
 				newUser = j["User"].get<std::string>();
@@ -221,6 +226,7 @@ public:
 		SignatureCertFile = newSignatureCertFile;
 		PidFile = newPidFile;
 		DnsmasqLogFile = newDnsmasqLogFile;
+		UseAfPacket = newUseAfPacket;
 		User = newUser;
 		Group = newGroup;
 		WhitelistedIpv4Addresses = newWhitelistedIpv4Addresses;

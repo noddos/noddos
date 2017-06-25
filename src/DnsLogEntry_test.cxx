@@ -32,8 +32,7 @@ int main()
 {
 	// TODO
 	Host h(MacAddress("aa:bb:cc:dd:ee:ff"), false);
-	// DELETE DNSMASQ
-	// h.DnsLogEntry_set("www.blah.com", "10.10.10.1");
+	h.DnsLogEntry_set("www.blah.com", "10.10.10.1");
 	json l;
 	h.DeviceStats(l, 3600);
 	std::cout << l << std::endl;
