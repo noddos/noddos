@@ -1,4 +1,19 @@
 /*
+   Copyright 2017 Steven Hessing
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
  * DnsCache.h
  *
  *  Created on: Jun 3, 2017
@@ -29,6 +44,12 @@ public:
         if (Ttl < 4 * 3600) {
             Ttl = 4 * 3600;
         }
+        std::string fqdn = inFqdn;
+        std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
+
+        std::string cname = inCname;
+        std::transform(cname.begin(), cname.end(), cname.begin(), ::tolower);
+
         auto now = time(nullptr);
         if (Debug == true) {
             syslog (LOG_DEBUG, "DnsCache: Setting %s to CNAME %s with TTL %lu", inFqdn.c_str(), inCname.c_str(), Ttl);
@@ -40,6 +61,9 @@ public:
         if (recdepth > 5) {
             return inCname;
         }
+        std::string cname = inCname;
+        std::transform(cname.begin(), cname.end(), cname.begin(), ::tolower);
+
         auto it = DnsCache.find(inCname);
         if (it != DnsCache.end()) {
             if (Debug == true) {
@@ -86,7 +110,11 @@ public:
 		if (Ttl < 4 * 3600) {
 			Ttl = 4 * 3600;
 		}
-		auto now = time(nullptr);
+
+		std::string fqdn = inFqdn;
+        std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
+
+        auto now = time(nullptr);
 		std::string ipstring = inIpAddress.to_string();
 		if (Debug == true) {
 			syslog (LOG_DEBUG, "DnsCache: Setting %s to %s with TTL %lu", inFqdn.c_str(), ipstring.c_str(), Ttl);
@@ -155,11 +183,11 @@ public:
 				auto it_record = it_resource->second.begin();
 				while (it_record != it_resource->second.end()) {
 					if (Force || now > (it_record->second + 1)) {
-						it_record = it_resource->second.erase(it_record);
 						if (Debug == true) {
 							syslog(LOG_DEBUG, "DnsCache: pruning entry %s pointing to %s  with TTL %lu while now is %lu",
 									it_resource->first.to_string().c_str(), it_record->first.c_str(), it_record->second, now);
 						}
+                        it_record = it_resource->second.erase(it_record);
 						deletecount++;
 					} else {
 						it_record++;

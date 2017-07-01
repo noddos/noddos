@@ -777,9 +777,6 @@ bool HostCache::ImportDeviceInfo (json &j) {
 			IpAddress = j["Ipv4Address"].get<std::string>();
 		}
 	}
-	if (Debug == true) {
-		syslog(LOG_DEBUG, "Importing Device Profile for UUID %s with MacAddress %s", DeviceProfileUuid.c_str(), MacAddressString.c_str());
-	}
 
 	MacAddress Mac(MacAddressString);
 	auto hit = hC.find(Mac.get());

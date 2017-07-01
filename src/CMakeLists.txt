@@ -24,9 +24,6 @@ add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
 add_definitions(-DBOOST_SYSTEM_NO_DEPRECATED)
 
 include_directories("/usr/include/tins")
-#link_directories("libtins-3.5/lib")
-
-#add_subdirectory("libtins-3.5")
 
 # The version number.
 set (noddos_VERSION_MAJOR 0)
@@ -64,7 +61,7 @@ target_link_libraries(HostCache_test curl ssl crypto)
 
 
 add_test (DeviceProfile DeviceProfile_test)
-add_executable(DeviceProfile_test DeviceProfile_test.cxx DeviceProfile.cxx
+add_executable(DeviceProfile_test DeviceProfile_test.cxx 
 	FlowTrack.cxx Config.cxx HostCache.cxx Host.cxx SsdpServer.cxx
 	DnsmasqLogFile.cxx DnsLogEntry.cxx SsdpLocation.cxx opensslfingerprint.cxx)
 target_link_libraries(DeviceProfile_test curl ssl crypto netfilter_conntrack)
@@ -96,6 +93,9 @@ target_link_libraries(SsdpServer_test curl ssl crypto)
 
 add_test (MacAddress MacAddress_test)
 add_executable(MacAddress_test MacAddress_test.cxx)
+
+add_test (DnsCache DnsCache_test)
+add_executable(DnsCache_test DnsCache_test.cxx)
 
 add_test (Curl Curl_test)
 add_executable(Curl_test Curl_test.cxx)

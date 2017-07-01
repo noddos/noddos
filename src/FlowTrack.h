@@ -202,7 +202,9 @@ public:
 		if (config.Debug) {
 			syslog(LOG_DEBUG, "Closing conntrack handler");
 		}
-		return nfct_close(h);
+		// valgrind thinks nfct_close is buggy
+		// return nfct_close(h);
+		return true;
 	}
 
 	virtual int GetFileHandle() {

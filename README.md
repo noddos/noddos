@@ -171,78 +171,51 @@ Install development packages for libcurl, libopenssl and libnetfilter_conntrack
 
 ### Install noddos
 Install needed apps
+
     sudo adduser --system --home /var/lib/noddos --shell /bin/false \
-         --disabled-login --disabled-password\
+         --disabled-login --disabled-password \
          --quiet  --group noddos
     sudo mkdir /etc/noddos
-    sudo cp noddos.conf-sample /etc/noddos.conf
+    sudo cp noddos.conf-sample /etc/noddos/noddos.conf
     sudo cp files/noddosconfig.pem /etc/noddos
 
 Edit /etc/noddos.conf, for one to whitelist the IP addresses of the interfaces of your router
 
     sudo chown -R root:root /etc/noddos
-    sudo chgrp noddos /etc/noddos/noddosapiclient.key
-    sudo chmod 640 /etc/noddos/noddosapiclient.key
 
 Directory where DeviceProfiles.json will be downloaded to
 
     sudo mkdir /var/lib/noddos
     sudo chown noddos:noddos /var/lib/noddos
 
-    sudo install -o 0 -g 0 -s noddos /usr/sbin 
+    sudo install -o 0 -g 0 -s src/noddos /usr/sbin 
     sudo install -o 0 -g 0 tools/getnoddosdeviceprofiles /usr/bin 
     sudo install -o 0 -g 0 tools/makenoddoscert.sh /usr/bin 
  
-	sudo -u noddos /usr/bin/getnoddosdeviceprofiles
+	sudo -u noddos bash /usr/bin/getnoddosdeviceprofiles
 
 	cd /etc/noddos
 	/usr/bin/makenoddoscert.sh
+    sudo chgrp noddos /etc/noddos/noddosapiclient.key
+    sudo chmod 640 /etc/noddos/noddosapiclient.key
 	
-Install a cronjob for user noddos to do this frequently (please pick a randon time of day instead of 3:23am), ie
+Install a cronjob for user noddos to do this frequently (please pick a randon time of day instead of 3:23am), ie:
 
-    23 */3 * * * /usr/bin/getnoddosdeviceprofiles
+    23 */3 * * * bash /usr/bin/getnoddosdeviceprofiles
 
 If you want maximum privacy, create a new client cert every 6 hours or so. That does mean that going forward you may not be able to use some newly developed Noddos portal functions. Create a cronjob for root:
 
     23 */6 * * * cd /etc/noddos; /usr/bin/makenoddoscert.sh
 
-Noddos needs to be started as root as it will need to get Linux firewall connection state changes. It will drop to an unprivileged user/group after that has been set up if a user and group has been defined in /etc/noddos/noddos.conf. As there is an issue with errors occassionally occurring when polling a netfilter_conntrack filehandle, it is recommended to not define a user and group so noddos keeps running as root and is able to re-open the netfilter_conntrack connection.
+Noddos needs to be started as root as it will need to get Linux firewall connection state changes. It will drop to an unprivileged user/group after that has been set up if a user and group has been defined in /etc/noddos/noddos.conf. As there is an issue with errors occassionally occurring when polling a netfilter_conntrack filehandle, it is recommended to not define a user and group so noddos keeps running as root so Noddos is able to re-open the netfilter_conntrack connection.
 
     sudo noddos 
-
-Noddos leverages dnsmasq logs. Look at what is installed on your router to make sure installing dnsmasq doesn't interfere with any other installed DNS or DHCP servers. The following changes are required to install dnsmasq and make dnsmasq log the right data to the right place: 
-
-    sudo apt install dnsmasq
-    
-    cat >>/etc/dnsmasq.conf <<EOF
-    log-facility=/var/log/dnsmasq.log
-    log-dhcp
-    EOF
-
-    cat >/etc/logrotate.d/dnsmasq <<EOF
-    /var/log/dnsmasq.log
-    {
-        rotate 7
-        daily
-        su root syslog
-        size 10M
-        missingok
-        notifempty
-        #nodelaycompress
-        compress
-        postrotate
-        /usr/bin/killall -SIGUSR2 dnsmasq
-        endscript
-    }
-    EOF
-
 
 ## Command line options
 The following command line options are supported by the Noddos client:
 * __-n, --no-daemon__: Don't run as daemon and send log messages to STDERR in addition to syslog
 * __-c, --config-file__: Location of configuration default, default /etc/noddos/noddos.conf
 * __-p, --no_prune__: Disable pruning of Hosts, DnsQueries, DHCP transactions and flows
-* __-f, --no_flowtrack__: Disable tracking IP flows
 * __-d, --debug__: Enable extensive logging, save uploaded data to /tmp
 * __-h, --help__: Print command line options
 

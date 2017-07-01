@@ -296,9 +296,11 @@ bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportPriva
 					syslog (LOG_DEBUG, "Reverse resolved %s to %s", ip.to_string().c_str(), itf.c_str());
 				}
 				std::string fqdn = dCcname.lookupCname(itf);
-				endpoints.insert(fqdn);
+				if (inDnsQueryList(fqdn)) {
+				    endpoints.insert(fqdn);
+				}
 			}
-			if (it == allIps.end() || fqdns.size() == 0) {
+			if (endpoints.size() == 0) {
 				endpoints.insert(ip.to_string());
 			}
 		}

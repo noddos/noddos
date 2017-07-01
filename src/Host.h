@@ -105,8 +105,19 @@ class Host : public iCache {
 		bool SsdpInfo_set(const std::shared_ptr<SsdpHost> insHost);
 
 		// This is the DnsQueryCache
-		void addorupdateDnsQueryList (std::string inFqdn) { DnsQueryList[inFqdn] = time(nullptr); }
-		bool inDnsQueryList (std::string inFqdn) { if (DnsQueryList.find(inFqdn) == DnsQueryList.end()) { return false; } return true; }
+		void addorupdateDnsQueryList (std::string inFqdn) {
+	        std::string fqdn = inFqdn;
+	        std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
+            DnsQueryList[fqdn] = time(nullptr);
+		}
+		bool inDnsQueryList (std::string inFqdn) {
+            std::string fqdn = inFqdn;
+            std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
+		    if (DnsQueryList.find(inFqdn) == DnsQueryList.end()) {
+		        return false;
+		    }
+		    return true;
+		}
 		uint32_t pruneDnsQueryList (time_t Expired = 14400, bool Force = false);
 
 		bool isMatched () { return Uuid != ""; }
