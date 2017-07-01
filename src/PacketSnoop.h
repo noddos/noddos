@@ -32,6 +32,7 @@
 #include "boost/asio.hpp"
 
 #include "dns.h"
+#include "dhcp.h"
 #include "noddos.h"
 #include "iDeviceInfoSource.h"
 #include "HostCache.h"
@@ -121,9 +122,9 @@ private:
 
 public:
 	PacketSnoop(HostCache &inHc, const bool  inDebug = false):	hC{&inHc}, Debug{inDebug} {
-		if (Debug == true) {
+		// if (Debug == true) {
 			syslog (LOG_DEBUG, "Constructing PacketSnoop instance");
-		}
+		//}
 	};
 
 	virtual ~PacketSnoop() { Close(); };

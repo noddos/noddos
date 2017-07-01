@@ -63,7 +63,7 @@ class Host : public iCache {
     	DhcpRequest Dhcp;
     	SsdpHost Ssdp;
     	std::string Uuid;
-    	time_t matchtime;
+    	time_t matchversion;
     	ConfidenceLevel IdentifyConfidenceLevel;
     	ConfidenceLevel EnforceConfidenceLevel;
     	bool UploadStats;
@@ -73,7 +73,7 @@ class Host : public iCache {
 		Host(const MacAddress inMac, const bool inDebug = false): Mac{inMac}, Debug{inDebug}  {
 			iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);
 			UploadStats = true;
-			matchtime = 0;
+			matchversion = 0;
 			IdentifyConfidenceLevel = EnforceConfidenceLevel = ConfidenceLevel::None;
 		}
 
@@ -81,7 +81,7 @@ class Host : public iCache {
 				Mac{inMac}, Uuid{inUuid}, Debug{inDebug} {
 			iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);
 			UploadStats = true;
-			matchtime = 0;
+			matchversion = 0;
 			IdentifyConfidenceLevel = EnforceConfidenceLevel = ConfidenceLevel::None;
 		}
 		virtual ~Host() {
@@ -107,21 +107,7 @@ class Host : public iCache {
 		// This is the DnsQueryCache
 		void addorupdateDnsQueryList (std::string inFqdn) { DnsQueryList[inFqdn] = time(nullptr); }
 		bool inDnsQueryList (std::string inFqdn) { if (DnsQueryList.find(inFqdn) == DnsQueryList.end()) { return false; } return true; }
-		uint32_t pruneDnsQueryList (time_t Expired = 14400, bool Force = false) {
-			uint32_t deletecount;
-			time_t now = time(nullptr);
-			auto i = DnsQueryList.begin();
-			while (i != DnsQueryList.end()) {
-				if (Force || i->second > (now - Expired)) {
-					if (Debug == true) {
-						syslog (LOG_DEBUG, "Deleting %s from DnsQueryList as %lu is later than %lu", i->first.c_str(), i->second, now - Expired);
-					}
-					i = DnsQueryList.erase(i);
-					deletecount++;
-				}
-			}
-			return deletecount;
-		}
+		uint32_t pruneDnsQueryList (time_t Expired = 14400, bool Force = false);
 
 		bool isMatched () { return Uuid != ""; }
 		bool UploadsEnabled ();
@@ -133,7 +119,8 @@ class Host : public iCache {
 
 		void ExportDeviceInfo (json &j, bool detailed = false);
 		bool DeviceStats(json& j, const uint32_t interval, bool force = false, bool detailed = false);
-		bool TrafficStats(json& j, const uint32_t interval, const bool ReportRfc1918, const std::unordered_set<std::string> & LocalIps, bool force = false);
+		bool TrafficStats(json& j, const uint32_t interval, const bool ReportRfc1918, const std::unordered_set<std::string> & LocalIps,
+				const DnsIpCache <boost::asio::ip::address> &dCip, const DnsCnameCache &dCcname, bool force = false);
 		bool inPrivateAddressRange(const std::string ip );
 
 	    // iCache interface methods.

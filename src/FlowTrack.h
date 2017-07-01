@@ -72,7 +72,7 @@ public:
 		inExpiration = 0;
 
 		struct stat buf;
-		if (stat ("/proc/net/nf_conntrack", &buf) == 0) {
+		if (config.UseNfConntrack == true && stat ("/proc/net/nf_conntrack", &buf) == 0) {
 			if (Debug == true) {
 				syslog (LOG_DEBUG, "/proc/net/nf_conntrack exists, using it");
 			}

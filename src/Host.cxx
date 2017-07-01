@@ -25,6 +25,7 @@
 #include <forward_list>
 #include <map>
 #include <unordered_set>
+#include <vector>
 
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -43,14 +44,12 @@ using json = nlohmann::json;
 #include "DeviceProfile.h"
 
 bool Host::Match(const DeviceProfileMap& dpMap) {
-	// If already matched and time of match is more recent as last update in Device Profiles then keep
-	// keep current match, accepting that there may be a better match available. I'm assuming that
-	// matching will be expensive process on HGWs so if we really want to force certain devices to
-	// re-match then update the LastUpdated value of the correspondign DeviceProfile
+	// If no newer version of the DeviceProfile it previously matched to is available then no need to try to
+	// match the device again
 	if (isMatched()) {
 		auto it = dpMap.find(Uuid);
 		if (it != dpMap.end()) {
-			if (matchtime > it->second->LastUpdated_get()) {
+			if (matchversion > it->second->DeviceProfileVersion_get()) {
 				return true;
 			}
 		}
@@ -67,7 +66,7 @@ bool Host::Match(const DeviceProfileMap& dpMap) {
 			UploadStats = kv.second->UploadStats_get();
 			bestmatch = match;
 			matcheduuid = kv.first;
-			matchtime = time(nullptr);
+			matchversion = time(nullptr);
 		}
 
 	}
@@ -194,7 +193,7 @@ bool Host::Match(const MatchCondition& mc) {
 bool Host::Match(const ContainCondition& cc) {
 	if(cc.Key == "DnsQueries") {
 		for (auto fqdn: cc.Values) {
-			if (DnsHostCache.find(fqdn) != DnsHostCache.end()) {
+			if (DnsHostCache.find(fqdn) != DnsHostCache.end() || DnsQueryList.find(fqdn) != DnsQueryList.end()) {
 				if(Debug) {
 					syslog(LOG_DEBUG, "Found DnsQuery for %s from host %s", fqdn.c_str(), Mac.c_str());
 				}
@@ -239,20 +238,33 @@ bool Host::DeviceStats(json& j, const uint32_t time_interval, bool force, bool d
 
 	std::string fqdns = "";
 	for (auto &dq: DnsHostCache) {
-		if (detailed) {
+		if (detailed == true) {
 			dq.second->DnsStats(j, time_interval);
 		} else {
 			fqdns += dq.second->Fqdn_get() + " ";
         }
 	}
-	if (not detailed && not fqdns.empty()) {
+	if (Debug == true) {
+		syslog (LOG_DEBUG, "Adding items from DnsQueryList to list of fqdns");
+	}
+	for (auto &dq: DnsQueryList) {
+		if (detailed == false) {
+			if (Debug == true) {
+				syslog (LOG_DEBUG, "Adding FQDN %s from DnsQueryList to list of fqdns", dq.first.c_str());
+			}
+			fqdns += dq.first + " ";
+		}
+	}
+
+	if (detailed == false && not fqdns.empty()) {
 		j["DnsQueries"] = fqdns;
     }
 
 	return true;
 }
 
-bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportPrivateAddresses, const std::unordered_set<std::string> &LocalIps, bool force) {
+bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportPrivateAddresses, const std::unordered_set<std::string> &LocalIps,
+		const DnsIpCache <boost::asio::ip::address> &dCip, const DnsCnameCache &dCcname, bool force) {
 	if (not isMatched()) {
 		return false;
 	}
@@ -267,39 +279,31 @@ bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportPriva
 
 	std::unordered_set<std::string> endpoints;
 	for (auto &fc: FlowCacheIpv4) {
-		boost::asio::ip::address ip = fc.first;
+		const boost::asio::ip::address_v4  &ip = fc.first;
 		if (ReportPrivateAddresses || not inPrivateAddressRange(ip.to_string())) {
-			for (auto &fe : *(fc.second)) {
-				if(fe->Fresh(interval)) {
-					auto it = allIps.find(ip.to_string());
-					if (it == allIps.end()) {
-						endpoints.insert(ip.to_string());
-					} else {
-						for (auto &fqdn: *(it->second)) {
-							endpoints.insert(fqdn);
-						}
-					}
+			auto it = allIps.find(ip.to_string());
+			if (it != allIps.end()) {
+				for (auto &fqdn: *(it->second)) {
+					endpoints.insert(fqdn);
 				}
+			}
+			if (Debug == true) {
+				syslog (LOG_DEBUG, "Getting all DNS lookups for %s", ip.to_string().c_str());
+			}
+			std::vector<std::string> fqdns = dCip.getAllFqdns(ip);
+			for (auto &itf : fqdns) {
+				if (Debug) {
+					syslog (LOG_DEBUG, "Reverse resolved %s to %s", ip.to_string().c_str(), itf.c_str());
+				}
+				std::string fqdn = dCcname.lookupCname(itf);
+				endpoints.insert(fqdn);
+			}
+			if (it == allIps.end() || fqdns.size() == 0) {
+				endpoints.insert(ip.to_string());
 			}
 		}
 	}
-	for (auto &fc: FlowCacheIpv6) {
-		boost::asio::ip::address ip = fc.first;
-		if (ReportPrivateAddresses || not inPrivateAddressRange(ip.to_string())) {
-			for (auto &fe : *(fc.second)) {
-				if(fe->Fresh(interval)) {
-					auto it = allIps.find(ip.to_string());
-					if (it == allIps.end()) {
-						endpoints.insert(ip.to_string());
-					} else {
-						for (auto &fqdn: *(it->second)) {
-							endpoints.insert(fqdn);
-						}
-					}
-				}
-			}
-		}
-	}
+
 	if (endpoints.size() > 0) {
 		j = { {"DeviceProfileUuid", Uuid } };
 		j["TrafficStats"] = endpoints;
@@ -371,8 +375,7 @@ bool Host::FlowEntry_set(const uint16_t inSrcPort, const std::string inDstIp,
 	f->Protocol = inProtocol;
 	f->Expiration_set(inExpiration);
 
-	boost::asio::ip::address dstIpAddress;
-	dstIpAddress.from_string(inDstIp);
+	boost::asio::ip::address dstIpAddress = boost::asio::ip::address::from_string(inDstIp);
 
 	// Is there already at least one flow from the Host to the destination IP?
 	if (dstIpAddress.is_v4()) {
@@ -537,8 +540,9 @@ uint32_t Host::Prune (bool Force) {
 			while (it != fel.end()) {
 				if (Force || (*it)->isExpired()) {
 					if (Debug) {
+						std::string dstIp = (fc->first).to_string();
 						syslog(LOG_DEBUG, "Pruning IPv4 FlowEntry to %s for DstPort %u with expiration %ld while now is %ld",
-								fc->first.to_string().c_str(), (*it)->DstPort, (*it)->Expiration_get (), time(nullptr));
+								dstIp.c_str(), (*it)->DstPort, (*it)->Expiration_get (), time(nullptr));
 					}
 					// Remove element from list
 					it = fel.erase(it);
@@ -616,6 +620,24 @@ uint32_t Host::Prune (bool Force) {
 		syslog (LOG_DEBUG, "Pruned %u DNS queries", pruned_dnsqueries);
 	}
 	return pruned;
+}
+
+uint32_t Host::pruneDnsQueryList (time_t Expired, bool Force) {
+	uint32_t deletecount;
+	time_t now = time(nullptr);
+	auto i = DnsQueryList.begin();
+	while (i != DnsQueryList.end()) {
+		if (Force || i->second > (now - Expired)) {
+			if (Debug == true) {
+				syslog (LOG_DEBUG, "Deleting %s from DnsQueryList as %lu is later than %lu", i->first.c_str(), i->second, now - Expired);
+			}
+			i = DnsQueryList.erase(i);
+			deletecount++;
+		} else {
+			i++;
+		}
+	}
+	return deletecount;
 }
 
 

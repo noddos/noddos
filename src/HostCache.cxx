@@ -65,8 +65,10 @@ uint32_t HostCache::Prune (bool Force) {
 	syslog(LOG_INFO, "Pruned %u hosts", prunedhosts);
 	uint32_t count = pruneDnsQueryCache(Force);
 	syslog(LOG_DEBUG, "Pruned %u DNS queries", count);
-	count = pruneDnsCache(Force);
-	syslog(LOG_DEBUG, "Pruned %u DNS cache entries", count);
+	count = pruneDnsIpCache(Force);
+	syslog(LOG_DEBUG, "Pruned %u DNS IP cache entries", count);
+    count = pruneDnsCnameCache(Force);
+    syslog(LOG_DEBUG, "Pruned %u DNS CNAME cache entries", count);
 	return prunedhosts;
 }
 
@@ -324,6 +326,8 @@ uint32_t HostCache::pruneDnsQueryCache (bool Force) {
 			}
 			i = DnsQueryCache.erase(i);
 			deletecount++;
+		} else {
+			i++;
 		}
 	}
 	return deletecount;
@@ -684,14 +688,13 @@ uint32_t HostCache::UploadDeviceStats(const std::string ClientApiCertFile, const
 	return uploads;
 }
 
-bool HostCache::UploadTrafficStats(const time_t interval, const bool ReportRfc1918, const std::string ClientCertFile,
-		const std::string ClientApiKeyFile, bool doUpload) {
+bool HostCache::UploadTrafficStats(const time_t interval, const bool ReportRfc1918, const std::string ClientCertFile, const std::string ClientApiKeyFile, bool doUpload) {
 	uint32_t uploads = 0;
 	json j;
 	for (auto it : hC) {
 		if ( (not isWhitelisted(*(it.second))) && it.second->isMatched()) {
 			json h;
-			if (it.second->TrafficStats(h, interval, ReportRfc1918, LocalIpAddresses, false)) {
+			if (it.second->TrafficStats(h, interval, ReportRfc1918, LocalIpAddresses, dCip, false)) {
 				uploads++;
 				j.push_back(h);
 			}

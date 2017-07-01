@@ -13,19 +13,49 @@
 #include "TcpSnoop.h"
 
 int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
-	// '(ip or ip6) and (tcp or udp) and port 53'
-	struct sock_filter bpfcode[] = { { 0x28, 0, 0, 0x0000000c }, { 0x15, 0, 10,
-			0x00000800 }, { 0x30, 0, 0, 0x00000017 },
-			{ 0x15, 1, 0, 0x00000006 }, { 0x15, 0, 17, 0x00000011 }, { 0x28, 0,
-					0, 0x00000014 }, { 0x45, 15, 0, 0x00001fff }, { 0xb1, 0, 0,
-					0x0000000e }, { 0x48, 0, 0, 0x0000000e }, { 0x15, 11, 0,
-					0x00000035 }, { 0x48, 0, 0, 0x00000010 }, { 0x15, 9, 10,
-					0x00000035 }, { 0x15, 0, 9, 0x000086dd }, { 0x30, 0, 0,
-					0x00000014 }, { 0x15, 2, 0, 0x00000006 }, { 0x15, 6, 0,
-					0x0000002c }, { 0x15, 0, 5, 0x00000011 }, { 0x28, 0, 0,
-					0x00000036 }, { 0x15, 2, 0, 0x00000035 }, { 0x28, 0, 0,
-					0x00000038 }, { 0x15, 0, 1, 0x00000035 }, { 0x6, 0, 0,
-					0x00040000 }, { 0x6, 0, 0, 0x00000000 }, };
+	// sudo tcpdump -dd '(ip or ip6) and ((tcp or udp) and port 53) or (udp and (port 67 or port 68))'
+	struct sock_filter bpfcode[] = {
+	        { 0x28, 0, 0, 0x0000000c },
+	        { 0x15, 0, 19, 0x00000800 },
+	        { 0x30, 0, 0, 0x00000017 },
+	        { 0x15, 0, 7, 0x00000006 },
+	        { 0x28, 0, 0, 0x00000014 },
+	        { 0x45, 33, 0, 0x00001fff },
+	        { 0xb1, 0, 0, 0x0000000e },
+	        { 0x48, 0, 0, 0x0000000e },
+	        { 0x15, 29, 0, 0x00000035 },
+	        { 0x48, 0, 0, 0x00000010 },
+	        { 0x15, 27, 28, 0x00000035 },
+	        { 0x15, 0, 27, 0x00000011 },
+	        { 0x28, 0, 0, 0x00000014 },
+	        { 0x45, 25, 0, 0x00001fff },
+	        { 0xb1, 0, 0, 0x0000000e },
+	        { 0x48, 0, 0, 0x0000000e },
+	        { 0x15, 21, 0, 0x00000035 },
+	        { 0x15, 20, 0, 0x00000043 },
+	        { 0x15, 19, 0, 0x00000044 },
+	        { 0x48, 0, 0, 0x00000010 },
+	        { 0x15, 17, 15, 0x00000035 },
+	        { 0x15, 0, 17, 0x000086dd },
+	        { 0x30, 0, 0, 0x00000014 },
+	        { 0x15, 0, 4, 0x00000006 },
+	        { 0x28, 0, 0, 0x00000036 },
+	        { 0x15, 12, 0, 0x00000035 },
+	        { 0x28, 0, 0, 0x00000038 },
+	        { 0x15, 10, 11, 0x00000035 },
+	        { 0x15, 10, 0, 0x0000002c },
+	        { 0x15, 0, 9, 0x00000011 },
+	        { 0x28, 0, 0, 0x00000036 },
+	        { 0x15, 6, 0, 0x00000035 },
+	        { 0x15, 5, 0, 0x00000043 },
+	        { 0x15, 4, 0, 0x00000044 },
+	        { 0x28, 0, 0, 0x00000038 },
+	        { 0x15, 2, 0, 0x00000035 },
+	        { 0x15, 1, 0, 0x00000043 },
+	        { 0x15, 0, 1, 0x00000044 },
+	        { 0x6, 0, 0, 0x00040000 },
+	        { 0x6, 0, 0, 0x00000000 },
+	};
 	struct sock_fprog bpf = { .len = size(bpfcode), .filter = bpfcode, };
 
 	// ETH_P_ALL is required to also capture outgoing packets
@@ -33,11 +63,11 @@ int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
 	// https://www.spinics.net/lists/netdev/msg159788.html or something like that
 	// So for now we use ETH_P_IP meaning that for TCP we can't check that an answer matches a query that was sent out if
 	// we're running on a recursive DNS server .
+	if (Debug == true) {
+		syslog(LOG_DEBUG, "Opening AF_PACKET SOCK_RAW with ETH_P_ALL");
+	}
 	sock = socket( AF_PACKET, SOCK_RAW, htons(ETH_P_ALL)) ;
 	// sock = socket( AF_PACKET, SOCK_RAW, htons(ETH_P_IP));
-	if (Debug == true) {
-		syslog(LOG_DEBUG, "Opened AF_PACKET SOCK_RAW with ETH_P_ALL");
-	}
 	//setsockopt(sock_raw , SOL_SOCKET , SO_BINDTODEVICE , "eth0" , strlen("eth0")+ 1 );
 	if (sock < 0) {
 		//Print the error with proper message
@@ -344,6 +374,9 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
 			std::shared_ptr<Host> h = hC->FindOrCreateHostByMac(inMac, "",
 					sourceIp);
 			h->addorupdateDnsQueryList(it.dname());
+			if (Debug == true) {
+				syslog (LOG_DEBUG, "Adding FQDN %s to DnsQueryList for %s", it.dname().c_str(), sourceIp.c_str());
+			}
 		}
 		delete q;
 		return false;
@@ -351,7 +384,6 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
 		// This is an outgoing query or an response to client without answers
 		// Store the Query ID in a short-term cache so that incoming answers
 		// can be confirmed to come in response to the query
-		// TODO: prune this cache!
 		hC->addorupdateDnsQueryCache(q->id());
 	} else if (ifMap->isWanInterface(ifIndex) && q->answers_count() > 0) {
 		// Only accept an answer if for each question there is a matching outgoing query from the DNS server
@@ -375,24 +407,18 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
 				std::string dnsdata = it.data();
 				switch (it.query_type()) {
 				case Tins::DNS::QueryType::A: {
-					boost::asio::ip::address_v4::bytes_type addr4;
-					std::copy(&dnsdata[0], &dnsdata[0] + addr4.size(),
-							addr4.data());
-					boost::asio::ip::address_v4 ipv4(addr4);
-					hC->addorupdateDnsCache(it.dname(), ipv4, it.ttl());
 					if (Debug == true) {
 						syslog(LOG_DEBUG, "A record: %s",
-								ipv4.to_string().c_str());
+								it.data().c_str());
 					}
-				}
+					boost::asio::ip::address ipv4 = boost::asio::ip::address::from_string(it.data());
+					hC->addorupdateDnsIpCache(it.dname(), ipv4, it.ttl());
 					break;
+				}
 				case Tins::DNS::QueryType::AAAA: {
-					boost::asio::ip::address_v6::bytes_type addr6;
-					std::copy(&dnsdata[0], &dnsdata[0] + addr6.size(),
-							addr6.data());
-					boost::asio::ip::address_v6 ipv6(addr6);
+					boost::asio::ip::address ipv6 = boost::asio::ip::address::from_string(it.data());
 
-					hC->addorupdateDnsCache(it.dname(), ipv6, it.ttl());
+					hC->addorupdateDnsIpCache(it.dname(), ipv6, it.ttl());
 					if (Debug == true) {
 						syslog(LOG_DEBUG, "AAAA record: %s",
 								ipv6.to_string().c_str());
@@ -400,7 +426,7 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
 					break;
 				}
 				case Tins::DNS::QueryType::CNAME:
-					hC->addorupdateDnsCache(it.dname(), dnsdata, it.ttl());
+					hC->addorupdateDnsCnameCache(it.dname(), dnsdata, it.ttl());
 					if (Debug == true) {
 						syslog(LOG_DEBUG, "CNAME record: %s", dnsdata.c_str());
 					}
@@ -420,8 +446,19 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
 }
 
 bool PacketSnoop::parseDhcpUdpPacket(unsigned char *payload, size_t size) {
-	// TODO
-	syslog(LOG_INFO, "Ignoring DHCP packets for now");
+	Tins::DHCP *d;
+    try {
+        d = new Tins::DHCP(payload, size);
+    } catch (const Tins::malformed_packet &e) {
+        if (Debug == true) {
+            syslog(LOG_DEBUG, "Malformed DHCP packet");
+        }
+        return true;
+    }
+    if (Debug == true) {
+        syslog (LOG_DEBUG, "Parsed DHCP packet successfully");
+    }
+	delete d;
 	return false;
 }
 

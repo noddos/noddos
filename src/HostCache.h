@@ -31,11 +31,10 @@
 #include "DeviceProfile.h"
 #include "MacAddress.h"
 #include "Config.h"
-#include "DnsCache.h"
 #include "InterfaceMap.h"
 
 #include "boost/asio.hpp"
-
+#include "DnsCache.h"
 #include "noddos.h"
 
 class HostCache {
@@ -43,12 +42,11 @@ private:
 	std::map<unsigned long long, std::shared_ptr<Host>> hC; 	// map from Mac to Host
 	std::map<std::string, unsigned long long> Ip2MacMap; 	// map from IP to MaC
 
-	// This map is used to validate that answers received correspond to queries sent out
+	// This map is used to validate that answers received correspond to queries sent out. They are pruned after 30 seconds
 	std::map<uint16_t, time_t> DnsQueryCache;
-
-	DnsCache <boost::asio::ip::address_v4> dCv4;
-	DnsCache <boost::asio::ip::address_v6> dCv6;
-	DnsCache <std::string> dCcname;
+	// These maps cache IPv4 & IPv6 addresses and CNAMEs for at least the TrafficReport interval
+	DnsIpCache <boost::asio::ip::address> dCip;
+	DnsCnameCache dCcname;
 
 	DeviceProfileMap dpMap;
 	InterfaceMap *ifMap;
@@ -77,6 +75,8 @@ public:
 		arp_rx = std::regex(R"delim(^(\d\S+)\s+?\S+?\s+?\S+?\s+?\s+?(\S+)\s+?\S+?\W+?(\S+?)$)delim",
         	std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
 		getInterfaceIpAddresses();
+		dCip.debug_set(Debug);
+		dCcname.debug_set(Debug);
 	}
 	virtual ~HostCache() {
 		if (Debug) {
@@ -115,15 +115,19 @@ public:
 	uint32_t pruneDnsQueryCache (bool Force = false);
 
 	// These functions are for the new DnsCache filled by the PacketSnoop class
-	void addorupdateDnsCache(std::string inFqdn, boost::asio::ip::address_v4 inIp, time_t inTtl) { dCv4.addorupdateResourceRecord(inFqdn, inIp, inTtl); }
-	void addorupdateDnsCache(std::string inFqdn, boost::asio::ip::address_v6 inIp, time_t inTtl) { dCv6.addorupdateResourceRecord(inFqdn, inIp, inTtl);	}
-	void addorupdateDnsCache(std::string inFqdn, std::string inCname, time_t inTtl) { dCcname.addorupdateResourceRecord(inFqdn, inCname, inTtl);	}
+	void addorupdateDnsIpCache(std::string inFqdn, boost::asio::ip::address inIp, time_t inTtl) { dCip.addorupdateResourceRecord(inFqdn, inIp, inTtl); }
+	void addorupdateDnsCnameCache(std::string inFqdn, std::string inCname, time_t inTtl) { dCcname.addorupdateCname(inFqdn, inCname, inTtl);	}
 
-	uint32_t pruneDnsCache(bool Force = false) {
+	uint32_t pruneDnsIpCache(bool Force = false) {
 		uint32_t deletecount = 0;
-		deletecount = dCv4.pruneResourceRecords(Force) + dCv6.pruneResourceRecords(Force);
+		deletecount = dCip.pruneResourceRecords(Force);
 		return deletecount;
 	}
+    uint32_t pruneDnsCnameCache(bool Force = false) {
+        uint32_t deletecount = 0;
+        deletecount = dCcname.pruneCnames(Force);
+        return deletecount;
+    }
 	InterfaceMap * getInterfaceMap() { return ifMap; }
 	MacAddress MacLookup (const std::string inIpAddress, const int retries = 1);
 	MacAddress MacLookup (const std::string inIpAddress, const std::string inInterface, const int retries = 1);
@@ -132,8 +136,7 @@ public:
 
 	uint32_t RestApiCall (const std::string api, const json &j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
 	uint32_t UploadDeviceStats(const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
-	bool UploadTrafficStats(const time_t interval, const bool ReportRfc1918, const std::string ClientApiCertFile, const std::string ClientApiKeyFile,
-			bool doUpload = false);
+	bool UploadTrafficStats(const time_t interval, const bool ReportRfc1918, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
 	uint32_t ImportDeviceProfileMatches(const std::string filename);
 	bool ExportDeviceProfileMatches(const std::string filename, const bool detailed = false);
 	bool ImportDeviceInfo (json &j);

@@ -53,6 +53,7 @@ public:
 	std::string PidFile = "/var/lib/noddos/noddos.pid";
 	std::string DnsmasqLogFile = "";
 	bool UseAfPacket = true;
+	bool UseNfConntrack = false;
 	std::string User = "";
 	std::string Group = "";
 	std::unordered_set<std::string> WhitelistedIpv4Addresses;
@@ -101,6 +102,7 @@ public:
 		std::string newPidFile = PidFile;
 		std::string newDnsmasqLogFile = DnsmasqLogFile;
 		bool newUseAfPacket = UseAfPacket;
+		bool newUseNfConntrack = UseNfConntrack;
 		std::string newUser = User;
 		std::string newGroup = Group;
 		std::unordered_set<std::string> newWhitelistedIpv4Addresses = WhitelistedIpv4Addresses;
@@ -149,6 +151,9 @@ public:
 			}
 			if (j.count("UseAfPacket")) {
 				newUseAfPacket = j["UseAfPacket"].get<bool>();
+			}
+			if (j.count("UseNfConntrack")) {
+				newUseNfConntrack = j["UseNfConntrack"].get<bool>();
 			}
 			if (j.count("User")) {
 				newUser = j["User"].get<std::string>();
@@ -227,6 +232,7 @@ public:
 		PidFile = newPidFile;
 		DnsmasqLogFile = newDnsmasqLogFile;
 		UseAfPacket = newUseAfPacket;
+		UseNfConntrack = newUseNfConntrack;
 		User = newUser;
 		Group = newGroup;
 		WhitelistedIpv4Addresses = newWhitelistedIpv4Addresses;
