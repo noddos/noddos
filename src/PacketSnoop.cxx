@@ -12,6 +12,8 @@
 #include "PacketSnoop.h"
 #include "TcpSnoop.h"
 
+
+
 int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
 	// sudo tcpdump -dd '(ip or ip6) and ((tcp or udp) and port 53) or (udp and (port 67 or port 68))'
 	struct sock_filter bpfcode[] = {
@@ -59,43 +61,133 @@ int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
 	struct sock_fprog bpf = { .len = size(bpfcode), .filter = bpfcode, };
 
 	// ETH_P_ALL is required to also capture outgoing packets
-	// However, with ETH_P_ALL we get some packets twice with same sequence number but different packet size
-	// https://www.spinics.net/lists/netdev/msg159788.html or something like that
-	// So for now we use ETH_P_IP meaning that for TCP we can't check that an answer matches a query that was sent out if
-	// we're running on a recursive DNS server .
-	if (Debug == true) {
-		syslog(LOG_DEBUG, "Opening AF_PACKET SOCK_RAW with ETH_P_ALL");
-	}
-	sock = socket( AF_PACKET, SOCK_RAW, htons(ETH_P_ALL)) ;
-	// sock = socket( AF_PACKET, SOCK_RAW, htons(ETH_P_IP));
-	//setsockopt(sock_raw , SOL_SOCKET , SO_BINDTODEVICE , "eth0" , strlen("eth0")+ 1 );
-	if (sock < 0) {
-		//Print the error with proper message
-		syslog(LOG_CRIT, "Socket Error");
-	}
-	int ret = setsockopt(sock, SOL_SOCKET, SO_ATTACH_FILTER, &bpf, sizeof(bpf));
-	if (ret < 0) {
-		syslog(LOG_CRIT, "Setsockopt Error");
-	}
+    // However, with ETH_P_ALL we get some packets twice with same sequence number but different packet size
+    // https://www.spinics.net/lists/netdev/msg159788.html or something like that
+	// TPACKET_V3: https://gist.github.com/giannitedesco/5863705
+	// Kernel 3.19 required: http://www.spinics.net/lists/netdev/msg309630.html
+    if (Debug == true) {
+        syslog(LOG_DEBUG, "Opening AF_PACKET SOCK_DGRAM with ETH_P_IP");
+    }
+    // sock = socket( AF_PACKET, SOCK_RAW, htons(ETH_P_ALL)) ;
+    // sock = socket( AF_PACKET, SOCK_RAW, htons(ETH_P_IP));
+    // sock = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_IP));
+    sock = socket( PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+    //setsockopt(sock_raw , SOL_SOCKET , SO_BINDTODEVICE , "eth0" , strlen("eth0")+ 1 );
+    if (sock < 0) {
+        syslog(LOG_CRIT, "Socket Error");
+    }
+    int val = TPACKET_V3;
+    if (setsockopt(sock, SOL_PACKET, PACKET_VERSION, &val, sizeof(val))) {
+        syslog(LOG_CRIT, "setsockopt(TPACKET_V3)");
+    }
+    int ret = setsockopt(sock, SOL_SOCKET, SO_ATTACH_FILTER, &bpf, sizeof(bpf));
+    if (ret < 0) {
+        syslog(LOG_CRIT, "Setsockopt Error");
+    }
+
+    struct tpacket_req3 req;
+
+    req.tp_block_size = getpagesize() << 2;
+    req.tp_block_nr = NUM_BLOCKS;
+    req.tp_frame_size = TPACKET_ALIGNMENT << 7;
+    req.tp_frame_nr = req.tp_block_size / req.tp_frame_size * req.tp_block_nr;
+    req.tp_retire_blk_tov = 64;
+    // req.tp_sizeof_priv = sizeof(struct priv);
+    req.tp_feature_req_word = 0;
+    //req.tp_feature_req_word |= TP_REQ_FILL_RXHASH;
+    if (setsockopt(sock, SOL_PACKET, PACKET_RX_RING, (char *)&req, sizeof(req))) {
+        syslog(LOG_CRIT,"setsockopt(PACKET_RX_RING)");
+    };
+
+    map_sz = req.tp_block_size * req.tp_block_nr;
+    nr_blocks = req.tp_block_nr;
+    block_sz = req.tp_block_size;
+
+    struct sockaddr_ll sll;
+    // std::string ifname = "enp0s31f6";
+    std::string ifname = "enp3s0";
+    if ( ifname.c_str() ) {
+        struct ifreq ifr;
+        snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", ifname.c_str());
+        if ( ioctl(sock, SIOCGIFINDEX, &ifr) ) {
+            syslog(LOG_CRIT,"ioctl");
+        }
+        ifindex = ifr.ifr_ifindex;
+    }else{
+        /* interface "any" */
+        ifindex = 0;
+    }
+
+    memset(&sll, 0, sizeof(sll));
+    sll.sll_family = PF_PACKET;
+    sll.sll_protocol = htons(ETH_P_ALL);
+    sll.sll_ifindex = ifindex;
+    if ( bind(sock, (struct sockaddr *)&sll, sizeof(sll)) ) {
+        syslog(LOG_CRIT, "bind()");
+    }
+
+    map = (uint8_t *) mmap(NULL, map_sz, PROT_READ | PROT_WRITE, MAP_SHARED, sock, 0);
+    if (map == MAP_FAILED) {
+        syslog(LOG_CRIT, "mmap()");
+    }
+
 	return sock;
 }
 
-bool PacketSnoop::ProcessEvent(struct epoll_event &event) {
-	struct sockaddr_ll saddr;
-	int saddr_size = sizeof saddr;
-	unsigned char buffer[65600]; // It might be big! We also may use it copy a DNS message from TCP flow
+bool PacketSnoop::Close () {
+    if (munmap(map, map_sz)) {
+        syslog(LOG_ERR, "munmap");
+        return true;
+    }
+    if (close (sock)) {
+        syslog (LOG_NOTICE, "Error closing PacketSnoop socket");
+        return true;
+    }
+    return false;
+}
 
-	int data_size = recvfrom(sock, buffer, 65536, 0, (struct sockaddr *) &saddr,
-			(socklen_t*) &saddr_size);
-	if (data_size < 0) {
-		syslog(LOG_WARNING, "Recvfrom error , failed to get packets\n");
-		return true;
-	}
-	Parse(buffer, data_size, saddr.sll_ifindex);
+bool PacketSnoop::ProcessEvent(struct epoll_event &event) {
+    int ret;
+    if (Debug) {
+        syslog (LOG_DEBUG, "Received AF_PACKET event");
+    }
+
+    struct tpacket_block_desc *desc = (struct tpacket_block_desc *) map + r_idx + block_sz;
+
+    if (!(desc->hdr.bh1.block_status & TP_STATUS_USER)) {
+        return true;
+    }
+    const uint8_t *ptr;
+    struct tpacket3_hdr *hdr;
+    unsigned int num_pkts, i;
+
+    ptr = (uint8_t *)desc + desc->hdr.bh1.offset_to_first_pkt;
+    num_pkts = desc->hdr.bh1.num_pkts;
+
+    for(i = 0; i < num_pkts; i++) {
+        if (Debug) {
+            syslog (LOG_DEBUG, "Processing packet %u of %u", i, num_pkts);
+        }
+        hdr = (struct tpacket3_hdr *)ptr;
+
+        // printf("packet %u/%u %u.%u\n",
+        //    i, num_pkts, hdr->tp_sec, hdr->tp_nsec);
+
+        /* packet */
+        // if ( cb )
+        //    (*cb)(rx->user, ptr + hdr->tp_mac, hdr->tp_snaplen);
+        Parse((unsigned char *) ptr + hdr->tp_mac, 1500, ifindex);
+
+        ptr += hdr->tp_next_offset;
+        __sync_synchronize();
+    }
+	desc->hdr.bh1.block_status = TP_STATUS_KERNEL;
+	__sync_synchronize();
+	r_idx = (r_idx + 1) % nr_blocks;
 	return false;
 }
 
-bool PacketSnoop::Parse(unsigned char *frame, size_t size, int ifindex) {
+bool PacketSnoop::Parse(unsigned char *frame, size_t size, int _ifindex) {
 	syslog(LOG_DEBUG, "Parsing packet of %zu bytes on interface %d", size,
 			ifindex);
 	// Get the IP Header part of this packet , excluding the ethernet header
@@ -106,9 +198,7 @@ bool PacketSnoop::Parse(unsigned char *frame, size_t size, int ifindex) {
 	unsigned short protocol;
 	uint16_t payloadLength = 0;
 	uint16_t ipPacketLength = 0;
-	// struct sockaddr_storage source, dest;
-	// memset(&source, 0, sizeof(source));
-	// memset(&dest, 0, sizeof(dest));
+
 	char srcString[INET6_ADDRSTRLEN], destString[INET6_ADDRSTRLEN];
 
 	if (ntohs(ethh->h_proto) == 0x0800) {
@@ -244,8 +334,9 @@ bool PacketSnoop::Parse(unsigned char *frame, size_t size, int ifindex) {
 				addTcpSnoopInstance(src, srcPort, dest, destPort, tsPtr);
 			}
 			if ((tsPtr)->addPacket(payload, payloadLength)) {
-				uint16_t bytesRead = (tsPtr)->getDnsMessage(frame);
-				parseDnsPacket(frame, bytesRead, Mac, srcString, ifindex);
+			    unsigned char buffer[65600];
+			    uint16_t bytesRead = (tsPtr)->getDnsMessage(buffer);
+				parseDnsPacket(buffer, bytesRead, Mac, srcString, ifindex);
 			}
 		} else {
 			syslog(LOG_WARNING,
@@ -451,13 +542,19 @@ bool PacketSnoop::parseDhcpUdpPacket(unsigned char *payload, size_t size) {
         d = new Tins::DHCP(payload, size);
     } catch (const Tins::malformed_packet &e) {
         if (Debug == true) {
-            syslog(LOG_DEBUG, "Malformed DHCP packet");
+            syslog(LOG_DEBUG, "PacketSnoop: Malformed DHCP packet");
         }
         return true;
     }
     if (Debug == true) {
-        syslog (LOG_DEBUG, "Parsed DHCP packet successfully");
+        syslog (LOG_DEBUG, "PacketSnoop: Parsed DHCP packet successfully");
     }
+    syslog (LOG_DEBUG, "PacketSnoop: DHCP Message Type %u", d->type());
+    // syslog (LOG_DEBUG, "PacketSnoop: DHCP Hostname %s", d->hostname().c_str());
+    // HOST_NAME
+    // VENDOR_CLASS_IDENTIFIER
+    // DHCP_CLIENT_IDENTIFIER
+
 	delete d;
 	return false;
 }

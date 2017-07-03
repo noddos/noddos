@@ -23,7 +23,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
 add_definitions(-DBOOST_SYSTEM_NO_DEPRECATED)
 
-include_directories("/usr/include/tins")
+#include_directories("/usr/include/tins")
+include_directories("/home/steven/src/libtins-3.5/include")
+link_directories("/home/steven/src/libtins-3.5/lib")
 
 # The version number.
 set (noddos_VERSION_MAJOR 0)

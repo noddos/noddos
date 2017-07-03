@@ -20,7 +20,7 @@ start_service() {
 
     netstat -nr | grep '224.0.0' > /dev/null
     if [ "$?" -gt "0" ]; then
-        route add -net 224.0.0.0 netmask 240.0.0.0 dev br-lan
+        route add -net 224.0.0.0 netmask 224.0.0.0 dev br-lan
     fi
 
     CONFFILE=/var/etc/noddos.conf

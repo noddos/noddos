@@ -252,9 +252,6 @@ int main(int argc, char** argv) {
 					hC.ExportDeviceProfileMatches(config.DumpFile, true);
 				}
 				if (t > NextDeviceUpload && config.DeviceReportInterval > 0) {
-					if (config.Debug) {
-						syslog(LOG_DEBUG, "Starting matching");
-					}
 					hC.UploadDeviceStats(config.ClientApiCertFile, config.ClientApiKeyFile, config.DeviceReportInterval != 0);
 					NextDeviceUpload = t + config.DeviceReportInterval;
 				}

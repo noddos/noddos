@@ -52,22 +52,25 @@ public:
 
         auto now = time(nullptr);
         if (Debug == true) {
-            syslog (LOG_DEBUG, "DnsCache: Setting %s to CNAME %s with TTL %lu", inFqdn.c_str(), inCname.c_str(), Ttl);
+            syslog (LOG_DEBUG, "DnsCache: Setting %s to CNAME %s with TTL %lu", fqdn.c_str(), cname.c_str(), Ttl);
         }
-        DnsCache[inCname] = std::make_pair(inFqdn, now + Ttl);
+        DnsCache[cname] = std::make_pair(fqdn, now + Ttl);
     }
 
     std::string lookupCname (const std::string inCname, const uint8_t recdepth = 0) const {
         if (recdepth > 5) {
             return inCname;
         }
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "DnsCache: Seeing if %s is a CNAME", inCname.c_str());
+        }
         std::string cname = inCname;
         std::transform(cname.begin(), cname.end(), cname.begin(), ::tolower);
 
-        auto it = DnsCache.find(inCname);
+        auto it = DnsCache.find(cname);
         if (it != DnsCache.end()) {
             if (Debug == true) {
-                syslog (LOG_DEBUG, "DnsCache: Found reverse CNAME from %s to %s", inCname.c_str(), it->second.first.c_str());
+                syslog (LOG_DEBUG, "DnsCache: Found reverse CNAME from %s to %s", cname.c_str(), it->second.first.c_str());
             }
             return lookupCname(it->second.first, recdepth + 1);
         } else {
