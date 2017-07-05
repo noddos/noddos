@@ -1,4 +1,19 @@
 /*
+   Copyright 2017 Steven Hessing
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
  * PacketSnoop.h
  *
  *  Created on: May 28, 2017
@@ -16,27 +31,31 @@
 #include <unistd.h>
 #include <stdexcept>
 
+#include <sys/ioctl.h>
+#include <features.h>
+
+#include <string.h>
 
 #include <sys/socket.h>
-#include <linux/if_packet.h>
-// #include <net/ethernet.h> /* the L2 protocols */
 #include <arpa/inet.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
-//#include <netpacket/packet.h>
-#include <linux/filter.h>
+#if __GLIBC__ >= 2 && __GLIBC_MINOR >= 1
+#include <netpacket/packet.h>
 #include <net/ethernet.h>   /* the L2 protocols */
+#else
+#include <asm/types.h>
+#endif
+#include <linux/filter.h>
+// if_ether.h causes redefinition conflicts
+// #include <linux/if_ether.h>
 #include <linux/ipv6.h>
 // #include <linux/if.h>
 #include <linux/if_packet.h>
-// #include <linux/if_ether.h> /* The L2 protocols */
-#include <string.h>
 #include <netinet/in.h>
 
 #include "boost/asio.hpp"
-
-// #include <rxring.h>
 
 #include "tins/dns.h"
 #include "tins/dhcp.h"
@@ -48,10 +67,11 @@
 
 #define NUM_BLOCKS 2049
 
+struct priv {
+    /* unused */
+};
 
-
-
-struct tcp_pseudo /*the tcp pseudo header*/
+struct tcp_pseudo /*the tcp pseudo header for checksum calculation*/
 {
   __u32 src_addr;
   __u32 dst_addr;
@@ -89,9 +109,9 @@ private:
 
 public:
 	PacketSnoop(HostCache &inHc, const bool  inDebug = false):	hC{&inHc}, Debug{inDebug} {
-		// if (Debug == true) {
+		if (Debug == true) {
 			syslog (LOG_DEBUG, "Constructing PacketSnoop instance");
-		//}
+		}
 	};
 
 	virtual ~PacketSnoop() { Close(); };
@@ -99,7 +119,7 @@ public:
 	int GetFileHandle() { return sock; }
 	bool Close();
 	bool ProcessEvent(struct epoll_event &event);
-	bool Parse (unsigned char *frame, size_t size, int _ifIndex);
+	bool Parse (unsigned char *frame);
 	bool parseDnsTcpPacket(unsigned char *payload, size_t size);
 	bool parseDnsPacket(const unsigned char *payload, const size_t size, const MacAddress &inMac, const std::string sourceIp, const int ifindex);
 	bool parseDhcpUdpPacket(unsigned char *payload, size_t size);
@@ -120,22 +140,22 @@ public:
     };
     uint8_t get8Bits () {
         if (message == nullptr) {
-            throw std::domain_error("DNS message is initialized");
+            throw std::domain_error("PacketSnoop: DNS message is initialized");
             return 0;
         }
         if (messageIndex >= messageLength) {
-            throw std::out_of_range("DNS message already fully parsed");
+            throw std::out_of_range("PacketSnoop: DNS message already fully parsed");
             return 0;
         }
         return message[messageIndex++];
     }
     uint16_t get16Bits () {
         if (message == nullptr) {
-            throw std::domain_error("DNS message not initialized");
+            throw std::domain_error("PacketSnoop: DNS message not initialized");
             return 0;
         }
         if (messageIndex +1 >= messageLength) {
-            throw std::out_of_range("DNS message already fully parsed");
+            throw std::out_of_range("PacketSnoop: DNS message already fully parsed");
             return 0;
         }
         uint16_t val = (message[messageIndex] << 8) + message[messageIndex+1];
@@ -144,21 +164,21 @@ public:
     }
     bool getFlag (const uint8_t Field, const uint8_t Pos) {
         if (Pos > 7) {
-            throw std::out_of_range("Position out of range");
+            throw std::out_of_range("PacketSnoop: Position out of range");
             return false;
         }
         return  (Field >> (7-Pos)) & 1;
     }
     bool getFlag (const uint16_t Field, const uint8_t Pos) {
         if (Pos > 15) {
-            throw std::out_of_range("Position out of range");
+            throw std::out_of_range("PacketSnoop: Position out of range");
             return false;
         }
         return  (Field >> (15-Pos)) & 1;
     }
     uint8_t getBits (const uint16_t Field, const uint8_t startPos, const uint8_t endPos) {
         if (startPos >= endPos || endPos > 15) {
-            throw std::out_of_range("Starting position equal or larger than ending position");
+            throw std::out_of_range("SPacketSnoop: tarting position equal or larger than ending position");
             return false;
         }
         return  (Field >> (15-endPos)) & ((1 << (endPos - startPos)) -1);

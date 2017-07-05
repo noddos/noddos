@@ -141,12 +141,18 @@ int main(int argc, char** argv) {
     //
     // all the DeviceInfoSources
     //
-    PacketSnoop p(hC, config.Debug);
+    std::unordered_set<PacketSnoop *> pInstances;
     if (config.UseAfPacket == true) {
-    	p.Open("");
-    	add_epoll_filehandle(epfd, epollmap, p);
+        std::unordered_set<std::string> allInterfaces = config.LanInterfaces;
+        allInterfaces.insert(config.WanInterfaces.begin(), config.WanInterfaces.end());
+        for (auto iface: allInterfaces) {
+            PacketSnoop *p = new PacketSnoop(hC, config.Debug);
+            p->Open(iface);
+            add_epoll_filehandle(epfd, epollmap, *p);
+            pInstances.insert(p);
+        }
     } else {
-    	syslog (LOG_NOTICE, "AF_PACKET disabled through configuration");
+        syslog (LOG_NOTICE, "AF_PACKET disabled through configuration");
     }
 
    	DnsmasqLogFile f(config.DnsmasqLogFile, hC, 86400, config.Debug);
@@ -166,7 +172,6 @@ int main(int argc, char** argv) {
     uint32_t NextPrune = time(nullptr) + config.PruneInterval + rand() % 15;
 	uint32_t NextDeviceUpload = time(nullptr) + config.DeviceReportInterval + rand() %5;
 	uint32_t NextTrafficUpload = time(nullptr) + config.TrafficReportInterval + rand() %5;
-
 
 	struct epoll_event* epoll_events = static_cast<epoll_event*>(calloc(MAXEPOLLEVENTS, sizeof (epoll_event)));
 	while (true) {
@@ -196,7 +201,8 @@ int main(int argc, char** argv) {
 					f.Open(config.DnsmasqLogFile, 0); // 0: do not read file, just jump to the end and listen for writes to it
 					add_epoll_filehandle(epfd, epollmap, f);
 				} else {
-					close(epoll_events[ev].data.fd);
+					syslog(LOG_ERR, "Closing file description without re-opening it %d", epoll_events[ev].data.fd);
+				    close(epoll_events[ev].data.fd);
 				}
 			} else {
 				if (config.Debug) {
@@ -279,7 +285,9 @@ exitprog:
 	hC.Prune();
 	f.Close();
 	s.Close();
-	p.Close();
+	for (auto p: pInstances) {
+	    p->Close();
+	}
 	ft.Close();
 	close (epfd);
 	close (sfd);

@@ -69,7 +69,7 @@ int main()
         }
         //Now process the packet
         syslog (LOG_DEBUG, "Received packet of %u bytes", data_size);
-        ps.Parse(buffer, data_size, saddr.sll_ifindex);
+        ps.Parse(buffer);
         // ProcessPacket(buffer , data_size);
     }
     ps.Close();

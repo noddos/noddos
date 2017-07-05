@@ -1,4 +1,19 @@
 /*
+   Copyright 2017 Steven Hessing
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
  * PacketSnoop.cxx
  *
  *  Created on: May 28, 2017
@@ -66,23 +81,28 @@ int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
 	// TPACKET_V3: https://gist.github.com/giannitedesco/5863705
 	// Kernel 3.19 required: http://www.spinics.net/lists/netdev/msg309630.html
     if (Debug == true) {
-        syslog(LOG_DEBUG, "Opening AF_PACKET SOCK_DGRAM with ETH_P_IP");
+        syslog(LOG_DEBUG, "PacketSnoop: Opening AF_PACKET SOCK_RAW with ETH_P_ALL on interface %s",
+			input.c_str());
     }
     // sock = socket( AF_PACKET, SOCK_RAW, htons(ETH_P_ALL)) ;
     // sock = socket( AF_PACKET, SOCK_RAW, htons(ETH_P_IP));
     // sock = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_IP));
-    sock = socket( PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
-    //setsockopt(sock_raw , SOL_SOCKET , SO_BINDTODEVICE , "eth0" , strlen("eth0")+ 1 );
+    sock = socket( AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
     if (sock < 0) {
-        syslog(LOG_CRIT, "Socket Error");
+        syslog(LOG_CRIT, "PacketSnoop: Socket Error");
+        return -1;
     }
     int val = TPACKET_V3;
     if (setsockopt(sock, SOL_PACKET, PACKET_VERSION, &val, sizeof(val))) {
-        syslog(LOG_CRIT, "setsockopt(TPACKET_V3)");
+        syslog(LOG_CRIT, "PacketSnoop: setsockopt(TPACKET_V3)");
+        Close();
+        return -1;
     }
     int ret = setsockopt(sock, SOL_SOCKET, SO_ATTACH_FILTER, &bpf, sizeof(bpf));
     if (ret < 0) {
-        syslog(LOG_CRIT, "Setsockopt Error");
+        syslog(LOG_CRIT, "PacketSnoop: setsockopt Error");
+        Close();
+        return -1;
     }
 
     struct tpacket_req3 req;
@@ -92,11 +112,13 @@ int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
     req.tp_frame_size = TPACKET_ALIGNMENT << 7;
     req.tp_frame_nr = req.tp_block_size / req.tp_frame_size * req.tp_block_nr;
     req.tp_retire_blk_tov = 64;
-    // req.tp_sizeof_priv = sizeof(struct priv);
+    req.tp_sizeof_priv = sizeof(struct priv);
     req.tp_feature_req_word = 0;
     //req.tp_feature_req_word |= TP_REQ_FILL_RXHASH;
     if (setsockopt(sock, SOL_PACKET, PACKET_RX_RING, (char *)&req, sizeof(req))) {
-        syslog(LOG_CRIT,"setsockopt(PACKET_RX_RING)");
+        syslog(LOG_CRIT,"PacketSnoop: setsockopt(PACKET_RX_RING)");
+        Close();
+        return -1;
     };
 
     map_sz = req.tp_block_size * req.tp_block_nr;
@@ -104,13 +126,14 @@ int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
     block_sz = req.tp_block_size;
 
     struct sockaddr_ll sll;
-    // std::string ifname = "enp0s31f6";
-    std::string ifname = "enp3s0";
-    if ( ifname.c_str() ) {
+
+    if (input != "") {
         struct ifreq ifr;
-        snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", ifname.c_str());
+        snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", input.c_str());
         if ( ioctl(sock, SIOCGIFINDEX, &ifr) ) {
-            syslog(LOG_CRIT,"ioctl");
+            syslog(LOG_CRIT,"PacketSnoop: ioctl");
+            Close();
+            return -1;
         }
         ifindex = ifr.ifr_ifindex;
     }else{
@@ -123,39 +146,52 @@ int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
     sll.sll_protocol = htons(ETH_P_ALL);
     sll.sll_ifindex = ifindex;
     if ( bind(sock, (struct sockaddr *)&sll, sizeof(sll)) ) {
-        syslog(LOG_CRIT, "bind()");
+        syslog(LOG_CRIT, "PacketSnoop: bind()");
+        Close();
+        return -1;
     }
 
-    map = (uint8_t *) mmap(NULL, map_sz, PROT_READ | PROT_WRITE, MAP_SHARED, sock, 0);
-    if (map == MAP_FAILED) {
-        syslog(LOG_CRIT, "mmap()");
+    map = (uint8_t *) mmap(nullptr, map_sz, PROT_READ | PROT_WRITE, MAP_SHARED, sock, 0);
+    if ((char *) map == MAP_FAILED) {
+        syslog(LOG_CRIT, "PacketSnoop: mmap()");
+        Close();
+        return -1;
     }
 
 	return sock;
 }
 
 bool PacketSnoop::Close () {
-    if (munmap(map, map_sz)) {
-        syslog(LOG_ERR, "munmap");
-        return true;
+    if (map != nullptr && (char *) map != MAP_FAILED) {
+        if (munmap(map, map_sz)) {
+            syslog(LOG_ERR, "munmap");
+            return true;
+        }
     }
-    if (close (sock)) {
-        syslog (LOG_NOTICE, "Error closing PacketSnoop socket");
-        return true;
+    if (sock >= 0) {
+        if (close (sock)) {
+            syslog (LOG_NOTICE, "PacketSnoop: Error closing PacketSnoop socket");
+            return true;
+        }
     }
+    sock = -1;
     return false;
 }
 
 bool PacketSnoop::ProcessEvent(struct epoll_event &event) {
     int ret;
     if (Debug) {
-        syslog (LOG_DEBUG, "Received AF_PACKET event");
+        syslog (LOG_DEBUG, "PacketSnoop: Received AF_PACKET event");
     }
 
-    struct tpacket_block_desc *desc = (struct tpacket_block_desc *) map + r_idx + block_sz;
+    struct tpacket_block_desc *desc = (struct tpacket_block_desc *) (map + r_idx * block_sz);
 
     if (!(desc->hdr.bh1.block_status & TP_STATUS_USER)) {
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "PacketSnoop: Packet is not yet handed over to user-space");
+        }
         return true;
+
     }
     const uint8_t *ptr;
     struct tpacket3_hdr *hdr;
@@ -166,17 +202,11 @@ bool PacketSnoop::ProcessEvent(struct epoll_event &event) {
 
     for(i = 0; i < num_pkts; i++) {
         if (Debug) {
-            syslog (LOG_DEBUG, "Processing packet %u of %u", i, num_pkts);
+            syslog (LOG_DEBUG, "PacketSnoop: Processing packet %u of %u", i+1, num_pkts);
         }
         hdr = (struct tpacket3_hdr *)ptr;
 
-        // printf("packet %u/%u %u.%u\n",
-        //    i, num_pkts, hdr->tp_sec, hdr->tp_nsec);
-
-        /* packet */
-        // if ( cb )
-        //    (*cb)(rx->user, ptr + hdr->tp_mac, hdr->tp_snaplen);
-        Parse((unsigned char *) ptr + hdr->tp_mac, 1500, ifindex);
+        Parse((unsigned char *) ptr + hdr->tp_mac);
 
         ptr += hdr->tp_next_offset;
         __sync_synchronize();
@@ -187,12 +217,10 @@ bool PacketSnoop::ProcessEvent(struct epoll_event &event) {
 	return false;
 }
 
-bool PacketSnoop::Parse(unsigned char *frame, size_t size, int _ifindex) {
-	syslog(LOG_DEBUG, "Parsing packet of %zu bytes on interface %d", size,
-			ifindex);
-	// Get the IP Header part of this packet , excluding the ethernet header
-	struct ethhdr *ethh = (struct ethhdr *) frame;
+bool PacketSnoop::Parse(unsigned char *frame) {
+	syslog(LOG_DEBUG, "Parsing packet on interface %d", ifindex);
 
+	struct ethhdr *ethh = (struct ethhdr *) frame;
 	uint8_t af;
 	unsigned short iphdrlen;
 	unsigned short protocol;
@@ -208,28 +236,40 @@ bool PacketSnoop::Parse(unsigned char *frame, size_t size, int _ifindex) {
 		if (iphdrlen < sizeof(struct iphdr)) {
 			// Packet is broken!
 			// IP packets must not be smaller than the mandatory IP header.
-			return false;
+			if (Debug == true) {
+			    syslog (LOG_DEBUG, "PacketSnoop: Received packet with invalid IP header length: %u", iphdrlen);
+			}
+		    return false;
 		}
 		if (in_cksum((void *) iph, iphdrlen, 0) != 0) {
 			// Packet is broken!
 			// Checksum of IP header does not verify, thus header is corrupt.
+            if (Debug == true) {
+                syslog (LOG_DEBUG, "PacketSnoop: Received packet with invalid IP checksum");
+            }
 			return false;
 		}
 		ipPacketLength = ntohs(iph->tot_len);
 		if (ipPacketLength < iphdrlen) {
 			// Packet is broken!
 			// The overall packet cannot be smaller than the header.
+            if (Debug == true) {
+                syslog (LOG_DEBUG, "PacketSnoop: Received packet with packet length %u smaller than header length %u", ipPacketLength, iphdrlen);
+            }
 			return false;
 		}
 		payloadLength = ntohs(iph->tot_len) - iphdrlen;
 		if (payloadLength < sizeof(struct tcphdr)) {
 			// Packet is broken!
 			// A TCP header doesn't even fit into the data that follows the IP header.
-			return false;
+            if (Debug == true) {
+                syslog (LOG_DEBUG, "PacketSnoop: Received packet with payload length %u smaller than TCP header length %lu", payloadLength, sizeof(struct tcphdr));
+            }
+            return false;
 		}
 		uint8_t ipFlags = (uint8_t) (iph->frag_off >> 13);
 		if ((ipFlags & 1) == 1) {
-			syslog (LOG_NOTICE, "Fragmented IPv4 packets are not supported, discarding");
+			syslog (LOG_NOTICE, "PacketSnoop: Fragmented IPv4 packets are not supported, discarding");
 			return false;
 		}
 		protocol = iph->protocol;
@@ -240,12 +280,12 @@ bool PacketSnoop::Parse(unsigned char *frame, size_t size, int _ifindex) {
 		dest.sin_addr.s_addr = iph->daddr;
 		if (inet_ntop(af, &(source.sin_addr), srcString, INET6_ADDRSTRLEN)
 				== nullptr) {
-			syslog(LOG_ERR, "Invalid source IP address");
+			syslog(LOG_ERR, "PacketSnoop: Received packet with invalid source IPv4 address");
 			return false;
 		}
 		if (inet_ntop(af, &(dest.sin_addr), destString, INET6_ADDRSTRLEN)
 				== nullptr) {
-			syslog(LOG_ERR, "Invalid destination IP address");
+			syslog(LOG_ERR, "PacketSnoop: Received packet with invalid destination IPv4 address");
 			return false;
 		}
 	} else if (ntohs(ethh->h_proto) == 0x86DD) {
@@ -256,25 +296,24 @@ bool PacketSnoop::Parse(unsigned char *frame, size_t size, int _ifindex) {
 		payloadLength = ntohs(ipv6h->payload_len);
 		if (ipv6h->nexthdr != 6 && ipv6h->nexthdr != 17) {
 			syslog(LOG_INFO,
-					"Sorry, only support for IPv6 without optional headers for now %u",
+					"PacketSnoop: Sorry, only support for IPv6 without optional headers for now %u",
 					ipv6h->nexthdr);
 			return true;
 		}
 		protocol = ipv6h->nexthdr;
 		if (inet_ntop(af, &(ipv6h->saddr), srcString, INET6_ADDRSTRLEN)
 				== nullptr) {
-			syslog(LOG_ERR, "Invalid source IP address");
+			syslog(LOG_ERR, "PacketSnoop: Received packet with invalid source IPv6 address");
 			return false;
 		}
 		if (inet_ntop(af, &(ipv6h->daddr), destString, INET6_ADDRSTRLEN)
 				== nullptr) {
-			syslog(LOG_ERR, "Invalid destination IP address");
+			syslog(LOG_ERR, "PacketSnoop: Received packet with invalid destination IPv6 address");
 			return false;
 		}
 	} else {
 		syslog(LOG_INFO,
-				"Received Ethernet packet with unsupported protocol %u",
-				ethh->h_proto);
+				"PacketSnoop: Received packet with unsupported protocol %u", ethh->h_proto);
 		return true;
 	}
 
@@ -282,7 +321,7 @@ bool PacketSnoop::Parse(unsigned char *frame, size_t size, int _ifindex) {
 
 	if (Debug == true) {
 		syslog(LOG_DEBUG,
-				"Parsing packet from %s to %s, protocol %u, packet size %u, header length %u from MAC %s",
+				"PacketSnoop: Parsing packet from %s to %s, protocol %u, packet size %u, header length %u from MAC %s",
 				srcString, destString, protocol, ipPacketLength, iphdrlen,
 				Mac.c_str());
 	}
@@ -296,13 +335,13 @@ bool PacketSnoop::Parse(unsigned char *frame, size_t size, int _ifindex) {
 		if (ipPacketLength < (iphdrlen + tcph->doff * 4)) {
 			if (Debug == true) {
 				syslog(LOG_DEBUG,
-						"Invalid packet, IP packet length < ip header + tcp header");
+						"PacketSnoop: Received packet with IP packet length < ip header + tcp header");
 			}
 			return false;
 		}
 		if (tcpcsum(frame) != 0) {
 			if (Debug == true) {
-				syslog(LOG_DEBUG, "Received TCP packet with invalid checksum");
+				syslog(LOG_DEBUG, "PacketSnoop: Received packet with invalid TCP checksum");
 			}
 			return false;
 		}
@@ -321,7 +360,7 @@ bool PacketSnoop::Parse(unsigned char *frame, size_t size, int _ifindex) {
 		dest.from_string(destString);
 
 		if (Debug == true) {
-			syslog(LOG_DEBUG, "TCP source port %u, dest port %u", srcPort,
+			syslog(LOG_DEBUG, "PacketSnoop: TCP source port %u, dest port %u", srcPort,
 					destPort);
 		}
 		if (ntohs(tcph->source) == 53 || ntohs(tcph->dest) == 53) {
@@ -340,7 +379,7 @@ bool PacketSnoop::Parse(unsigned char *frame, size_t size, int _ifindex) {
 			}
 		} else {
 			syslog(LOG_WARNING,
-					"Received PacketSnoop TCP packet with source port %u, destination port %u",
+					"PacketSnoop: Received packet with unexpected TCP ports: source %u, destination %u",
 					srcPort, destPort);
 		}
 	}
@@ -349,11 +388,12 @@ bool PacketSnoop::Parse(unsigned char *frame, size_t size, int _ifindex) {
 	{
 		struct udphdr *udph = (struct udphdr*) (frame + iphdrlen
 				+ sizeof(struct ethhdr));
-		int header_size = sizeof(struct ethhdr) + iphdrlen + sizeof udph;
+		// int header_size = sizeof(struct ethhdr) + iphdrlen + sizeof udph;
+		int header_size = sizeof(struct ethhdr) + iphdrlen + sizeof(struct udphdr);
 		unsigned char *payload = frame + header_size;
 
 		if (Debug == true) {
-			syslog(LOG_DEBUG, "UDP source port %u, dest port %u",
+			syslog(LOG_DEBUG, "PacketSnoop: UDP source port %u, dest port %u",
 					ntohs(udph->source), ntohs(udph->dest));
 		}
 		if (ntohs(udph->source) == 53 || ntohs(udph->dest) == 53) {
@@ -363,14 +403,14 @@ bool PacketSnoop::Parse(unsigned char *frame, size_t size, int _ifindex) {
 			parseDhcpUdpPacket(payload, payloadLength);
 		} else {
 			syslog(LOG_WARNING,
-					"Received PacketSnoop UDP packet with source port %u, destination port %u",
+					"PacketSnoop: Received packet with UDP source port %u, destination port %u",
 					ntohs(udph->source), ntohs(udph->dest));
 		}
 	}
 		break;
 	default: //Some Other Protocol like ARP etc.
 		syslog(LOG_ERR,
-				"PacketSnoop received packet with protocol other than TCP or UDP");
+				"PacketSnoop: Received packet with protocol other than TCP or UDP");
 	}
 	return false;
 }
@@ -407,7 +447,7 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
 		const size_t size, const MacAddress &inMac, const std::string sourceIp,
 		const int ifIndex) {
 	if (size < 12) {
-		syslog(LOG_WARNING, "Receive DNS packet smaller than 12 bytes");
+		syslog(LOG_WARNING, "PacketSnoop: Received DNS packet smaller than 12 bytes");
 		return true;
 	}
 	DnsDecode d((uint8_t *) payload, size);
@@ -426,7 +466,7 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
 	uint8_t dnsRcode = d.getBits(dnsFlags, 12, 15);
 	if (Debug == true) {
 		syslog(LOG_DEBUG,
-				"Own decode of %zu bytes: %u, Q: %u, A: %u, NS: %u, Add: %u, Response: %u, Opcode: %u, Rcode: %u",
+				"PacketSnoop: Own decode of %zu bytes: %u, Q: %u, A: %u, NS: %u, Add: %u, Response: %u, Opcode: %u, Rcode: %u",
 				size, dnsId, dnsQuestions, dnsAnswers, dnsAuth, dnsAdditional,
 				dnsIsResponse, dnsOpcode, dnsRcode);
 	}
@@ -436,7 +476,7 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
 		q = new Tins::DNS(payload, size);
 	} catch (const Tins::malformed_packet &e) {
 		if (Debug == true) {
-			syslog(LOG_DEBUG, "Malformed DNS packet");
+			syslog(LOG_DEBUG, "PacketSnoop: Malformed DNS packet");
 		}
 		return true;
 	}
@@ -444,8 +484,8 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
 	// Note, additional resources section is not processed as this is not information a non-resursive DNS client would use
 
 	if (Debug == true) {
-		syslog(LOG_DEBUG, "Query ID: %u on interface %u", q->id(), ifIndex);
-		syslog(LOG_DEBUG, "Questions: %u Answers: %u Additional answers: %u",
+		syslog(LOG_DEBUG, "PacketSnoop: Query ID: %u on interface %u", q->id(), ifIndex);
+		syslog(LOG_DEBUG, "PacketSnoop: Questions: %u Answers: %u Additional answers: %u",
 				q->questions_count(), q->answers_count(),
 				q->additional_count());
 	}
@@ -455,7 +495,7 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
 			&& q->additional_count() == 0) {
 		for (auto it : q->queries()) {
 			if (Debug == true) {
-				syslog(LOG_DEBUG, "Question %u : %s %u %u", q->id(),
+				syslog(LOG_DEBUG, "PacketSnoop: Question %u : %s %u %u", q->id(),
 						it.dname().c_str(), it.query_class(), it.query_type());
 			}
 			// Here we track which DNS queries each Host has executed so when we report traffic stats, we can
@@ -466,7 +506,7 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
 					sourceIp);
 			h->addorupdateDnsQueryList(it.dname());
 			if (Debug == true) {
-				syslog (LOG_DEBUG, "Adding FQDN %s to DnsQueryList for %s", it.dname().c_str(), sourceIp.c_str());
+				syslog (LOG_DEBUG, "PacketSnoop: Adding FQDN %s to DnsQueryList for %s", it.dname().c_str(), sourceIp.c_str());
 			}
 		}
 		delete q;
@@ -480,7 +520,7 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
 		// Only accept an answer if for each question there is a matching outgoing query from the DNS server
 		// on which Noddos runs
 		if (hC->inDnsQueryCache(q->id()) == false) {
-			syslog(LOG_WARNING, "No matching entry in DnsQueryCache for %u",
+			syslog(LOG_WARNING, "PacketSnoop: No matching entry in DnsQueryCache for %u",
 					q->id());
 			delete q;
 			return true;
@@ -491,7 +531,7 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
 			char ipaddr[INET6_ADDRSTRLEN];
 			if (it.query_type() != 41) { // OPT pseudo-RR
 				if (Debug == true) {
-					syslog(LOG_DEBUG, "Answer %u : %-24s %5u %u %u", ++i,
+					syslog(LOG_DEBUG, "PacketSnoop: Answer %u : %-24s %5u %u %u", ++i,
 							it.dname().c_str(), it.ttl(), it.query_class(),
 							it.query_type());
 				}
@@ -499,7 +539,7 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
 				switch (it.query_type()) {
 				case Tins::DNS::QueryType::A: {
 					if (Debug == true) {
-						syslog(LOG_DEBUG, "A record: %s",
+						syslog(LOG_DEBUG, "PacketSnoop: A record: %s",
 								it.data().c_str());
 					}
 					boost::asio::ip::address ipv4 = boost::asio::ip::address::from_string(it.data());
@@ -511,7 +551,7 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
 
 					hC->addorupdateDnsIpCache(it.dname(), ipv6, it.ttl());
 					if (Debug == true) {
-						syslog(LOG_DEBUG, "AAAA record: %s",
+						syslog(LOG_DEBUG, "PacketSnoop: AAAA record: %s",
 								ipv6.to_string().c_str());
 					}
 					break;
@@ -519,7 +559,7 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
 				case Tins::DNS::QueryType::CNAME:
 					hC->addorupdateDnsCnameCache(it.dname(), dnsdata, it.ttl());
 					if (Debug == true) {
-						syslog(LOG_DEBUG, "CNAME record: %s", dnsdata.c_str());
+						syslog(LOG_DEBUG, "PacketSnoop: CNAME record: %s", dnsdata.c_str());
 					}
 					break;
 				default:
@@ -527,7 +567,7 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
 				}
 			} else {
 				if (Debug == true) {
-					syslog(LOG_DEBUG, "RR OPT");
+					syslog(LOG_DEBUG, "PacketSnoop: RR OPT");
 				}
 			}
 		}
@@ -550,16 +590,51 @@ bool PacketSnoop::parseDhcpUdpPacket(unsigned char *payload, size_t size) {
         syslog (LOG_DEBUG, "PacketSnoop: Parsed DHCP packet successfully");
     }
     syslog (LOG_DEBUG, "PacketSnoop: DHCP Message Type %u", d->type());
-    // syslog (LOG_DEBUG, "PacketSnoop: DHCP Hostname %s", d->hostname().c_str());
-    // HOST_NAME
-    // VENDOR_CLASS_IDENTIFIER
-    // DHCP_CLIENT_IDENTIFIER
+    syslog (LOG_DEBUG, "PacketSnoop: DHCP Hostname %s", d->hostname().c_str());
+    try {
+        const Tins::DHCP::option *h = d->search_option(Tins::DHCP::OptionTypes::HOST_NAME);
+        if (h != nullptr) {
+            std::string ClientHostname ((const char*) h->data_ptr(), h->data_size());
+            syslog (LOG_DEBUG, "PacketSnoop: client Hostname %s", ClientHostname.c_str());
+        } else {
+            syslog (LOG_DEBUG, "PacketSnoop: client Hostname DHCP option not found");
+        }
+    }
+    catch (const Tins::option_not_found &e) {
+        syslog (LOG_DEBUG, "PacketSnoop: client Hostname DHCP option not found");
+    }
+    try {
+        const Tins::DHCP::option *v = d->search_option(Tins::DHCP::OptionTypes::VENDOR_CLASS_IDENTIFIER);
+        if (v != nullptr) {
+            std::string Vendor ((const char*) v->data_ptr(), v->data_size());
+            syslog (LOG_DEBUG, "PacketSnoop: Vendor Class Identifier %s", Vendor.c_str());
+        } else {
+            syslog (LOG_DEBUG, "PacketSnoop: Vendor Class Identifier DHCP option not found");
+        }
+    }
+    catch (const Tins::option_not_found &e) {
+        syslog (LOG_DEBUG, "PacketSnoop: Vendor Class Identifier DHCP option not found");
+    }
+
+    try {
+        const Tins::DHCP::option *i = d->search_option(Tins::DHCP::OptionTypes::DHCP_CLIENT_IDENTIFIER);
+        if (i != nullptr) {
+            std::string Client ((const char*) i->data_ptr(), i->data_size());
+            syslog (LOG_DEBUG, "PacketSnoop: Client Identifier %s", Client.c_str());
+        } else {
+            syslog (LOG_DEBUG, "PacketSnoop: Client Identifier DHCP option not found");
+        }
+    }
+    catch (const Tins::option_not_found &e) {
+        syslog (LOG_DEBUG, "PacketSnoop: Vendor Class Identifier DHCP option not found");
+    }
+
 
 	delete d;
 	return false;
 }
 
-// thanx to http://seclists.org/lists/bugtraq/1999/Mar/0057.html
+// thanks to http://seclists.org/lists/bugtraq/1999/Mar/0057.html
 uint16_t tcpcsum(unsigned char * const packet) {
 	struct tcp_pseudo pseudo;
 
