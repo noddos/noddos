@@ -122,7 +122,7 @@ public:
 	bool Parse (unsigned char *frame);
 	bool parseDnsTcpPacket(unsigned char *payload, size_t size);
 	bool parseDnsPacket(const unsigned char *payload, const size_t size, const MacAddress &inMac, const std::string sourceIp, const int ifindex);
-	bool parseDhcpUdpPacket(unsigned char *payload, size_t size);
+	bool parseDhcpv4UdpPacket(unsigned char *payload, size_t size);
 	std::shared_ptr<TcpSnoop> getTcpSnoopInstance(const boost::asio::ip::address inSrc, const uint16_t srcPort,
 			const boost::asio::ip::address inDest, const uint16_t destPort);
 	void addTcpSnoopInstance(const boost::asio::ip::address inSrc, const uint16_t inSrcPort,

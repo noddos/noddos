@@ -98,8 +98,6 @@ public:
 	bool AddByMac (const MacAddress inMacAddress, const std::string inIpAddress = "");
 	bool AddFlow (const std::string srcip, const uint16_t srcport, const std::string dstip, const uint16_t dstport, const uint8_t protocol, const uint32_t expiration);
 	bool AddDnsQueryIp (const std::string clientip, const std::string fqdn, const std::string ip, const uint32_t expire = 86400);
-	bool AddDhcpRequest (const std::shared_ptr<DhcpRequest> inDhcpRequest_sptr);
-	bool AddDhcpRequest (const DhcpRequest &inDhcpRequest);
 	bool AddDhcpRequest (const std::string IpAddress, const MacAddress inMac, const std::string Hostname, const std::string DhcpHostname, const std::string DhcpVendor);
 	bool AddSsdpInfo (const std::shared_ptr<SsdpHost> insHost);
 

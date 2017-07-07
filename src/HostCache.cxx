@@ -224,32 +224,6 @@ bool HostCache::AddDnsQueryIp (const std::string clientip, const std::string fqd
 	return false;
 }
 
-bool HostCache::AddDhcpRequest (const std::shared_ptr<DhcpRequest> inDhcpRequest_sptr) {
-	if (Debug == true) {
-		syslog(LOG_DEBUG, "Adding DHCP request for host with MAC %s & IP %s", inDhcpRequest_sptr->Mac.c_str(), inDhcpRequest_sptr->IpAddress.c_str());
-	}
-	if (inDhcpRequest_sptr->IpAddress == "" && inDhcpRequest_sptr->Mac.isValid() == false) {
-		syslog(LOG_WARNING, "No IpAdddress or Macaddress in DHCP request");
-		return false;
-
-	}
-	if (isWhitelisted(inDhcpRequest_sptr->IpAddress) || isWhitelisted(inDhcpRequest_sptr->Mac.str())) {
-		return false;
-    }
-
-	std::shared_ptr<Host> h;
-	if (inDhcpRequest_sptr->Mac.isValid() == true) {
-		h = FindOrCreateHostByMac(inDhcpRequest_sptr->Mac, "", inDhcpRequest_sptr->IpAddress);
-	} else {
-		h = FindOrCreateHostByIp(inDhcpRequest_sptr->IpAddress);
-	}
-
-	if (h) {
-		h->Dhcp_set(inDhcpRequest_sptr);
-		return true;
-	}
-	return false;
-}
 
 bool HostCache::AddDhcpRequest (const std::string IpAddress, const MacAddress inMac, const std::string Hostname, const std::string DhcpHostname, const std::string DhcpVendor) {
 	if (Debug == true) {
