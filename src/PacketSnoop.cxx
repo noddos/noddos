@@ -224,8 +224,8 @@ bool PacketSnoop::Parse(unsigned char *frame) {
     uint8_t af;
     unsigned short iphdrlen;
     unsigned short protocol;
-    uint16_t payloadLength = 0;
-    uint16_t ipPacketLength = 0;
+    uint16_t ipPayloadLen = 0;
+    uint16_t ipPacketLen = 0;
 
     char srcString[INET6_ADDRSTRLEN], destString[INET6_ADDRSTRLEN];
 
@@ -249,21 +249,21 @@ bool PacketSnoop::Parse(unsigned char *frame) {
             }
             return false;
         }
-        ipPacketLength = ntohs(iph->tot_len);
-        if (ipPacketLength < iphdrlen) {
+        ipPacketLen = ntohs(iph->tot_len);
+        if (ipPacketLen < iphdrlen) {
             // Packet is broken!
             // The overall packet cannot be smaller than the header.
             if (Debug == true) {
-                syslog (LOG_DEBUG, "PacketSnoop: Received packet with packet length %u smaller than header length %u", ipPacketLength, iphdrlen);
+                syslog (LOG_DEBUG, "PacketSnoop: Received packet with packet length %u smaller than header length %u", ipPacketLen, iphdrlen);
             }
             return false;
         }
-        payloadLength = ntohs(iph->tot_len) - iphdrlen;
-        if (payloadLength < sizeof(struct tcphdr)) {
+        ipPayloadLen = ipPacketLen - iphdrlen;
+        if (ipPayloadLen < sizeof(struct tcphdr)) {
             // Packet is broken!
             // A TCP header doesn't even fit into the data that follows the IP header.
             if (Debug == true) {
-                syslog (LOG_DEBUG, "PacketSnoop: Received packet with payload length %u smaller than TCP header length %lu", payloadLength, sizeof(struct tcphdr));
+                syslog (LOG_DEBUG, "PacketSnoop: Received packet with payload length %u smaller than TCP header length %lu", ipPayloadLen, sizeof(struct tcphdr));
             }
             return false;
         }
@@ -293,7 +293,7 @@ bool PacketSnoop::Parse(unsigned char *frame) {
         iphdrlen = 40;
         struct ipv6hdr *ipv6h =
                 (struct ipv6hdr*) (frame + sizeof(struct ethhdr));
-        payloadLength = ntohs(ipv6h->payload_len);
+        ipPayloadLen = ntohs(ipv6h->payload_len);
         if (ipv6h->nexthdr != 6 && ipv6h->nexthdr != 17) {
             syslog(LOG_INFO,
                     "PacketSnoop: Sorry, only support for IPv6 without optional headers for now %u",
@@ -322,7 +322,7 @@ bool PacketSnoop::Parse(unsigned char *frame) {
     if (Debug == true) {
         syslog(LOG_DEBUG,
                 "PacketSnoop: Parsing %s packet from %s to %s, protocol %u, packet size %u, header length %u payload length %u  from MAC %s",
-                ntohs(ethh->h_proto) == 0x0800 ? "IPv4" : "IPv6", srcString, destString, protocol, ipPacketLength, iphdrlen, payloadLength,
+                ntohs(ethh->h_proto) == 0x0800 ? "IPv4" : "IPv6", srcString, destString, protocol, ipPacketLen, iphdrlen, ipPayloadLen,
                 Mac.c_str());
     }
 
@@ -330,9 +330,8 @@ bool PacketSnoop::Parse(unsigned char *frame) {
     switch (protocol) {
     case 6: //TCP Protocol
     {
-        struct tcphdr *tcph = (struct tcphdr*) (frame + iphdrlen
-                + sizeof(struct ethhdr));
-        if (ipPacketLength < (iphdrlen + tcph->doff * 4)) {
+        struct tcphdr *tcph = (struct tcphdr*) (frame + iphdrlen + sizeof(struct ethhdr));
+        if (ipPacketLen < (iphdrlen + tcph->doff * 4)) {
             if (Debug == true) {
                 syslog(LOG_DEBUG,
                         "PacketSnoop: Received packet with IP packet length < ip header + tcp header");
@@ -372,7 +371,10 @@ bool PacketSnoop::Parse(unsigned char *frame) {
                 tsPtr = std::make_shared<TcpSnoop>(Debug);
                 addTcpSnoopInstance(src, srcPort, dest, destPort, tsPtr);
             }
-            if ((tsPtr)->addPacket(payload, payloadLength)) {
+            //
+            // For TCP, we pass both TCP header and payload
+            //
+            if ((tsPtr)->addPacket(payload, ipPayloadLen)) {
                 unsigned char buffer[65600];
                 uint16_t bytesRead = (tsPtr)->getDnsMessage(buffer);
                 parseDnsPacket(buffer, bytesRead, Mac, srcString, ifindex);
@@ -386,21 +388,23 @@ bool PacketSnoop::Parse(unsigned char *frame) {
         break;
     case 17: //UDP Protocol
     {
-        struct udphdr *udph = (struct udphdr*) (frame + iphdrlen
-                + sizeof(struct ethhdr));
-        // int header_size = sizeof(struct ethhdr) + iphdrlen + sizeof udph;
+        struct udphdr *udph = (struct udphdr*) (frame + iphdrlen + sizeof(struct ethhdr));
         int header_size = sizeof(struct ethhdr) + iphdrlen + sizeof(struct udphdr);
-        unsigned char *payload = frame + header_size;
+        //
+        // for UDP, we only process the UDP payload
+        //
+        unsigned char *udpPayload = frame + header_size;
+        size_t udpPayloadLen = ipPayloadLen - sizeof(struct udphdr);
 
         if (Debug == true) {
             syslog(LOG_DEBUG, "PacketSnoop: UDP source port %u, dest port %u, header size %u",
                     ntohs(udph->source), ntohs(udph->dest), header_size);
         }
         if (ntohs(udph->source) == 53 || ntohs(udph->dest) == 53) {
-            parseDnsPacket(payload, payloadLength, Mac, srcString, ifindex);
+            parseDnsPacket(udpPayload, udpPayloadLen, Mac, srcString, ifindex);
         } else if (ntohs(udph->source) == 67 || ntohs(udph->dest) == 68
                 || ntohs(udph->source) == 68 || ntohs(udph->dest) == 68) {
-            parseDhcpv4UdpPacket(payload, payloadLength);
+            parseDhcpv4UdpPacket(udpPayload, udpPayloadLen);
         } else {
             syslog(LOG_WARNING,
                     "PacketSnoop: Received packet with UDP source port %u, destination port %u",

@@ -48,10 +48,8 @@ public:
 	std::string DumpFile = "/var/lib/noddos/DeviceDump.json";
 	std::string ClientApiCertFile = "/etc/noddos/noddosapiclient.pem";
 	std::string ClientApiKeyFile = "/etc/noddos/noddosapiclient.key";
-	// std::string ClientApiCertFingerprint = "";
 	std::string SignatureCertFile = "/etc/noddos/noddossignature.pem";
 	std::string PidFile = "/var/lib/noddos/noddos.pid";
-	std::string DnsmasqLogFile = "";
 	bool UseAfPacket = true;
 	bool UseNfConntrack = false;
 	std::string User = "";
@@ -59,8 +57,6 @@ public:
 	std::unordered_set<std::string> WhitelistedIpv4Addresses;
 	std::unordered_set<std::string> WhitelistedIpv6Addresses;
 	std::unordered_set<std::string> WhitelistedMacAddresses;
-	std::unordered_set<std::string> ListenIpAddresses;
-	std::unordered_set<std::string> ListenInterfaces;
 	std::unordered_set<std::string> LanInterfaces;
 	std::unordered_set<std::string> WanInterfaces;
 	std::time_t TrafficReportInterval = 3600; // Value in seconds, use 0 if no traffic stats should be uploaded
@@ -68,8 +64,8 @@ public:
 	bool ReportTrafficToRfc1918 = false;
 	std::time_t MatchInterval = 300;
 	std::time_t PruneInterval = 3600;
-	std::time_t ExpireDnsQuery = 86400;
-	std::time_t ExpireHost = 604800;
+	// std::time_t ExpireDnsQuery = 86400;
+	std::time_t ExpireHost = 7776000;
 	UploadMode uMode = Anonymous;
 	bool Debug;
 	static const std::string ApiFqdn;
@@ -100,7 +96,6 @@ public:
 		std::string newClientApiKeyFile = ClientApiKeyFile;
 		std::string newSignatureCertFile = SignatureCertFile;
 		std::string newPidFile = PidFile;
-		std::string newDnsmasqLogFile = DnsmasqLogFile;
 		bool newUseAfPacket = UseAfPacket;
 		bool newUseNfConntrack = UseNfConntrack;
 		std::string newUser = User;
@@ -108,8 +103,6 @@ public:
 		std::unordered_set<std::string> newWhitelistedIpv4Addresses = WhitelistedIpv4Addresses;
 		std::unordered_set<std::string> newWhitelistedIpv6Addresses = WhitelistedIpv6Addresses;
 		std::unordered_set<std::string> newWhitelistedMacAddresses = WhitelistedMacAddresses;
-		std::unordered_set<std::string> newListenIpAddresses = ListenIpAddresses;
-		std::unordered_set<std::string> newListenInterfaces = ListenInterfaces;
 		std::unordered_set<std::string> newLanInterfaces = LanInterfaces;
 		std::unordered_set<std::string> newWanInterfaces = WanInterfaces;
 		time_t newTrafficReportInterval = TrafficReportInterval;
@@ -117,7 +110,7 @@ public:
 		bool newReportTrafficToRfc1918 = ReportTrafficToRfc1918;
 		time_t newMatchInterval = MatchInterval;
 		time_t newPruneInterval = PruneInterval;
-		time_t newExpireDnsQuery = ExpireDnsQuery;
+		// time_t newExpireDnsQuery = ExpireDnsQuery;
 		time_t newExpireHost = ExpireHost;
 		UploadMode newuMode = uMode;
 
@@ -146,9 +139,6 @@ public:
 			if (j.count("PidFile")) {
 				newPidFile = j["PidFile"].get<std::string>();
 			}
-			if (j.count("DnsmasqLogFile")) {
-				newDnsmasqLogFile = j["DnsmasqLogFile"].get<std::string>();
-			}
 			if (j.count("UseAfPacket")) {
 				newUseAfPacket = j["UseAfPacket"].get<bool>();
 			}
@@ -169,14 +159,6 @@ public:
 			}
 			if (j.count("WhitelistedMacAddresses")) {
 				newWhitelistedMacAddresses = j["WhitelistedMacAddresses"].get<std::unordered_set<std::string>>();
-			}
-			// FIXME: ListenIpAddresses not currently implemented (for multicast joins)
-			if (j.count("ListenIpAddresses")) {
-				newListenIpAddresses = j["ListenIpAddresses"].get<std::unordered_set<std::string>>();
-			}
-			// FIXME: ListenInterfaces not currently implemented (for multicast joins)
-			if (j.count("ListenInterfaces")) {
-				newListenInterfaces = j["ListenInterfaces"].get<std::unordered_set<std::string>>();
 			}
 			if (j.count("LanInterfaces")) {
 				newLanInterfaces = j["LanInterfaces"].get<std::unordered_set<std::string>>();
@@ -199,9 +181,9 @@ public:
 			if (j.count("MatchInterval")) {
 				newMatchInterval= j["MatchInterval"].get<uint32_t>();
 			}
-			if (j.count("ExpireDnsQuery")) {
-				newExpireDnsQuery= j["ExpireDnsQuery"].get<uint32_t>();
-			}
+			// if (j.count("ExpireDnsQuery")) {
+			// 	newExpireDnsQuery= j["ExpireDnsQuery"].get<uint32_t>();
+			// }
 			if (j.count("ExpireHost")) {
 				newExpireHost= j["ExpireHost"].get<uint32_t>();
 			}
@@ -230,7 +212,6 @@ public:
 		// }
 		SignatureCertFile = newSignatureCertFile;
 		PidFile = newPidFile;
-		DnsmasqLogFile = newDnsmasqLogFile;
 		UseAfPacket = newUseAfPacket;
 		UseNfConntrack = newUseNfConntrack;
 		User = newUser;
@@ -238,8 +219,6 @@ public:
 		WhitelistedIpv4Addresses = newWhitelistedIpv4Addresses;
 		WhitelistedIpv6Addresses = newWhitelistedIpv6Addresses;
 		WhitelistedMacAddresses = newWhitelistedMacAddresses;
-		ListenIpAddresses = newListenIpAddresses;
-		ListenInterfaces = newListenInterfaces;
 		LanInterfaces = newLanInterfaces;
 		WanInterfaces = newWanInterfaces;
 		TrafficReportInterval = newTrafficReportInterval;
@@ -247,7 +226,7 @@ public:
 		ReportTrafficToRfc1918 = newReportTrafficToRfc1918;
 		MatchInterval = newMatchInterval;
 		PruneInterval = newPruneInterval;
-		ExpireDnsQuery = newExpireDnsQuery;
+		// ExpireDnsQuery = newExpireDnsQuery;
 		ExpireHost = newExpireHost;
 		uMode = newuMode;
 		return configfailure;

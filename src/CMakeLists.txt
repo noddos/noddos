@@ -23,9 +23,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
 add_definitions(-DBOOST_SYSTEM_NO_DEPRECATED)
 
-#include_directories("/usr/include/tins")
-include_directories("/home/steven/src/libtins-3.5/include")
-link_directories("/home/steven/src/libtins-3.5/lib")
+#include_directories("/home/steven/src/libtins-3.5/include")
+#link_directories("/home/steven/src/libtins-3.5/lib")
 
 # The version number.
 set (noddos_VERSION_MAJOR 0)
@@ -43,7 +42,7 @@ configure_file (
 # so that we will find TutorialConfig.h
 include_directories("${PROJECT_BINARY_DIR}")
  
-add_executable(noddos noddos.cxx DnsLogEntry.cxx DnsmasqLogFile.cxx Host.cxx 
+add_executable(noddos noddos.cxx DnsLogEntry.cxx Host.cxx 
     HostCache.cxx SsdpServer.cxx SsdpLocation.cxx FlowTrack.cxx Config.cxx
     opensslfingerprint.cxx PacketSnoop.cxx)
 target_link_libraries(noddos libnetfilter_conntrack.so ssl crypto curl tins)
@@ -51,13 +50,13 @@ target_link_libraries(noddos libnetfilter_conntrack.so ssl crypto curl tins)
 enable_testing()
 
 add_test (Host Host_test)
-add_executable(Host_test Host_test.cxx DnsLogEntry.cxx DnsmasqLogFile.cxx
+add_executable(Host_test Host_test.cxx DnsLogEntry.cxx 
     Host.cxx HostCache SsdpServer.cxx SsdpLocation.cxx opensslfingerprint.cxx)
 target_link_libraries(Host_test curl ssl crypto)
 
 add_test (HostCache Host_test)
 add_executable(HostCache_test HostCache_test.cxx DnsLogEntry.cxx
-    DnsmasqLogFile.cxx Host.cxx HostCache SsdpServer.cxx SsdpLocation.cxx
+    Host.cxx HostCache SsdpServer.cxx SsdpLocation.cxx
     opensslfingerprint.cxx)
 target_link_libraries(HostCache_test curl ssl crypto)
 
@@ -65,17 +64,11 @@ target_link_libraries(HostCache_test curl ssl crypto)
 add_test (DeviceProfile DeviceProfile_test)
 add_executable(DeviceProfile_test DeviceProfile_test.cxx 
 	FlowTrack.cxx Config.cxx HostCache.cxx Host.cxx SsdpServer.cxx
-	DnsmasqLogFile.cxx DnsLogEntry.cxx SsdpLocation.cxx opensslfingerprint.cxx)
+	DnsLogEntry.cxx SsdpLocation.cxx opensslfingerprint.cxx)
 target_link_libraries(DeviceProfile_test curl ssl crypto netfilter_conntrack)
 
-add_test (DnsmasqLogFile DnsmasqLogFile_test)
-add_executable(DnsmasqLogFile_test DnsmasqLogFile_test.cxx DnsmasqLogFile.cxx
-    HostCache.cxx Host.cxx DnsLogEntry.cxx SsdpServer.cxx SsdpLocation.cxx
-    opensslfingerprint.cxx)
-target_link_libraries(DnsmasqLogFile_test curl ssl crypto)
-
 add_test (DnsLogEntry DnsLogEntry_test)
-add_executable(DnsLogEntry_test DnsLogEntry_test.cxx DnsmasqLogFile.cxx
+add_executable(DnsLogEntry_test DnsLogEntry_test.cxx 
     HostCache.cxx Host.cxx DnsLogEntry.cxx SsdpServer.cxx SsdpLocation.cxx
     opensslfingerprint.cxx)
 target_link_libraries(DnsLogEntry_test curl ssl crypto)
@@ -88,7 +81,7 @@ add_executable(Config_test Config_test.cxx opensslfingerprint.cxx)
 target_link_libraries(Config_test curl ssl crypto)
 
 add_test (SsdpServer SsdpServer_test)
-add_executable(SsdpServer_test SsdpServer_test.cxx DnsmasqLogFile.cxx
+add_executable(SsdpServer_test SsdpServer_test.cxx 
     HostCache.cxx Host.cxx DnsLogEntry.cxx SsdpServer.cxx SsdpLocation.cxx
     opensslfingerprint.cxx)
 target_link_libraries(SsdpServer_test curl ssl crypto)

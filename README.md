@@ -215,7 +215,6 @@ Noddos needs to be started as root as it will need to get Linux firewall connect
 The following command line options are supported by the Noddos client:
 * __-n, --no-daemon__: Don't run as daemon and send log messages to STDERR in addition to syslog
 * __-c, --config-file__: Location of configuration default, default /etc/noddos/noddos.conf
-* __-p, --no_prune__: Disable pruning of Hosts, DnsQueries, DHCP transactions and flows
 * __-d, --debug__: Enable extensive logging, save uploaded data to /tmp
 * __-h, --help__: Print command line options
 
@@ -223,8 +222,6 @@ The following command line options are supported by the Noddos client:
 The noddos client configuration file (Default: /etc/noddos/noddos.conf) is a JSON file with the configuration settings.
 
 __DeviceProfilesFile__: The list of deviceprofiles for matching hosts against. This file is saved to this location by the shell script that downloads the file from the cloud and checks its signature. Default: /var/lib/noddos/DeviceProfiles.json
-
-__DnsmasqLogFile__: The dnsmasq daemon is configured per the installation instructions to write his extended DNS and DHCP logging to this file. Nodddos tails this file, parses the log lines and populates its DNS and DHCP tables with the information. Default: /var/log/dnsmasq.log. On LEDE firmware, it reads /tmp/system.log.
 
 __MatchFile__: Noddos will write all current matched devices to this file after receiving a SIGTERM signal. At startup, Noddos will read this file to have an initial list of matched devices. Default: /var/lib/noddos/DeviceMatches.json on Linux systems and /etc/noddos/DeviceMatches.json on routers wit hLede firmware
 
@@ -248,19 +245,15 @@ __WhitelistedIpv6Addresses__: list of IPv6 addresses that that should not have a
 
 __ReportTrafficToRfc1918__: should traffic to RFC1918 IP addresses be uploaded to the traffic stats API or not. There is currently no equivalent for IPv6 addresses. Default: false
 
-__ListenInterfaces__: (not currently implemented) Interfaces on which noddos should listen for SSDP traffic. Mutually exclusive with 'ipaddress'. Default: empty list, causes Noddos to listen on all interfaces and their IP addresses.
+__WanInterfaces__: Interfaces on which noddos should accept DNS answers. Default: empty list causes Noddos to discard all DNS answers, so one or more values should be provided for DNS snooping to work.
 
-__ListenIpaddresses__: (not currently implemented) IP address of the NICs connected to the network for noddos to listen for SSDP traffic on. Default: empty list, causes Noddos to listen on all interfaces and their IP addresses.
+__LanInterfaces__: Interfaces on which noddos should listen for DNS messages without answers. Currently unimplemented but planned: Noddos will only listen to SSDP multicast on these interfaces and Noddos will only perform ARP lookups on these interfaces. Default: empty list, which means Noddos will discard DNS queries so one or more values should be provided for DNS snooping to work.
 
 __TrafficReportInterval__: Interval between uploads of traffic stats for matched devices. To disable upload of traffic uploads, set this value to 0. Default: 3600 seconds
 
 __DeviceReportInterval__: Interval between uploads of data on unmatched devices. To disable upload of device reports, set this value to 0. Default: 14400 seconds
 
-__ExpireDnsQuery__: Cached DNS records will be pruned after this interval. This should be larger of typical largest TTL seen on DNS records. Default: 86400 seconds
-Default: 7 days
-
-__ExpireHost__: Cached Host records will be deleted if no traffic is seen from them based on this setting. Default: 604800 seconds
-Default: 7 days
+__ExpireHost__: Cached Host records will be deleted if no traffic is seen from them based on this setting. Default: 90 days
 
 ## Signals
 Noddos handles the following signals

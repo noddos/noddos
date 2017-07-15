@@ -45,7 +45,6 @@
 #include <curl/curl.h>
 
 #include "noddosconfig.h"
-#include "DnsmasqLogFile.h"
 #include "HostCache.h"
 #include "SsdpServer.h"
 #include "FlowTrack.h"
@@ -65,13 +64,12 @@ bool add_epoll_filehandle(int epfd, std::map<int, iDeviceInfoSource *> & epollma
 bool daemonize(Config &inConfig);
 bool write_pidfile(std::string pidfile);
 
-void parse_commandline(int argc, char** argv, bool& debug, std::string& configfile, bool& daemon, bool& prune);
+void parse_commandline(int argc, char** argv, bool& debug, std::string& configfile, bool& daemon);
 
 int main(int argc, char** argv) {
     bool debug = false;
 	std::string configfile = "/etc/noddos/noddos.conf";
 	bool daemon = true;
-	bool prune = true;
 
 	//
 	// Process management :
@@ -80,7 +78,7 @@ int main(int argc, char** argv) {
 	// - load configuration file,
 	// - write pid file
 	//
-	parse_commandline(argc, argv, debug, configfile, daemon, prune);
+	parse_commandline(argc, argv, debug, configfile, daemon);
 
 	if (daemon) {
 		openlog(argv[0], LOG_NOWAIT | LOG_PID, LOG_UUCP);
@@ -155,9 +153,6 @@ int main(int argc, char** argv) {
         syslog (LOG_NOTICE, "AF_PACKET disabled through configuration");
     }
 
-   	DnsmasqLogFile f(config.DnsmasqLogFile, hC, 86400, config.Debug);
-   	add_epoll_filehandle(epfd, epollmap, f);
-
     SsdpServer s(hC, 86400, "", config.Debug);
     add_epoll_filehandle(epfd, epollmap, s);
 
@@ -196,10 +191,6 @@ int main(int argc, char** argv) {
 					ft.Close();
 					ft.Open();
 			    	add_epoll_filehandle(epfd, epollmap, ft);
-				} else if (epoll_events[ev].data.fd == f.GetFileHandle()) {
-					f.Close();
-					f.Open(config.DnsmasqLogFile, 0); // 0: do not read file, just jump to the end and listen for writes to it
-					add_epoll_filehandle(epfd, epollmap, f);
 				} else {
 					syslog(LOG_ERR, "Closing file description without re-opening it %d", epoll_events[ev].data.fd);
 				    close(epoll_events[ev].data.fd);
@@ -269,7 +260,7 @@ int main(int argc, char** argv) {
 							config.ClientApiKeyFile, config.TrafficReportInterval != 0);
 					NextTrafficUpload = t + config.TrafficReportInterval;
 				}
-				if (prune && t > NextPrune) {
+				if (t > NextPrune) {
 					if (config.Debug) {
 						syslog(LOG_DEBUG, "Starting prune");
 					}
@@ -283,7 +274,6 @@ int main(int argc, char** argv) {
 exitprog:
 	hC.ExportDeviceProfileMatches(config.MatchFile);
 	hC.Prune();
-	f.Close();
 	s.Close();
 	for (auto p: pInstances) {
 	    p->Close();
@@ -466,7 +456,7 @@ bool write_pidfile(std::string pidfile) {
 
 }
 
-void parse_commandline(int argc, char** argv, bool& debug, std::string& configfile, bool& daemon, bool& prune) {
+void parse_commandline(int argc, char** argv, bool& debug, std::string& configfile, bool& daemon) {
 	int debug_flag = 0;
 	int daemon_flag = 1;
 	int prune_flag = 1;
@@ -475,7 +465,6 @@ void parse_commandline(int argc, char** argv, bool& debug, std::string& configfi
 		static struct option long_options[] = {
 	        {"debug",       no_argument,       &debug_flag, 1},
 	        {"nodaemon",    no_argument,       &daemon_flag, 0},
-	        {"noprune",     no_argument,       &prune_flag, 0},
 	        {"help",        no_argument,       &help_flag, 0},
 	        {"configfile",  required_argument, 0, 'c'},
 	        {0, 0, 0, 0}
@@ -497,14 +486,10 @@ void parse_commandline(int argc, char** argv, bool& debug, std::string& configfi
 	        case 'n':
 	        	daemon_flag = 0;
 	        	break;
-	        case 'p':
-	        	prune_flag = 0;
-	        	break;
 	        case 'c':
 	        	configfile = optarg;
 	        	break;
 	        case '?':
-	        	break;
 	        case 'h':
 	        default:
 	        	printf ("Noddos usage: -d/--debug -n/--nodaemon -c/--configfile <filename>\n");
@@ -517,8 +502,5 @@ void parse_commandline(int argc, char** argv, bool& debug, std::string& configfi
 	if (daemon_flag == 0) {
 		daemon = false;
        }
-	if (prune_flag == 0) {
-		prune = false;
-	}
 }
 
