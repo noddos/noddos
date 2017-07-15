@@ -135,12 +135,8 @@ bool Host::Match(const MatchCondition& mc) {
 	std::string value;
 	if (mc.Key == "MacOid") {
 		value = Mac.str().substr(0,8);
-	} else if (mc.Key == "DhcpHostname") {
-		value = Dhcp.DhcpHostname;
 	} else if (mc.Key == "DhcpVendor") {
 		value = Dhcp.DhcpVendor;
-	} else if (mc.Key == "DhcpHostname") {
-		value = Dhcp.DhcpHostname ;
 	} else if (mc.Key == "Hostname") {
 		value = Dhcp.Hostname ;
 	} else if (mc.Key == "SsdpFriendlyName" ) {
@@ -223,7 +219,6 @@ bool Host::DeviceStats(json& j, const uint32_t time_interval, bool force, bool d
 		return false;
 	}
 	j["MacOid"] = Mac.str().substr(0,8);
-	j["DhcpHostname"] = Dhcp.DhcpHostname;
 	j["DhcpVendor"] = Dhcp.DhcpVendor;
 	j["Hostname"] = Dhcp.Hostname;
 	j["SsdpFriendlyName"] = Ssdp.FriendlyName;
@@ -468,32 +463,26 @@ bool Host::DnsLogEntry_set(const std::string inFqdn, const std::string inIpAddre
 	return newentry;
 }
 
-bool Host::Dhcp_set (const std::shared_ptr<DhcpRequest> inDhcp_sptr) {
-	iCache::LastSeen = time(nullptr);
-	if (Dhcp == *(inDhcp_sptr)) {
-		return false;
+bool Host::Dhcp_set (const std::string inIpAddress, const MacAddress inMac, const std::string inHostname, const std::string inDhcpVendor) {
+    if (not inMac.isValid()) {
+            return false;
     }
-	iCache::FirstSeen = iCache::LastModified = iCache::LastSeen;
-
-	Dhcp = *inDhcp_sptr;
-	Dhcp.Expiration_set();
-	if(Debug) {
-		syslog(LOG_DEBUG, "Creating DHCP data for %s with expiration %lu", Dhcp.Mac.c_str(), Dhcp.Expiration_get());
+    Dhcp.Mac = Mac;
+    if (inIpAddress != "" && inIpAddress != "0.0.0.0") {
+        Dhcp.IpAddress = inIpAddress;
+    }
+	if (inHostname != "") {
+	    Dhcp.Hostname = inHostname;
 	}
-	return true;
-}
-
-bool Host::Dhcp_set (const std::string IpAddress, const MacAddress Mac, const std::string Hostname, const std::string DhcpHostname, const std::string DhcpVendor) {
-	Dhcp.IpAddress = IpAddress;
-	Dhcp.Mac = Mac;
-	Dhcp.Hostname = Hostname;
-	Dhcp.DhcpHostname = DhcpHostname;
-	Dhcp.DhcpVendor = DhcpVendor;
+	if (inDhcpVendor != "") {
+	    Dhcp.DhcpVendor = inDhcpVendor;
+	}
 
 	iCache::FirstSeen = iCache::LastModified = iCache::LastSeen = time(nullptr);
 	Dhcp.Expiration_set();
 	if(Debug) {
-		syslog(LOG_DEBUG, "Creating DHCP data for %s with expiration %lu", Dhcp.Mac.c_str(), Dhcp.Expiration_get());
+		syslog(LOG_DEBUG, "Creating DHCP data for %s with expiration %lu with ipaddress %s, hostname %s, vendor %s ",
+		        Dhcp.Mac.c_str(), Dhcp.Expiration_get(), Dhcp.IpAddress.c_str(), Dhcp.Hostname.c_str(), Dhcp.DhcpVendor.c_str());
 	}
 	return true;
 }

@@ -49,7 +49,7 @@ public:
 		int last = -1;
 		int rc = sscanf(inMacString.c_str(), "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx%n",
 				a + 0, a + 1, a + 2, a + 3, a + 4, a + 5, &last);
-		if(rc != 6 || inMacString.size() != last)
+		if(rc < 6)
 			throw std::runtime_error("invalid mac address format " + inMacString);
 		Mac =  uint64_t(a[0]) << 40 |
 			uint64_t(a[1]) << 32 |

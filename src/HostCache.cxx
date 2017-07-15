@@ -225,11 +225,11 @@ bool HostCache::AddDnsQueryIp (const std::string clientip, const std::string fqd
 }
 
 
-bool HostCache::AddDhcpRequest (const std::string IpAddress, const MacAddress inMac, const std::string Hostname, const std::string DhcpHostname, const std::string DhcpVendor) {
+bool HostCache::AddDhcpRequest (const std::string IpAddress, const MacAddress inMac, const std::string Hostname, const std::string DhcpVendor) {
 	if (Debug == true) {
 		syslog(LOG_DEBUG, "Adding DHCP request for host with MAC %s & IP %s", inMac.c_str(), IpAddress.c_str());
 	}
-	if (IpAddress == "" && inMac.isValid() == false) {
+	if ((IpAddress == "" || IpAddress == "0.0.0.0") && inMac.isValid() == false) {
 		syslog(LOG_WARNING, "No IpAdddress or Macaddress in DHCP request");
 		return false;
 
@@ -246,7 +246,7 @@ bool HostCache::AddDhcpRequest (const std::string IpAddress, const MacAddress in
 	}
 
 	if (h) {
-		h->Dhcp_set(IpAddress, inMac.str(), Hostname, DhcpHostname, DhcpVendor);
+		h->Dhcp_set(IpAddress, inMac.str(), Hostname, DhcpVendor);
 		return true;
 	}
 	return false;

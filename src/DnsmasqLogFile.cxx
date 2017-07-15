@@ -102,14 +102,10 @@ bool DnsmasqLogFile::ParseDhcpLine (const std::string line) {
 		}
 		DhcpRequestMap[querynumber]->IpAddress = ack_m.str(1);
 		DhcpRequestMap[querynumber]->Mac.set(ack_m.str(2));
-		DhcpRequestMap[querynumber]->DhcpHostname = ack_m.str(4);
-		std::transform(DhcpRequestMap[querynumber]->DhcpHostname.begin(), DhcpRequestMap[querynumber]->DhcpHostname.end(),
-				DhcpRequestMap[querynumber]->DhcpHostname.begin(), ::tolower);
 		if(Debug) {
-			syslog(LOG_DEBUG, "Parsed DHCP Ack %s : %s : %s",
+			syslog(LOG_DEBUG, "Parsed DHCP Ack %s : %s",
 				DhcpRequestMap[querynumber]->IpAddress.c_str(),
-				DhcpRequestMap[querynumber]->Mac.c_str(),
-				DhcpRequestMap[querynumber]->DhcpHostname.c_str()
+				DhcpRequestMap[querynumber]->Mac.c_str()
 			);
 		}
 		// The DHCP Ack is the last message for a DHCP query that we collect info from so now we can poplate the Host entity
@@ -117,7 +113,6 @@ bool DnsmasqLogFile::ParseDhcpLine (const std::string line) {
 				DhcpRequestMap[querynumber]->IpAddress,
 				DhcpRequestMap[querynumber]->Mac,
 				DhcpRequestMap[querynumber]->Hostname,
-				DhcpRequestMap[querynumber]->DhcpHostname,
 				DhcpRequestMap[querynumber]->DhcpVendor
 		);
 		if (DhcpRequestMap.erase(querynumber) < 1) {
@@ -152,7 +147,7 @@ bool DnsmasqLogFile::ParseDhcpLine (const std::string line) {
 				}
 				DhcpRequestMap[querynumber]->Hostname = client_m.str(1);
 				if(Debug) {
-					syslog(LOG_DEBUG, "Parsed DHCP Client provided hostname %s", DhcpRequestMap[querynumber]->DhcpHostname.c_str());
+					syslog(LOG_DEBUG, "Parsed DHCP Client provided hostname %s", DhcpRequestMap[querynumber]->Hostname.c_str());
 				}
 			}
 		}

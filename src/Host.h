@@ -100,8 +100,7 @@ class Host : public iCache {
 		uint32_t FlowCacheCount () { return FlowCacheIpv4.size() + FlowCacheIpv6.size(); }
 		bool DnsLogEntry_set(const std::string fqdn, const std::string ipaddress, const uint32_t expiration = 86400);
 		uint32_t DnsLogEntryCount () { return DnsHostCache.size(); }
-		bool Dhcp_set (const std::shared_ptr<DhcpRequest> inDhcp_sptr);
-		bool Dhcp_set (const std::string IpAddress, const MacAddress Mac, const std::string Hostname, const std::string DhcpHostname, const std::string DhcpVendor);
+        bool Dhcp_set (const std::string IpAddress, const MacAddress Mac, const std::string Hostname, const std::string DhcpVendor);
 		bool SsdpInfo_set(const std::shared_ptr<SsdpHost> insHost);
 
 		// This is the DnsQueryCache

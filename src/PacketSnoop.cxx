@@ -591,105 +591,38 @@ bool PacketSnoop::parseDhcpv4UdpPacket(unsigned char *payload, size_t size) {
     }
     uint8_t msgType = d->type();
 
+    Tins::BootP::ipaddress_type yiaddr = d->yiaddr();
+    std::string clientIp = yiaddr.to_string();
+
+    Tins::BootP::chaddr_type chaddr = d->chaddr();
+    // std::string macAddress = chaddr.to_string().substr(0,chaddr.address_size  + 1);
+    MacAddress mac (chaddr.to_string());
+
     std::string hostname = "";
-    if (Debug == true) {
-        syslog (LOG_DEBUG, "PacketSnoop: Parsed DHCPv4 packet successfully, type %u", msgType);
-        try {
-            hostname = d->hostname();
-            syslog (LOG_DEBUG, "PacketSnoop: DHCPv4 Hostname %s", d->hostname().c_str());
-        } catch (const Tins::option_not_found &e) {
-            if (Debug == true) {
-                syslog (LOG_DEBUG, "PacketSnoop: DHCPv4 client hostname not found");
-            }
-        }
-        catch (...) {
-            if (Debug == true) {
-                syslog (LOG_DEBUG, "PacketSnoop: DHCPv4 client hostname not found");
-            }
-        }
-    }
-    if (msgType != 5 && msgType != 8) {
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "Ignoring DHCPv4 packets if they are not ACKs or INFORMS");
-        }
-        return false;
-    }
-    std::string clientIp;
     try {
-        Tins::IPv4Address yiaddr = d->yiaddr();
-        clientIp = yiaddr.to_string();
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "PacketSnoop: DHCPv4 ACK with yiaddr %s", clientIp.c_str());
-        }
+        hostname = d->hostname();
     } catch (...) {
-        syslog (LOG_NOTICE, "PacketSnoop: DHCPv4 ACK doesn't have yiaddr");
-        return false;
     }
-    MacAddress mac;
-    try {
-        Tins::BootP::chaddr_type chaddr = d->chaddr();
-        mac.set(chaddr.to_string());
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "PacketSnoop: DHCPv4 ACK with chaddr %s", mac.c_str());
-        }
-    } catch (...) {
-        syslog (LOG_NOTICE, "PacketSnoop: DHCPv4 ACK doesn't have chaddr");
-        return false;
-    }
-    std::string vendor;
+
+    std::string vendor = "";
     try {
         const Tins::DHCP::option *v = d->search_option(Tins::DHCP::OptionTypes::VENDOR_CLASS_IDENTIFIER);
         if (v != nullptr) {
             std::string ven((const char*) v->data_ptr(), v->data_size());
             vendor = ven;
-            if (Debug == true) {
-                syslog (LOG_DEBUG, "PacketSnoop: DHCPv4 Vendor Class Identifier %s", vendor.c_str());
-            }
-        } else {
-            if (Debug == true) {
-                syslog (LOG_DEBUG, "PacketSnoop: Vendor Class Identifier DHCPv4 option not found");
-            }
         }
-    } catch (const Tins::option_not_found &e) {
+    } catch (...) {}
+
+
+
+    if (msgType != 1 && msgType != 3 && msgType != 5 && msgType != 8) {
         if (Debug == true) {
-            syslog (LOG_DEBUG, "PacketSnoop: Vendor Class Identifier DHCPv4 option not found");
+            syslog (LOG_DEBUG, "Ignoring DHCPv4 packets if they are not DISCOVER, REQUEST, ACK or INFORM");
         }
-    } catch (...) {
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "PacketSnoop: Vendor Class Identifier DHCPv4 option not found");
-        }
+        return false;
     }
 
-    try {
-        const Tins::DHCP::option *i = d->search_option(Tins::DHCP::OptionTypes::DHCP_CLIENT_IDENTIFIER);
-        if (i != nullptr) {
-            std::string client ((const char*) i->data_ptr(), i->data_size());
-            syslog (LOG_DEBUG, "PacketSnoop: DHCPv4 Client Identifier %s", client.c_str());
-        } else {
-            syslog (LOG_DEBUG, "PacketSnoop: Client Identifier DHCPv4 option not found");
-        }
-    } catch (const Tins::option_not_found &e) {
-        syslog (LOG_DEBUG, "PacketSnoop: Client Identifier DHCPv4 option not found");
-    } catch (...) {
-        syslog (LOG_DEBUG, "PacketSnoop: client Hostname DHCPv4 option not found");
-    }
-    std::string fqdn;
-    try {
-        fqdn = d->domain_name();
-         if (Debug == true) {
-             syslog (LOG_DEBUG, "PacketSnoop: DHCPv4 FQDN %s", fqdn.c_str());
-        }
-    } catch (const Tins::option_not_found &e) {
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "PacketSnoop: DHCPv4 FQDN not found");
-        }
-    } catch (...) {
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "PacketSnoop: DHCPv4 FQDN not found");
-        }
-    }
-
-    hC->AddDhcpRequest(clientIp, mac, hostname, fqdn, vendor);
+    hC->AddDhcpRequest(clientIp, mac, hostname, vendor);
     delete d;
     return false;
 }

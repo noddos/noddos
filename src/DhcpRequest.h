@@ -31,7 +31,6 @@
 
 class  DhcpRequest : public iCache {
 public:
-	std::string DhcpHostname;	// Hostname provided by DHCP server to the client
 	std::string DhcpVendor;
 	std::string Hostname;		// Hostname provided by the client to DHCP server
 	MacAddress Mac;
@@ -48,7 +47,6 @@ public:
     uint32_t Prune (bool Force = false) { return 0; }
 
 	void operator = (const DhcpRequest &rhs) {
-		DhcpHostname = rhs.DhcpHostname;
 		DhcpVendor = rhs.DhcpVendor;
 		Hostname = rhs.Hostname;
 		Mac = rhs.Mac;
@@ -58,8 +56,7 @@ public:
 		iCache::FirstSeen = time(nullptr);
 	}
     bool operator == (const DhcpRequest &rhs) const {
-		return DhcpHostname == rhs.DhcpHostname &&
-			DhcpVendor == rhs.DhcpVendor &&
+		return DhcpVendor == rhs.DhcpVendor &&
 			Hostname == rhs.Hostname &&
 			Mac == rhs.Mac &&
 			IpAddress == rhs.IpAddress;
