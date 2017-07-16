@@ -62,14 +62,22 @@ uint32_t HostCache::Prune (bool Force) {
 			prunedhosts++;
 		}
 	}
-	syslog(LOG_INFO, "Pruned %u hosts", prunedhosts);
+	if (Debug == true) {
+	    syslog(LOG_DEBUG, "Pruned %u hosts", prunedhosts);
+	}
 	uint32_t count = pruneDnsQueryCache(Force);
-	syslog(LOG_DEBUG, "Pruned %u DNS queries", count);
+    if (Debug == true) {
+        syslog(LOG_DEBUG, "Pruned %u DNS queries", count);
+    }
 	count = pruneDnsIpCache(Force);
-	syslog(LOG_DEBUG, "Pruned %u DNS IP cache entries", count);
+    if (Debug == true) {
+        syslog(LOG_DEBUG, "Pruned %u DNS IP cache entries", count);
+    }
     count = pruneDnsCnameCache(Force);
-    syslog(LOG_DEBUG, "Pruned %u DNS CNAME cache entries", count);
-	return prunedhosts;
+    if (Debug == true) {
+        syslog(LOG_DEBUG, "Pruned %u DNS CNAME cache entries", count);
+    }
+  	return prunedhosts;
 }
 
 uint32_t HostCache::Match() {

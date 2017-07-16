@@ -162,6 +162,8 @@ int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
 }
 
 bool PacketSnoop::Close () {
+    pruneTcpSnoopInstances(true);
+
     if (map != nullptr && (char *) map != MAP_FAILED) {
         if (munmap(map, map_sz)) {
             syslog(LOG_ERR, "munmap");
@@ -367,6 +369,18 @@ bool PacketSnoop::Parse(unsigned char *frame) {
             bool rstFlag = (tcph->th_flags & TH_RST) >> 2;
             std::shared_ptr<TcpSnoop> tsPtr = getTcpSnoopInstance(src, srcPort,
                     dest, destPort);
+            // FIXME: the below logic does free up memory but a FIN may be followed by an ACK of an incoming FIN so
+            // a new TcpSnoopInstance would be created and would have to be pruned using the periodic pruning algorithm
+            // But we do free up memory with the current solution so the extra `cost' is worth it.
+            if (finFlag == true || rstFlag == true) {
+                if (tsPtr != nullptr) {
+                    if (Debug == true) {
+                        syslog (LOG_DEBUG, "PacketSnoop: saw FIN or RST for TCP stream, pruning TcpSnoop instance");
+                    }
+                    pruneTcpSnoopInstance(src, srcPort, dest, destPort);
+                }
+                return true;
+            }
             if (tsPtr == nullptr) {
                 tsPtr = std::make_shared<TcpSnoop>(Debug);
                 addTcpSnoopInstance(src, srcPort, dest, destPort, tsPtr);
@@ -439,6 +453,48 @@ std::shared_ptr<TcpSnoop> PacketSnoop::getTcpSnoopInstance(
         return nullptr;
     }
     return dpit->second;
+}
+
+void PacketSnoop::pruneTcpSnoopInstance(const boost::asio::ip::address inSrc, const uint16_t inSrcPort,
+        const boost::asio::ip::address inDest, const uint16_t inDestPort) {
+    tcpSnoops[inSrc][inSrcPort][inDest][inDestPort] = nullptr;
+}
+
+uint32_t PacketSnoop::pruneTcpSnoopInstances(const bool Force) {
+    uint32_t deletedinstances = 0;
+    auto sit = tcpSnoops.begin();
+    while (sit != tcpSnoops.end()) {
+        auto spit = sit->second.begin();
+        while (spit != sit->second.end()) {
+            auto dit = spit->second.begin();
+            while (dit != spit->second.end()) {
+                auto dpit = dit->second.begin();
+                while (dpit != dit->second.end()) {
+                    if (Force == true || dpit->second->isExpired() == true) {
+                        dpit = dit->second.erase(dpit);
+                    } else {
+                        ++dpit;
+                    }
+                }
+                if (Force == true || dit->second.empty() == true) {
+                    dit = spit->second.erase(dit);
+                } else {
+                    ++dit;
+                }
+            }
+            if (Force == true || spit->second.empty() == true) {
+                spit = sit->second.erase(spit);
+            } else {
+                ++spit;
+            }
+        }
+        if (Force == true || sit->second.empty()) {
+            sit = tcpSnoops.erase(sit);
+        } else {
+            ++sit;
+        }
+    }
+    return deletedinstances;
 }
 
 void PacketSnoop::addTcpSnoopInstance(const boost::asio::ip::address inSrc,

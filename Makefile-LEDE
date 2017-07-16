@@ -123,14 +123,6 @@ define Package/noddos/postinst
 		/etc/init.d/noddos enable
 	fi
 
-
-	echo "Adding dnsmasq configuration settings for noddos: logdhcp"
-	uci set "dhcp.@dnsmasq[0].logqueries=1"
-	uci set "dhcp.@dnsmasq[0].logdhcp=1"
-	uci set "dhcp.@dnsmasq[0].logfile=/tmp/dnsmasq.log"
-	uci commit dhcp
-	/etc/init.d/dnsmasq restart
-
 	if [ ! -f /var/lib/noddos/DeviceDump.json ]; then
 		echo "[]" >/var/lib/noddos/DeviceDump.json
 	fi

@@ -14,10 +14,6 @@ reload_service() {
 }
 
 start_service() {
-    uci set dhcp.@dnsmasq[0].logqueries="1"
-    uci set dhcp.@dnsmasq[0].logdhcp="1"
-    uci commit dhcp
-
     netstat -nr | grep '224.0.0' > /dev/null
     if [ "$?" -gt "0" ]; then
         route add -net 224.0.0.0 netmask 224.0.0.0 dev br-lan
@@ -25,13 +21,6 @@ start_service() {
 
     CONFFILE=/var/etc/noddos.conf
     cp /etc/noddos/noddos.conf-base $CONFFILE
-	dnsmasqlogfile=$(uci get dhcp.@dnsmasq[0].logfile)
-    if [[ -z $dnsmasqlogfile ]] || [ ! -f $dnsmasqlogfile ] ; then
-		dnsmasqlogfile=$(uci get system.@system[0].log_file)
-	fi
-    if [[ -n $dnsmasqlogfile ]]; then
-        echo '    "DnsmasqLogFile": "'$dnsmasqlogfile'",' >>$CONFFILE
-    fi
     if [ "$(uci get noddos.@noddos[0].rfc1918)" -eq "1" ]; then
         echo '    "ReportTrafficToRfc1918": true,' >>$CONFFILE
     else

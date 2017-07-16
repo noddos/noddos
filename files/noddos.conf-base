@@ -12,7 +12,5 @@
     "ListenInterfaces": [],
     "LanInterfaces": ["eth0"],
     "WanInterfaces": ["eth1"],
-    "ExpireDnsQuery": 86400,
     "ExpireHost": 604800,
     "UploadMode": "Anonymous",
-    "UseAfPacket": false,

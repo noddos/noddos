@@ -1,3 +1,8 @@
+___Noddos v0.3.0  - 7/23/2017___
+
+Use AF_PACKET_MMAP for DNS and DHCP snooping to avoid dependency on dnsmasq
+Use /proc/net/nf_conntract is available and noddos configuration doesn't disable it
+
 ___Noddos v0.2.3 - 6/14/2017___
 
 Minor bug fix to run the Device Match algorithm periodically instead of constantly.

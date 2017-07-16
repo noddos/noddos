@@ -1,4 +1,19 @@
 /*
+   Copyright 2017 Steven Hessing
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
  * TcpSnoop.h
  *
  *  Created on: Jun 6, 2017
@@ -10,7 +25,9 @@
 
 #include <map>
 #include <memory>
+#include <vector>
 #include <netinet/tcp.h>
+#include <arpa/inet.h>
 #include <syslog.h>
 
 struct TcpSegment {
@@ -38,8 +55,8 @@ private:
 	// std::vector<unsigned char> tcpPayload;
 
 public:
-	TcpSnoop(bool inDebug = false): Debug{inDebug} {
-		Expiration = time(nullptr) + 120;
+	TcpSnoop(const bool inDebug = false, const time_t inExpiration = 120): Debug{inDebug} {
+        setExpiration(inExpiration);
 		if (Debug == true) {
 			syslog(LOG_DEBUG, "Constructing TcpSnoop instance");
 		}
@@ -51,8 +68,9 @@ public:
 	 * input: pointer to TCP Segment, size of TCP segement, whether packet was received or sent by host
 	 * output: bool on whether data might be ready for parsing with TcpSnoop:parseStream
 	 */
-	bool addPacket (const unsigned char *tcpSegment, const uint16_t size) {
-		struct tcphdr *tcph = (struct tcphdr*) tcpSegment;
+	bool addPacket (const unsigned char *tcpSegment, const uint16_t size, const time_t inExpiration = 120) {
+		setExpiration(inExpiration);
+	    struct tcphdr *tcph = (struct tcphdr*) tcpSegment;
 
 		bool finFlag = (tcph->th_flags & TH_FIN);
 		bool synFlag = (tcph->th_flags & TH_SYN) >> 1;
@@ -168,6 +186,8 @@ public:
 		}
 		return dnsMessageLength;
 	}
+	void setExpiration(const time_t inExpiration = 120) { Expiration = time(nullptr) + inExpiration; }
+	bool isExpired() { return time(nullptr) > Expiration; }
 };
 
 

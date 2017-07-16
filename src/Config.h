@@ -50,7 +50,6 @@ public:
 	std::string ClientApiKeyFile = "/etc/noddos/noddosapiclient.key";
 	std::string SignatureCertFile = "/etc/noddos/noddossignature.pem";
 	std::string PidFile = "/var/lib/noddos/noddos.pid";
-	bool UseAfPacket = true;
 	bool UseNfConntrack = false;
 	std::string User = "";
 	std::string Group = "";
@@ -64,7 +63,6 @@ public:
 	bool ReportTrafficToRfc1918 = false;
 	std::time_t MatchInterval = 300;
 	std::time_t PruneInterval = 3600;
-	// std::time_t ExpireDnsQuery = 86400;
 	std::time_t ExpireHost = 7776000;
 	UploadMode uMode = Anonymous;
 	bool Debug;
@@ -96,7 +94,6 @@ public:
 		std::string newClientApiKeyFile = ClientApiKeyFile;
 		std::string newSignatureCertFile = SignatureCertFile;
 		std::string newPidFile = PidFile;
-		bool newUseAfPacket = UseAfPacket;
 		bool newUseNfConntrack = UseNfConntrack;
 		std::string newUser = User;
 		std::string newGroup = Group;
@@ -110,7 +107,6 @@ public:
 		bool newReportTrafficToRfc1918 = ReportTrafficToRfc1918;
 		time_t newMatchInterval = MatchInterval;
 		time_t newPruneInterval = PruneInterval;
-		// time_t newExpireDnsQuery = ExpireDnsQuery;
 		time_t newExpireHost = ExpireHost;
 		UploadMode newuMode = uMode;
 
@@ -138,9 +134,6 @@ public:
 			}
 			if (j.count("PidFile")) {
 				newPidFile = j["PidFile"].get<std::string>();
-			}
-			if (j.count("UseAfPacket")) {
-				newUseAfPacket = j["UseAfPacket"].get<bool>();
 			}
 			if (j.count("UseNfConntrack")) {
 				newUseNfConntrack = j["UseNfConntrack"].get<bool>();
@@ -181,9 +174,6 @@ public:
 			if (j.count("MatchInterval")) {
 				newMatchInterval= j["MatchInterval"].get<uint32_t>();
 			}
-			// if (j.count("ExpireDnsQuery")) {
-			// 	newExpireDnsQuery= j["ExpireDnsQuery"].get<uint32_t>();
-			// }
 			if (j.count("ExpireHost")) {
 				newExpireHost= j["ExpireHost"].get<uint32_t>();
 			}
@@ -206,13 +196,8 @@ public:
 		DumpFile = newDumpFile;
 		ClientApiCertFile = newClientApiCertFile;
 		ClientApiKeyFile = newClientApiKeyFile;
-		// ClientApiCertFingerprint = getCertFingerprint(ClientApiCertFile, Debug);
-		// if (Debug) {
-		//	syslog (LOG_DEBUG, "Certificate fingerprint %s", ClientApiCertFingerprint.c_str());
-		// }
 		SignatureCertFile = newSignatureCertFile;
 		PidFile = newPidFile;
-		UseAfPacket = newUseAfPacket;
 		UseNfConntrack = newUseNfConntrack;
 		User = newUser;
 		Group = newGroup;
@@ -226,7 +211,6 @@ public:
 		ReportTrafficToRfc1918 = newReportTrafficToRfc1918;
 		MatchInterval = newMatchInterval;
 		PruneInterval = newPruneInterval;
-		// ExpireDnsQuery = newExpireDnsQuery;
 		ExpireHost = newExpireHost;
 		uMode = newuMode;
 		return configfailure;

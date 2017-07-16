@@ -137,20 +137,16 @@ int main(int argc, char** argv) {
     }
 
     //
-    // all the DeviceInfoSources
+    // Set up all the DeviceInfoSources
     //
     std::unordered_set<PacketSnoop *> pInstances;
-    if (config.UseAfPacket == true) {
-        std::unordered_set<std::string> allInterfaces = config.LanInterfaces;
-        allInterfaces.insert(config.WanInterfaces.begin(), config.WanInterfaces.end());
-        for (auto iface: allInterfaces) {
-            PacketSnoop *p = new PacketSnoop(hC, config.Debug);
-            p->Open(iface);
-            add_epoll_filehandle(epfd, epollmap, *p);
-            pInstances.insert(p);
-        }
-    } else {
-        syslog (LOG_NOTICE, "AF_PACKET disabled through configuration");
+    std::unordered_set<std::string> allInterfaces = config.LanInterfaces;
+    allInterfaces.insert(config.WanInterfaces.begin(), config.WanInterfaces.end());
+    for (auto iface: allInterfaces) {
+        PacketSnoop *p = new PacketSnoop(hC, config.Debug);
+        p->Open(iface);
+        add_epoll_filehandle(epfd, epollmap, *p);
+        pInstances.insert(p);
     }
 
     SsdpServer s(hC, 86400, "", config.Debug);
@@ -265,6 +261,9 @@ int main(int argc, char** argv) {
 						syslog(LOG_DEBUG, "Starting prune");
 					}
 					hC.Prune();
+					for (auto p: pInstances) {
+					    p->pruneTcpSnoopInstances();
+					}
 					NextPrune = t + config.PruneInterval;
 				}
     		}
@@ -501,6 +500,6 @@ void parse_commandline(int argc, char** argv, bool& debug, std::string& configfi
 	}
 	if (daemon_flag == 0) {
 		daemon = false;
-       }
+    }
 }
 

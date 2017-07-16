@@ -1,5 +1,4 @@
 [![Noddos Intro](https://www.noddos.io/assets/images/noddos-slide.gif)](https://www.noddos.io)
-[![Build Status](https://travis-ci.org/noddos/noddos.svg?branch=master)](https://travis-ci.org/noddos/noddos)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/879/badge)](https://bestpractices.coreinfrastructure.org/projects/879)
 [![SSL Rating](https://sslbadge.org/?domain=www.noddos.io)](https://www.ssllabs.com/ssltest/analyze.html?d=www.noddos.io)
 
@@ -11,12 +10,12 @@ The current focus of Noddos is on building the database of device profiles by ge
 
 ## Client Overview
 
-Noddos runs as a daemon to listen to DHCP, DNS and SSDP traffic on the home or enterprise network. It reads DHCP and DNS data from the dnsmasq daemon, if dnsmasq is configured to log extended DNS and DHCP data. If incoming SSDP data has a 'Location' header then Noddos will call the URL contained in the header to collect additional device information. Using the Linux Netfilter functionality, it tracks network flows in real time.
+Noddos runs as a daemon to listen to DHCP, DNS and SSDP traffic on the home or enterprise network. It reads DHCP and DNS data by sniffing those packets using AF_PACKET_MMAP, If incoming SSDP data has a 'Location' header then Noddos will call the URL contained in the header to collect additional device information. Using the Linux Netfilter functionality, it tracks network flows in real time using either /proc/net/nf_conntrack if available or otherwise using the NFCT library.
 Noddos reads a file with Device Profiles that specifies the matching conditions and traffic filtering rules. Periodically, Noddos matches discovered devices with the device profile database to identify known devices. Noddos can be configured to upload traffic statistics for identified devices and device attributes for devices it has not yet been able to identify. The Noddos configuration file specifies a.o. whether traffic and device statistics should be uploaded.
 
-The Noddos process should be started at boot time. The noddos package for routers running firmware of the [Lede project](https://lede-project.org/) includes an init.d/procd script that launches noddos. The process runs as a daemon and can be configured to drop privileges after initial startup. Due to issues with polling the file handle for a netfilter conntrack connection, it is recommended to not drop privileges so it is possible to re-establish the filehandle after poll errors occur. Depending on traffic patterns, the client can consume about 10MB of DRAM. Going forward that memory footprint will be reduced when more efficient storage of FQDNs and IP addresses is implemented. The CPU usage for the process is minimal after it has performed the inital processing of the dnsmasq log.
+The Noddos process should be started at boot time. The noddos package for routers running firmware of the [Lede project](https://lede-project.org/) includes an init.d/procd script that launches noddos. The process runs as a daemon and can be configured to drop privileges after initial startup. If the /proc/net/nf_conntrack file is not available, it is recommended to not drop privileges so it is possible to re-establish the filehandle after poll errors occur as epolling on the NFCT filehandle is somewhat unstable. Depending on traffic patterns, the client can consume about 10MB of DRAM. The CPU usage for the process is all but negligible. 
 
-The 'getnoddosdeviceprofiles' script is used to securely download the list of Device Profiles over HTTPS from the Noddos web site, check the digital signature of the file using a Noddos certificate and makes the file available to the Noddos client. It needs access to the public cert that was used to sign the file. This script should be called at least once per day from cron. 
+The 'getnoddosdeviceprofiles' script is used to securely download the list of Device Profiles over HTTPS from the Noddos web site, check the digital signature of the file using a Noddos certificate and makes the downloaded file available to the Noddos client. It needs access to the public cert that was used to sign the file. This script should be called at least once per day from cron. 
 
 ## Installation 
 
@@ -26,24 +25,6 @@ Here are instructions for installing Noddos on Home Gateways running Lede firmwa
 - Various routers from Asus RT-AC56/68/87U, Buffalo, D-Link DIR-885L, Linksys EA6xxx, Netgear R6250/6300/7000/8000/9000 and TPlink Archer C5, C8, C9 using the [arm_cortex_A9 package architecture](https://lede-project.org/docs/instructionset/arm_cortex-a9)
 
 If you have a different router, you can either send me a request to build a package for that router or you can follow the instructions to create your own package. If someone wants a package for a router running OpenWRT then please ping me and I'll attempt to build a package for that firmware. 
-
-    
-    ssh root@<HGW-IP>
-    vi /etc/init.d/dnsmasq
-
-We need to edit the dnsmasq start-up script to make sure it starts with the parameters that noddos needs
-- (line numbers are based on the file with these modifications being applied)
-- insert after line 602 (only for Lede 17.01.1, this line is not needed for 17.01.2): append_parm "$cfg" "logdhcp" "--log-dhcp"
-- insert after line 670:
-
-	config_get dnsmasqlogfile "$cfg" logfile ""  
-	[ -n dnsmasqlogfile ] && {  
-		xappend "log-facility=$dnsmasqlogfile"  
-	}  
-
-- insert after line 790 (Lede 17.01.2) or line 772 (Lede 17.01.1): procd_add_jail_mount_rw $dnsmasqlogfile
-
-	service dnsmasq restart
 
 We need to modify the menu structure of the Luci web interface to point to the Noddos Client and Configuration pages. First edit the file /usr/lib/lua/luci/controller/admin/status.lua. Insert on line 15:
 
@@ -74,24 +55,14 @@ Now we can install the actual Noddos package (and the libtins package that is al
 	opkg install <libtins-package>
 	opkg install <noddos-package>
 
-Go to the Luci -> Network -> Client Firewall page to configure Noddos. Make sure to include the Loopback, WAN and LAN IP- or MAC-addresses of your router. You may also want to whitelist addresses of your PCs that you use daily as collecting traffic statistics for them is of not much use with the traffic they generate to so many destinations. You may also want to add the MAC addresses of phones or tablets. 
+Go to the Luci -> Network -> Client Firewall page to configure Noddos. Make sure to include the Loopback, WAN and LAN IP- or MAC-addresses of your router in the whitelists. Populate the lists of LanInterfaces and WanInterfaces with your interface names as DNS and DHCP snooping use that to select the interfaces they accept traffic from. You may also want to whitelist addresses of your PCs that you use daily as collecting traffic statistics for them is of not much use with the traffic they generate to so many destinations. You may also want to add the MAC addresses of phones or tablets. 
 
 	service noddos start
-
-Optional: remove odhcp so dnsmasq becomes the DHCP server. That enables noddos to read the logs for DHCP transactions. If you use IPv6 from your ISP and have multiple routers that automatically get assigned a prefix from the prefix you get from your ISP then don't perform this step as dnsmasq doesn't support this functionality. If you don't uninstall odhcp then Noddos won't be able to recognize some devices as it won't have access to all the DHCP transaction details
-
-	opkg remove odhcp
-	/etc/init.d/dnsmasq restart
 
 Install a cronjob to download the Device Profiles database frequently (please pick a randon minute instead of 23 minutes after the hour, ie
 
 	crontab -e 
     	23 */3 * * * /usr/bin/getnoddosdeviceprofiles
-
-We're telling dnsmasq to create some log files that can pretty big so we want to wipe them daily:
-
-	crontab -e
-		21 4 * * * echo -n "" >/tmp/dnsmasq.log; /etc/init.d/dnsmasq reload
 
 If you want maximum privacy for uploads, create a new client cert every 12 hours or so. That does mean that going forward you may not be able to use some newly developed Noddos portal functions. Create a cronjob for root:
 
@@ -105,7 +76,7 @@ Sorry, there are no packages yet for Ubuntu / Fedora / CentOS / Gentoo. For now,
 Compilation instructions are available for Home Gateways and regular Linux systems.
 
 ### Compilation for a Home Gateway running firmware of the [Lede project](https://lede-project.org/)
-Noddos is now up and running on Lede firmware installed on a a Linksys WRT 1200AC. There is also the package for Asus/Netgear/D-Link/Buffalo routers. If you have a HGW using a differnet platform then you can use these instructions to generate your own package. These instructions are based on the Lede 17.01.1 release.
+Noddos is now up and running on Lede firmware installed on a a Linksys WRT 1200AC. There is also the package for Asus/Netgear/D-Link/Buffalo routers. If you have a HGW using a differnet platform then you can use these instructions to generate your own package. These instructions are based on the Lede 17.01.2 release.
 
 	mkdir -p noddosbuild/package
 	cd noddosbuild/package
@@ -179,7 +150,7 @@ Install needed apps
     sudo cp noddos.conf-sample /etc/noddos/noddos.conf
     sudo cp files/noddosconfig.pem /etc/noddos
 
-Edit /etc/noddos.conf, for one to whitelist the IP addresses of the interfaces of your router
+Edit /etc/noddos.conf, to at least set the LanInterfaces and WanInterfaces and to  whitelist the IP addresses of the interfaces of your router
 
     sudo chown -R root:root /etc/noddos
 
