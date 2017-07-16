@@ -42,7 +42,7 @@ configure_file (
 # so that we will find TutorialConfig.h
 include_directories("${PROJECT_BINARY_DIR}")
  
-add_executable(noddos noddos.cxx DnsLogEntry.cxx Host.cxx 
+add_executable(noddos noddos.cxx Host.cxx 
     HostCache.cxx SsdpServer.cxx SsdpLocation.cxx FlowTrack.cxx Config.cxx
     opensslfingerprint.cxx PacketSnoop.cxx)
 target_link_libraries(noddos libnetfilter_conntrack.so ssl crypto curl tins)
@@ -50,12 +50,12 @@ target_link_libraries(noddos libnetfilter_conntrack.so ssl crypto curl tins)
 enable_testing()
 
 add_test (Host Host_test)
-add_executable(Host_test Host_test.cxx DnsLogEntry.cxx 
+add_executable(Host_test Host_test.cxx 
     Host.cxx HostCache SsdpServer.cxx SsdpLocation.cxx opensslfingerprint.cxx)
 target_link_libraries(Host_test curl ssl crypto)
 
 add_test (HostCache Host_test)
-add_executable(HostCache_test HostCache_test.cxx DnsLogEntry.cxx
+add_executable(HostCache_test HostCache_test.cxx 
     Host.cxx HostCache SsdpServer.cxx SsdpLocation.cxx
     opensslfingerprint.cxx)
 target_link_libraries(HostCache_test curl ssl crypto)
@@ -64,14 +64,8 @@ target_link_libraries(HostCache_test curl ssl crypto)
 add_test (DeviceProfile DeviceProfile_test)
 add_executable(DeviceProfile_test DeviceProfile_test.cxx 
 	FlowTrack.cxx Config.cxx HostCache.cxx Host.cxx SsdpServer.cxx
-	DnsLogEntry.cxx SsdpLocation.cxx opensslfingerprint.cxx)
+	SsdpLocation.cxx opensslfingerprint.cxx)
 target_link_libraries(DeviceProfile_test curl ssl crypto netfilter_conntrack)
-
-add_test (DnsLogEntry DnsLogEntry_test)
-add_executable(DnsLogEntry_test DnsLogEntry_test.cxx 
-    HostCache.cxx Host.cxx DnsLogEntry.cxx SsdpServer.cxx SsdpLocation.cxx
-    opensslfingerprint.cxx)
-target_link_libraries(DnsLogEntry_test curl ssl crypto)
 
 add_test (Identifier Identifier_test)
 add_executable(Identifier_test Identifier_test.cxx)
@@ -82,7 +76,7 @@ target_link_libraries(Config_test curl ssl crypto)
 
 add_test (SsdpServer SsdpServer_test)
 add_executable(SsdpServer_test SsdpServer_test.cxx 
-    HostCache.cxx Host.cxx DnsLogEntry.cxx SsdpServer.cxx SsdpLocation.cxx
+    HostCache.cxx Host.cxx SsdpServer.cxx SsdpLocation.cxx
     opensslfingerprint.cxx)
 target_link_libraries(SsdpServer_test curl ssl crypto)
 
@@ -97,7 +91,7 @@ add_executable(Curl_test Curl_test.cxx)
 target_link_libraries(Curl_test curl ssl crypto)
 
 add_executable (PacketSnoop_test PacketSnoop_test.cxx PacketSnoop.cxx 
-	HostCache.cxx Host.cxx DnsLogEntry.cxx SsdpServer.cxx SsdpLocation.cxx
+	HostCache.cxx Host.cxx SsdpServer.cxx SsdpLocation.cxx
     opensslfingerprint.cxx)
 target_link_libraries(PacketSnoop_test curl ssl crypto tins)
 

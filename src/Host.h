@@ -33,7 +33,6 @@
 using json = nlohmann::json;
 
 #include "noddos.h"
-#include "DnsLogEntry.h"
 #include "DhcpRequest.h"
 #include "FlowEntry.h"
 #include "iCache.h"
@@ -44,103 +43,96 @@ using json = nlohmann::json;
 #include "DnsCache.h"
 #include "boost/asio.hpp"
 
-typedef std::map<std::string, std::shared_ptr<DnsLogEntry>> DnsHostCache;
 typedef std::list<std::shared_ptr<FlowEntry>> FlowEntryList;
 
 
 #define HOSTDEFAULTEXPIRATION 604800
 
 class Host : public iCache {
-	private:
-    	std::map<std::string,time_t> DnsQueryList;
+private:
+    std::map<std::string,time_t> DnsQueryList;
 
-    	std::map<std::string, std::shared_ptr<DnsLogEntry>> DnsHostCache;
-    	std::map<boost::asio::ip::address_v4, std::shared_ptr<FlowEntryList>> FlowCacheIpv4;
-    	std::map<boost::asio::ip::address_v6, std::shared_ptr<FlowEntryList>> FlowCacheIpv6;
-    	std::string Ipv4Address;
-    	std::string Ipv6Address;
-    	MacAddress Mac;
-    	DhcpRequest Dhcp;
-    	SsdpHost Ssdp;
-    	std::string Uuid;
-    	time_t matchversion;
-    	ConfidenceLevel IdentifyConfidenceLevel;
-    	ConfidenceLevel EnforceConfidenceLevel;
-    	bool UploadStats;
-    	bool Debug;
+ 	// std::map<std::string, std::shared_ptr<DnsLogEntry>> DnsHostCache;
+   	std::map<boost::asio::ip::address_v4, std::shared_ptr<FlowEntryList>> FlowCacheIpv4;
+   	std::map<boost::asio::ip::address_v6, std::shared_ptr<FlowEntryList>> FlowCacheIpv6;
+   	std::string Ipv4Address;
+   	std::string Ipv6Address;
+   	MacAddress Mac;
+   	DhcpRequest Dhcp;
+   	SsdpHost Ssdp;
+   	std::string Uuid;
+   	time_t matchversion;
+   	ConfidenceLevel IdentifyConfidenceLevel;
+   	ConfidenceLevel EnforceConfidenceLevel;
+   	bool UploadStats;
+   	bool Debug;
 
-	public:
-		Host(const MacAddress inMac, const bool inDebug = false): Mac{inMac}, Debug{inDebug}  {
-			iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);
-			UploadStats = true;
-			matchversion = 0;
-			IdentifyConfidenceLevel = EnforceConfidenceLevel = ConfidenceLevel::None;
-		}
+public:
+	Host(const MacAddress inMac, const bool inDebug = false): Mac{inMac}, Debug{inDebug}  {
+		iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);
+		UploadStats = true;
+		matchversion = 0;
+		IdentifyConfidenceLevel = EnforceConfidenceLevel = ConfidenceLevel::None;
+	}
 
-		Host(const MacAddress inMac, const std::string inUuid, const bool inDebug = false):
-				Mac{inMac}, Uuid{inUuid}, Debug{inDebug} {
-			iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);
-			UploadStats = true;
-			matchversion = 0;
-			IdentifyConfidenceLevel = EnforceConfidenceLevel = ConfidenceLevel::None;
-		}
-		virtual ~Host() {
-			syslog (LOG_DEBUG, "Destroying Host instance: %s", Ipv4Address.c_str());
-		};
+	Host(const MacAddress inMac, const std::string inUuid, const bool inDebug = false):
+			Mac{inMac}, Uuid{inUuid}, Debug{inDebug} {
+		iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);
+		UploadStats = true;
+		matchversion = 0;
+		IdentifyConfidenceLevel = EnforceConfidenceLevel = ConfidenceLevel::None;
+	}
+	virtual ~Host() {
+		syslog (LOG_DEBUG, "Destroying Host instance: %s", Ipv4Address.c_str());
+	};
+	bool Match(const DeviceProfileMap& dpMap);
+	ConfidenceLevel Match(const DeviceProfile& dp);
+	ConfidenceLevel Match(const Identifier& i);
+	bool Match(const MatchCondition& mc);
+	bool Match(const ContainCondition& cc);
+	void IpAddress_set (const std::string inIpAddress) { Ipv4Address = inIpAddress; }
+	bool FlowEntry_set(const uint16_t inSrcPort, const std::string inDstIp,
+			const uint16_t inDstPort, const uint8_t inProtocol, const uint32_t inExpiration);
+	uint32_t FlowCacheCount () { return FlowCacheIpv4.size() + FlowCacheIpv6.size(); }
+    bool Dhcp_set (const std::string IpAddress, const MacAddress Mac, const std::string Hostname, const std::string DhcpVendor);
+	bool SsdpInfo_set(const std::shared_ptr<SsdpHost> insHost);
 
-		bool Match(const DeviceProfileMap& dpMap);
-		ConfidenceLevel Match(const DeviceProfile& dp);
-		ConfidenceLevel Match(const Identifier& i);
-		bool Match(const MatchCondition& mc);
-		bool Match(const ContainCondition& cc);
-
-		void IpAddress_set (const std::string IpAddress) { Ipv4Address = IpAddress; }
-		bool FlowEntry_set(const uint16_t inSrcPort, const std::string inDstIp,
-				const uint16_t inDstPort, const uint8_t inProtocol, const uint32_t inExpiration);
-		uint32_t FlowCacheCount () { return FlowCacheIpv4.size() + FlowCacheIpv6.size(); }
-		bool DnsLogEntry_set(const std::string fqdn, const std::string ipaddress, const uint32_t expiration = 86400);
-		uint32_t DnsLogEntryCount () { return DnsHostCache.size(); }
-        bool Dhcp_set (const std::string IpAddress, const MacAddress Mac, const std::string Hostname, const std::string DhcpVendor);
-		bool SsdpInfo_set(const std::shared_ptr<SsdpHost> insHost);
-
-		// This is the DnsQueryCache
-		void addorupdateDnsQueryList (std::string inFqdn) {
-	        std::string fqdn = inFqdn;
-	        std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
-            DnsQueryList[fqdn] = time(nullptr);
-		}
-		bool inDnsQueryList (std::string inFqdn) {
-            std::string fqdn = inFqdn;
-            std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
-		    if (DnsQueryList.find(inFqdn) == DnsQueryList.end()) {
-		        return false;
-		    }
-		    return true;
-		}
-		uint32_t pruneDnsQueryList (time_t Expired = 14400, bool Force = false);
-
-		bool isMatched () { return Uuid != ""; }
-		bool UploadsEnabled ();
-		std::string Uuid_get () { return Uuid; }
-
-		std::string MacAddress_get () { return Mac.str(); }
-		std::string Ipv4Address_get () { return Ipv4Address; }
-		std::string Ipv6Address_get () { return Ipv6Address; }
-
-		void ExportDeviceInfo (json &j, bool detailed = false);
-		bool DeviceStats(json& j, const uint32_t interval, bool force = false, bool detailed = false);
-		bool TrafficStats(json& j, const uint32_t interval, const bool ReportRfc1918, const std::unordered_set<std::string> & LocalIps,
-				const DnsIpCache <boost::asio::ip::address> &dCip, const DnsCnameCache &dCcname, bool force = false);
-		bool inPrivateAddressRange(const std::string ip );
-
-	    // iCache interface methods.
-	    time_t Expiration_set (time_t inExpiration = HOSTDEFAULTEXPIRATION) {
-	    	iCache::Expires = time(nullptr) + inExpiration;
-	    	return iCache::LastSeen + HOSTDEFAULTEXPIRATION;
+	// This manipulates the DnsQueryCache
+	void addorupdateDnsQueryList (std::string inFqdn) {
+	    std::string fqdn = inFqdn;
+	    std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
+        DnsQueryList[fqdn] = time(nullptr);
+	}
+	bool inDnsQueryList (std::string inFqdn) {
+        std::string fqdn = inFqdn;
+        std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
+	    if (DnsQueryList.find(inFqdn) == DnsQueryList.end()) {
+	        return false;
 	    }
-	    time_t Expiration_get () { return iCache::LastSeen + HOSTDEFAULTEXPIRATION; }
-	    bool isExpired() { return time(nullptr) >= iCache::LastSeen + HOSTDEFAULTEXPIRATION; }
-	    uint32_t Prune (bool Force = false);
+	    return true;
+	}
+	uint32_t pruneDnsQueryList (time_t Expired = 14400, bool Force = false);
+
+	bool isMatched () { return Uuid != ""; }
+	bool UploadsEnabled ();
+	std::string Uuid_get () { return Uuid; }
+	std::string MacAddress_get () { return Mac.str(); }
+	std::string Ipv4Address_get () { return Ipv4Address; }
+	std::string Ipv6Address_get () { return Ipv6Address; }
+	void ExportDeviceInfo (json &j, bool detailed = false);
+	bool DeviceStats(json& j, const uint32_t interval, bool force = false, bool detailed = false);
+	bool TrafficStats(json& j, const uint32_t interval, const bool ReportRfc1918, const std::unordered_set<std::string> & LocalIps,
+	        const DnsIpCache <boost::asio::ip::address> &dCip, const DnsCnameCache &dCcname, bool force = false);
+	bool inPrivateAddressRange(const std::string ip );
+
+	// iCache interface methods.
+	time_t Expiration_set (time_t inExpiration = HOSTDEFAULTEXPIRATION) {
+	  	iCache::Expires = time(nullptr) + inExpiration;
+	   	return iCache::LastSeen + HOSTDEFAULTEXPIRATION;
+	}
+	time_t Expiration_get () { return iCache::LastSeen + HOSTDEFAULTEXPIRATION; }
+	bool isExpired() { return time(nullptr) >= iCache::LastSeen + HOSTDEFAULTEXPIRATION; }
+	uint32_t Prune (bool Force = false);
 };
 #endif /* HOST_CXX_ */
 

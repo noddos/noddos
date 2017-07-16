@@ -54,7 +54,7 @@ int main () {
         testfailed = 1;
     }
     prunecount=i.pruneResourceRecords(true);
-    if (prunecount != 1) {
+    if (prunecount != 2) {
         syslog (LOG_DEBUG, "Pruned %u DNS IP records", prunecount);
         testfailed = 1;
     }

@@ -218,7 +218,7 @@ bool HostCache::AddDnsQueryIp (const std::string clientip, const std::string fqd
 
 	std::shared_ptr<Host> h = FindOrCreateHostByIp(clientip);
 	if (h) {
-		h->DnsLogEntry_set(fqdn, ip);
+		h->addorupdateDnsQueryList(fqdn);
 		return true;
 	}
 	return false;
@@ -817,13 +817,4 @@ uint32_t HostCache::Whitelists_set (const std::unordered_set<std::string>& inIpv
 	return WhitelistedNodes.size();
 }
 
-uint32_t HostCache::HostDnsQueryCount (std::string IpAddress) {
-	auto it = Ip2MacMap.find(IpAddress);
-	if ( it == Ip2MacMap.end()) {
-		return 0;
-	}
-	auto Mac = it->second;
-	auto &h = hC[Mac];
-	return h->DnsLogEntryCount();
 
-}

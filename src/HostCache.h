@@ -140,7 +140,6 @@ public:
 	bool ImportDeviceInfo (json &j);
 
 	uint32_t HostCount() { return hC.size(); }
-	uint32_t HostDnsQueryCount (std::string IpAddress);
 	bool Debug_get() { return Debug; }
 };
 

@@ -189,7 +189,7 @@ bool Host::Match(const MatchCondition& mc) {
 bool Host::Match(const ContainCondition& cc) {
 	if(cc.Key == "DnsQueries") {
 		for (auto fqdn: cc.Values) {
-			if (DnsHostCache.find(fqdn) != DnsHostCache.end() || DnsQueryList.find(fqdn) != DnsQueryList.end()) {
+		    if (DnsQueryList.find(fqdn) != DnsQueryList.end()) {
 				if(Debug) {
 					syslog(LOG_DEBUG, "Found DnsQuery for %s from host %s", fqdn.c_str(), Mac.c_str());
 				}
@@ -232,13 +232,6 @@ bool Host::DeviceStats(json& j, const uint32_t time_interval, bool force, bool d
 	j["SsdpLocation"] = Ssdp.Location;
 
 	std::string fqdns = "";
-	for (auto &dq: DnsHostCache) {
-		if (detailed == true) {
-			dq.second->DnsStats(j, time_interval);
-		} else {
-			fqdns += dq.second->Fqdn_get() + " ";
-        }
-	}
 	if (Debug == true) {
 		syslog (LOG_DEBUG, "Adding items from DnsQueryList to list of fqdns");
 	}
@@ -268,9 +261,6 @@ bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportPriva
 	}
 	// This holds reverse lookup table from an IP address to one or more FQDNs.
 	std::map<std::string,std::shared_ptr<std::unordered_set<std::string>>> allIps;
-	for (auto &dq: DnsHostCache) {
-		dq.second->Ips_get(allIps);
-	}
 
 	std::unordered_set<std::string> endpoints;
 	for (auto &fc: FlowCacheIpv4) {
@@ -442,27 +432,6 @@ bool Host::FlowEntry_set(const uint16_t inSrcPort, const std::string inDstIp,
 	return false;
 }
 
-/*
- *  Host::DnsLogwEntry_set
- *  Adds or updates the list of dns log entries for lookups of a FQDN
- *  Returns true if a DnsLogEntry was added, false if existing DnsLogEntry was updated
- */
-bool Host::DnsLogEntry_set(const std::string inFqdn, const std::string inIpAddress, const uint32_t inExpiration) {
-	iCache::LastSeen = iCache::LastModified = time(nullptr);
-	bool newentry = false;
-	if(DnsHostCache.find(inFqdn) == DnsHostCache.end()) {
-		DnsHostCache[inFqdn] = std::make_shared<DnsLogEntry>(inFqdn);
-		newentry = true;
-		if(Debug) {
-			syslog(LOG_DEBUG, "Creating DnsLogEntry for %s with IP address %s and expiration %lu",
-					inFqdn.c_str(), inIpAddress.c_str(), DnsHostCache[inFqdn]->Expiration_get());
-		}
-	}
-
-	DnsHostCache[inFqdn]->Ips_set(inIpAddress, inExpiration);
-	return newentry;
-}
-
 bool Host::Dhcp_set (const std::string inIpAddress, const MacAddress inMac, const std::string inHostname, const std::string inDhcpVendor) {
     if (not inMac.isValid()) {
             return false;
@@ -596,20 +565,6 @@ uint32_t Host::Prune (bool Force) {
 			syslog (LOG_DEBUG, "Pruned %u Flow Entries and %u flows", pruned_flowentries, pruned_flows);
 		}
 	}
-	uint32_t pruned_dnsqueries = 0;
-	for(auto const& dc: DnsHostCache) {
-		if (Force || dc.second->isExpired()) {
-			if (Debug) {
-				syslog(LOG_DEBUG, "Pruning DNS for %s with expiration %ld while now is %ld", dc.first.c_str(), dc.second->Expiration_get (), time(nullptr));
-			}
-			DnsHostCache.erase(dc.first);
-			pruned_dnsqueries++;
-			pruned = true;
-		}
-	}
-	if(Debug) {
-		syslog (LOG_DEBUG, "Pruned %u DNS queries", pruned_dnsqueries);
-	}
 	return pruned;
 }
 
@@ -625,7 +580,7 @@ uint32_t Host::pruneDnsQueryList (time_t Expired, bool Force) {
 			i = DnsQueryList.erase(i);
 			deletecount++;
 		} else {
-			i++;
+			++i;
 		}
 	}
 	return deletecount;
