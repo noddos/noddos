@@ -220,7 +220,9 @@ bool PacketSnoop::ProcessEvent(struct epoll_event &event) {
 }
 
 bool PacketSnoop::Parse(unsigned char *frame) {
-    syslog(LOG_DEBUG, "Parsing packet on interface %d", ifindex);
+	if (Debug == true) {
+    	syslog(LOG_DEBUG, "Parsing packet on interface %d", ifindex);
+	}
 
     struct ethhdr *ethh = (struct ethhdr *) frame;
     uint8_t af;
