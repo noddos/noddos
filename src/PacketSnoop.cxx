@@ -265,7 +265,7 @@ bool PacketSnoop::Parse(unsigned char *frame) {
             // Packet is broken!
             // A TCP header doesn't even fit into the data that follows the IP header.
             if (Debug == true) {
-                syslog (LOG_DEBUG, "PacketSnoop: Received packet with payload length %u smaller than TCP header length %lu", ipPayloadLen, sizeof(struct tcphdr));
+                syslog (LOG_DEBUG, "PacketSnoop: Received packet with payload length %u smaller than TCP header length %zu", ipPayloadLen, sizeof(struct tcphdr));
             }
             return false;
         }

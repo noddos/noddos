@@ -24,10 +24,11 @@ PKG_RELEASE:=1
 PKG_LICENSE:=GPLv3
 CMAKE_INSTALL:=1
 
-#PKG_VERSION:=lede-opkg
-#PKG_SOURCE:=git
-#PKG_SOURCE_PROTO:=git
-#PKG_SOURCE_URL:=https://github.com/noddos/noddos
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_URL:=https://github.com/noddos/noddos.git
+PKG_SOURCE_VERSION:=dnssnoop
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_SOURCE_VERSION).tar.gz
+PKG_SOURCE_SUBDIR:=$(PKG_NAME)
 
 # This specifies the directory where we're going to build the program.
 # The root build directory, $(BUILD_DIR), is by default the build_mipsel
@@ -66,10 +67,10 @@ endef
 # PKG_SOURCE which is not defined here to download the source from the web.
 # In order to just build a simple program that we have just written, it is
 # much easier to do it this way.
-define Build/Prepare
-	mkdir -p $(PKG_BUILD_DIR)
-	$(CP) ./src/* $(PKG_BUILD_DIR)/
-endef
+#define Build/Prepare
+#	mkdir -p $(PKG_BUILD_DIR)
+#	$(CP) ./src/* $(PKG_BUILD_DIR)/
+#endef
 
 # We do not need to define Build/Configure or Build/Compile directives
 # The defaults are appropriate for compiling a simple program such as this one
@@ -95,16 +96,16 @@ define Package/noddos/install
 	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/model/cbi/admin_network
 	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/view/admin_status
 	$(INSTALL_DIR) $(1)/www/cgi-bin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/noddos $(1)/usr/sbin/
-	$(INSTALL_BIN) ./tools/getnoddosdeviceprofiles $(1)/usr/bin
-	$(INSTALL_BIN) ./tools/makenoddoscert.sh $(1)/usr/bin
-	$(INSTALL_BIN) ./files/noddos $(1)/etc/init.d
-	$(INSTALL_DATA) ./files/noddos.conf-base $(1)/etc/noddos
-	$(INSTALL_DATA) ./files/noddosconfig.pem $(1)/etc/noddos
-	$(INSTALL_BIN) ./files/clientdetails $(1)/www/cgi-bin
-	$(INSTALL_DATA) ./files/noddos.lua $(1)/usr/lib/lua/luci/model/cbi/admin_network
-	$(INSTALL_DATA) ./files/clients.htm $(1)/usr/lib/lua/luci/view/admin_status
-	$(INSTALL_DATA) ./files/dkjson.lua $(1)/usr/lib/lua
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/src/noddos $(1)/usr/sbin/
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/tools/getnoddosdeviceprofiles $(1)/usr/bin
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/tools/makenoddoscert.sh $(1)/usr/bin
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/noddos $(1)/etc/init.d
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/noddos.conf-base $(1)/etc/noddos
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/noddosconfig.pem $(1)/etc/noddos
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/clientdetails $(1)/www/cgi-bin
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/noddos.lua $(1)/usr/lib/lua/luci/model/cbi/admin_network
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/clients.htm $(1)/usr/lib/lua/luci/view/admin_status
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/dkjson.lua $(1)/usr/lib/lua
 endef
 
 define Package/noddos/postinst
