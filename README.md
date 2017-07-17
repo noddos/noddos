@@ -10,10 +10,10 @@ The current focus of Noddos is on building the database of device profiles by ge
 
 ## Client Overview
 
-Noddos runs as a daemon to listen to DHCP, DNS and SSDP traffic on the home or enterprise network. It reads DHCP and DNS data by sniffing those packets using AF_PACKET_MMAP, If incoming SSDP data has a 'Location' header then Noddos will call the URL contained in the header to collect additional device information. Using the Linux Netfilter functionality, it tracks network flows in real time using either /proc/net/nf_conntrack if available or otherwise using the NFCT library.
+Noddos runs as a daemon to listen to DHCP, DNS and UPnP/SSDP traffic and monitor traffic flows on the home or enterprise network. It reads DHCP and DNS data by sniffing those packets using AF_PACKET_RING. If incoming SSDP data has a 'Location' header then Noddos will call the URL contained in the header to collect additional device information. Using the Linux Netfilter functionality, it tracks network flows in real time using either /proc/net/nf_conntrack if available or otherwise using the Linux NFCT API.
 Noddos reads a file with Device Profiles that specifies the matching conditions and traffic filtering rules. Periodically, Noddos matches discovered devices with the device profile database to identify known devices. Noddos can be configured to upload traffic statistics for identified devices and device attributes for devices it has not yet been able to identify. The Noddos configuration file specifies a.o. whether traffic and device statistics should be uploaded.
 
-The Noddos process should be started at boot time. The noddos package for routers running firmware of the [Lede project](https://lede-project.org/) includes an init.d/procd script that launches noddos. The process runs as a daemon and can be configured to drop privileges after initial startup. If the /proc/net/nf_conntrack file is not available, it is recommended to not drop privileges so it is possible to re-establish the filehandle after poll errors occur as epolling on the NFCT filehandle is somewhat unstable. Depending on traffic patterns, the client can consume about 10MB of DRAM. The CPU usage for the process is all but negligible. 
+The Noddos process should be started at boot time. The noddos package for routers running firmware of the [Lede project](https://lede-project.org/) includes an init.d/procd script that launches noddos. The process runs as a daemon and can be configured to drop privileges after initial startup. If the /proc/net/nf_conntrack file is not available, Noddos will use the NFCT API and epoll on the NFCT filehandle. Unfortunately, epolling the NFCP filehandle is somewhat unstable. In this case, it is recommended to not drop privileges so it remains possible to re-establish the filehandle. Depending on traffic patterns, normally the client consumes about 10MB of DRAM. Note that there is currently a bug where Noddos consumes 80MB right from when it is started. The CPU usage for the process is all but negligible. 
 
 The 'getnoddosdeviceprofiles' script is used to securely download the list of Device Profiles over HTTPS from the Noddos web site, check the digital signature of the file using a Noddos certificate and makes the downloaded file available to the Noddos client. It needs access to the public cert that was used to sign the file. This script should be called at least once per day from cron. 
 
@@ -70,7 +70,7 @@ If you want maximum privacy for uploads, create a new client cert every 12 hours
         41 */12 * * * cd /etc/noddos; /usr/bin/makenoddoscert.sh
 
 ### Installation for Linux DIY routers
-Sorry, there are no packages yet for Ubuntu / Fedora / CentOS / Gentoo. For now, just compile it from source.
+Sorry, there are no packages yet for Ubuntu / Fedora / CentOS / Gentoo. For now, just compile it from source using the instructions provided below.
 
 ## Compilation
 Compilation instructions are available for Home Gateways and regular Linux systems.
@@ -78,14 +78,15 @@ Compilation instructions are available for Home Gateways and regular Linux syste
 ### Compilation for a Home Gateway running firmware of the [Lede project](https://lede-project.org/)
 Noddos is now up and running on Lede firmware installed on a a Linksys WRT 1200AC. There is also the package for Asus/Netgear/D-Link/Buffalo routers. If you have a HGW using a differnet platform then you can use these instructions to generate your own package. These instructions are based on the Lede 17.01.2 release.
 
-	mkdir -p noddosbuild/package
-	cd noddosbuild/package
-	git clone https://github.com/noddos/noddos.git
-	mv noddos/Makefile-LEDE noddos/Makefile
-	cd ..
+	mkdir -p noddosbuild/package/{noddos,libtins}
+	cd noddosbuild/package/noddos
+	wget https://github.com/noddos/noddos/lede/packages/noddos/Makefile
+	cd ../libtins
+	wget https://github.com/noddos/noddos/lede/packages/libtins/Makefile
+	cd ../..
 	ROOTDIR=$PWD
 
-Download the Lede project SDK v17.01.1 for your platform from [Lede Table of Hardware](https://lede-project.org/toh/start)
+Download the Lede project SDK v17.01.2 for your platform from [Lede Table of Hardware](https://lede-project.org/toh/start)
 
 	tar xf <SDK-for-your-platform-tarbar>
 	cd <SDK-directory-for-your-platform>
@@ -94,7 +95,7 @@ Download the Lede project SDK v17.01.1 for your platform from [Lede Table of Har
     make menuconfig
 
 In the firmware build menu:
-- Select Global Build Settings and press enter, in the submenu deselect/exclude the following options:
+- Select "Global Build Settings" and press enter, in the submenu deselect/exclude the following options:
 - "Select all target specific packages by default"
 - "Select all kernel module packages by default"
 - "Select all userspace packages by default"
@@ -117,7 +118,8 @@ Now we just have to build to package:
 
 Change the architecture directory and architecture ipkg to match your HGW platform
 
-    scp bin/packages/arm_cortex-a9_vfpv3/custom/noddos_1_arm_cortex-a9_vfpv3.ipk root@<HGW-IP>:
+    scp bin/packages/arm_cortex-a9_vfpv3/custom/libtins-v0.3.0_arm_cortex-a9_vfpv3.ipk root@<HGW-IP>:
+    scp bin/packages/arm_cortex-a9_vfpv3/custom/noddos-v0.3.0_arm_cortex-a9_vfpv3.ipk root@<HGW-IP>:
 
 Follow the installation instructions from this point onwards.
 
@@ -134,7 +136,7 @@ Install development packages for libcurl, libopenssl and libnetfilter_conntrack
 	sudo apt install libtins-dev
 
     git clone https://github.com/noddos/noddos
-    cd noddos/src
+    cd noddos
     cmake .
     make
     sudo apt install openssl ssl libcurl3 libtins3.4 brotli wget libnetfilter-conntrack3 ca-certificates
@@ -150,7 +152,7 @@ Install needed apps
     sudo cp noddos.conf-sample /etc/noddos/noddos.conf
     sudo cp files/noddosconfig.pem /etc/noddos
 
-Edit /etc/noddos.conf, to at least set the LanInterfaces and WanInterfaces and to  whitelist the IP addresses of the interfaces of your router
+Edit /etc/noddos.conf, to at least set the LanInterfaces and WanInterfaces and to whitelist the IP addresses of the interfaces of your router
 
     sudo chown -R root:root /etc/noddos
 
