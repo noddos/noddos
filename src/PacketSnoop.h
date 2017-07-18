@@ -105,17 +105,18 @@ private:
     unsigned int r_idx = 0;
     unsigned int nr_blocks = 0;
     unsigned int block_sz = 0;
+    size_t numBlocks;
     int ifindex = 0;
 
 public:
-	PacketSnoop(HostCache &inHc, const bool  inDebug = false):	hC{&inHc}, Debug{inDebug} {
+	PacketSnoop(HostCache &inHc, const size_t inNumBlocks, const bool inDebug = false):	hC{&inHc}, numBlocks{inNumBlocks}, Debug{inDebug} {
 		if (Debug == true) {
 			syslog (LOG_DEBUG, "Constructing PacketSnoop instance");
 		}
 	};
 
 	virtual ~PacketSnoop() { Close(); };
-	int Open(std::string input, uint32_t inExpiration = 0);
+	int Open(std::string input, uint32_t inExpiration);
 	int GetFileHandle() { return sock; }
 	bool Close();
 	bool ProcessEvent(struct epoll_event &event);
@@ -130,62 +131,6 @@ public:
     void pruneTcpSnoopInstance(const boost::asio::ip::address inSrc, const uint16_t inSrcPort,
             const boost::asio::ip::address inDest, const uint16_t inDestPort);
     uint32_t pruneTcpSnoopInstances(const bool Force = false);
-};
-
-class DnsDecode {
-private:
-    uint8_t * const message = nullptr;
-    uint16_t messageIndex = 0;
-    uint16_t messageLength = 0;
-
-public:
-    DnsDecode (uint8_t * const inMessage, const uint16_t inLength): message{inMessage}, messageLength{inLength} {
-    };
-    uint8_t get8Bits () {
-        if (message == nullptr) {
-            throw std::domain_error("PacketSnoop: DNS message is initialized");
-            return 0;
-        }
-        if (messageIndex >= messageLength) {
-            throw std::out_of_range("PacketSnoop: DNS message already fully parsed");
-            return 0;
-        }
-        return message[messageIndex++];
-    }
-    uint16_t get16Bits () {
-        if (message == nullptr) {
-            throw std::domain_error("PacketSnoop: DNS message not initialized");
-            return 0;
-        }
-        if (messageIndex +1 >= messageLength) {
-            throw std::out_of_range("PacketSnoop: DNS message already fully parsed");
-            return 0;
-        }
-        uint16_t val = (message[messageIndex] << 8) + message[messageIndex+1];
-        messageIndex += 2;
-        return val;
-    }
-    bool getFlag (const uint8_t Field, const uint8_t Pos) {
-        if (Pos > 7) {
-            throw std::out_of_range("PacketSnoop: Position out of range");
-            return false;
-        }
-        return  (Field >> (7-Pos)) & 1;
-    }
-    bool getFlag (const uint16_t Field, const uint8_t Pos) {
-        if (Pos > 15) {
-            throw std::out_of_range("PacketSnoop: Position out of range");
-            return false;
-        }
-        return  (Field >> (15-Pos)) & 1;
-    }
-    uint8_t getBits (const uint16_t Field, const uint8_t startPos, const uint8_t endPos) {
-        if (startPos >= endPos || endPos > 15) {
-            throw std::out_of_range("SPacketSnoop: tarting position equal or larger than ending position");
-            return false;
-        }
-        return  (Field >> (15-endPos)) & ((1 << (endPos - startPos)) -1);
-    }
 };
 
 #endif /* PACKETSNOOP_H_ */

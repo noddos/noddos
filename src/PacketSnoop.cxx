@@ -108,7 +108,7 @@ int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
     struct tpacket_req3 req;
 
     req.tp_block_size = getpagesize() << 2;
-    req.tp_block_nr = NUM_BLOCKS;
+    req.tp_block_nr = numBlocks;
     req.tp_frame_size = TPACKET_ALIGNMENT << 7;
     req.tp_frame_nr = req.tp_block_size / req.tp_frame_size * req.tp_block_nr;
     req.tp_retire_blk_tov = 64;
@@ -511,26 +511,6 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
     if (size < 12) {
         syslog(LOG_WARNING, "PacketSnoop: Received DNS packet smaller than 12 bytes");
         return true;
-    }
-    DnsDecode d((uint8_t *) payload, size);
-    uint16_t dnsId = d.get16Bits();
-    uint16_t dnsFlags = d.get16Bits();
-    uint16_t dnsQuestions = d.get16Bits();
-    uint16_t dnsAnswers = d.get16Bits();
-    uint16_t dnsAuth = d.get16Bits();
-    uint16_t dnsAdditional = d.get16Bits();
-    bool dnsIsResponse = d.getFlag(dnsFlags, 0);
-    uint8_t dnsOpcode = d.getBits(dnsFlags, 1, 4);
-    bool dnsIsAuth = d.getFlag(dnsFlags, 5);
-    bool dnsIsTrunc = d.getFlag(dnsFlags, 6);
-    bool dnsIsRecReq = d.getFlag(dnsFlags, 7);
-    bool dnsIsRecAvail = d.getFlag(dnsFlags, 8);
-    uint8_t dnsRcode = d.getBits(dnsFlags, 12, 15);
-    if (Debug == true) {
-        syslog(LOG_DEBUG,
-                "PacketSnoop: Own decode of %zu bytes: %u, Q: %u, A: %u, NS: %u, Add: %u, Response: %u, Opcode: %u, Rcode: %u",
-                size, dnsId, dnsQuestions, dnsAnswers, dnsAuth, dnsAdditional,
-                dnsIsResponse, dnsOpcode, dnsRcode);
     }
     Tins::DNS *q;
     InterfaceMap *ifMap = hC->getInterfaceMap();

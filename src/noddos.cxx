@@ -143,8 +143,8 @@ int main(int argc, char** argv) {
     std::unordered_set<std::string> allInterfaces = config.LanInterfaces;
     allInterfaces.insert(config.WanInterfaces.begin(), config.WanInterfaces.end());
     for (auto iface: allInterfaces) {
-        PacketSnoop *p = new PacketSnoop(hC, config.Debug);
-        p->Open(iface);
+        PacketSnoop *p = new PacketSnoop(hC, 64, config.Debug);
+        p->Open(iface, 64);
         add_epoll_filehandle(epfd, epollmap, *p);
         pInstances.insert(p);
     }
