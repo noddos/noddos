@@ -30,6 +30,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <syslog.h>
+#include <sys/stat.h>
 
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 #include <libnetfilter_conntrack/libnetfilter_conntrack_tcp.h>
@@ -53,21 +54,42 @@ struct Flow {
 
 class FlowTrack : public iDeviceInfoSource {
 private:
-    struct nfct_handle *h;
-    struct nfct_filter *filter;
+    struct nfct_handle *h = nullptr;
+    struct nfct_filter *filter = nullptr;
     HostCache &hC;
     const Config &config;
+    bool useNfct = false;
+    FILE * ctFilePointer = nullptr;
+    bool Debug = false;
+
 
 public:
-	FlowTrack(HostCache & inhC, Config &inConfig): hC{inhC}, config{inConfig} {
-		h = nullptr;
-		Open();
+	FlowTrack(HostCache & inhC, Config &inConfig): hC{inhC}, config{inConfig}, Debug{inConfig.Debug} {
 	}
 	virtual int Open (std::string input = "", uint32_t inExpiration = 0) {
 		// We don't care about Open parameters in this Class derived from iDeviceInfoSource
 		input = "";
 		inExpiration = 0;
 
+		struct stat buf;
+		if (config.UseNfConntrack == true && stat ("/proc/net/nf_conntrack", &buf) == 0) {
+			if (Debug == true) {
+				syslog (LOG_DEBUG, "/proc/net/nf_conntrack exists, using it");
+			}
+			if ((ctFilePointer = fopen ("/proc/net/nf_conntrack","r")) != NULL) {
+				int flags;
+				int nf_fd = fileno(ctFilePointer);
+				if (-1 == (flags = fcntl(nf_fd, F_GETFL, 0)))
+					flags = 0;
+				if (fcntl(nf_fd, F_SETFL, flags | O_NONBLOCK) == -1) {
+					syslog(LOG_ERR, "Set O_NONBLOCK on conntrack log file");
+				} else {
+					useNfct = false;
+					return 0;
+				}
+			}
+		}
+		useNfct = true;
 		if (config.Debug) {
 			syslog (LOG_DEBUG, "Opening NFCT");
 		}
@@ -80,6 +102,13 @@ public:
             exit(1);
             return -1;
         }
+        int on = 1;
+
+        setsockopt(nfct_fd(h), SOL_NETLINK,
+                   NETLINK_BROADCAST_SEND_ERROR, &on, sizeof(int));
+
+        setsockopt(nfct_fd(h), SOL_NETLINK,
+                   NETLINK_NO_ENOBUFS, &on, sizeof(int));
 
 /* This should have made conntrack more stable but it may be causing core dumps
 		int on = 1;
@@ -165,32 +194,55 @@ public:
 	}
 	// iDeviceInfoSource interface methods
 	virtual bool Close () {
-		if (!h) {
+		if (useNfct == false) {
+			if (ctFilePointer == nullptr) {
+				syslog(LOG_WARNING, "Closing closed conntrack file pointer");
+				return false;
+			}
+			syslog(LOG_DEBUG, "Closing conntrack file pointer");
+			return fclose(ctFilePointer);
+		}
+		// useNfct == true
+		if (h == nullptr) {
 			syslog(LOG_WARNING, "Closing closed conntrack handler");
-			return -1;
+			return false;
 		}
 		if (config.Debug) {
 			syslog(LOG_DEBUG, "Closing conntrack handler");
 		}
-		return nfct_close(h);
+		// valgrind thinks nfct_close is buggy
+		// return nfct_close(h);
+		return true;
 	}
 
-	virtual int GetFileHandle() { return nfct_fd(h); }
+	virtual int GetFileHandle() {
+		if (useNfct == false) {
+			return fileno(ctFilePointer);
+		}
+		return nfct_fd(h);
+	}
 
 	virtual bool ProcessEvent(struct epoll_event &event) {
-		auto rt = nfct_catch(h);
-		if (rt < 0) {
-			syslog(LOG_ERR, "nfct_catch: %s ", strerror(errno));
-		}
 		char buf [24];
 		auto rawtime = time (nullptr);
 		struct tm * timeinfo = localtime (&rawtime);
 		strftime (buf, 20, "%x %X", timeinfo);
-		if (config.Debug) {
-			syslog(LOG_DEBUG, "Conntrack event read at %s with status %d", buf, rt);
+
+		int rt = -1;
+		if (useNfct == true) {
+			rt = nfct_catch(h);
+			if (rt < 0) {
+				syslog(LOG_ERR, "nfct_catch: %s ", strerror(errno));
+			}
+			if (config.Debug) {
+				syslog(LOG_DEBUG, "Conntrack event read at %s with status %d", buf, rt);
+			}
+		} else {
+        	while ((parseLogLine()) > -1) {}
 		}
         return true;
 	}
+	int parseLogLine();
 };
 
 

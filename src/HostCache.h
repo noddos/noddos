@@ -31,16 +31,25 @@
 #include "DeviceProfile.h"
 #include "MacAddress.h"
 #include "Config.h"
+#include "InterfaceMap.h"
 
 #include "boost/asio.hpp"
-
+#include "DnsCache.h"
 #include "noddos.h"
 
 class HostCache {
 private:
 	std::map<unsigned long long, std::shared_ptr<Host>> hC; 	// map from Mac to Host
 	std::map<std::string, unsigned long long> Ip2MacMap; 	// map from IP to MaC
+
+	// This map is used to validate that answers received correspond to queries sent out. They are pruned after 30 seconds
+	std::map<uint16_t, time_t> DnsQueryCache;
+	// These maps cache IPv4 & IPv6 addresses and CNAMEs for at least the TrafficReport interval
+	DnsIpCache <boost::asio::ip::address> dCip;
+	DnsCnameCache dCcname;
+
 	DeviceProfileMap dpMap;
+	InterfaceMap *ifMap;
 	std::regex arp_rx, dev_rx;
 	std::unordered_set<std::string> WhitelistedNodes;
 	bool Debug;
@@ -49,7 +58,8 @@ private:
 	uint32_t FlowExpiration;
 
 public:
-	HostCache(const uint32_t inFlowExpiration = FLOWDEFAULTEXPIRATION, const bool inDebug = false): Debug{inDebug} {
+	HostCache(InterfaceMap &inifMap, const uint32_t inFlowExpiration = FLOWDEFAULTEXPIRATION, const bool inDebug = false):
+			ifMap{&inifMap}, Debug{inDebug} {
 		if (Debug) {
 			syslog (LOG_DEBUG, "Initializing HostCache instance");
 		}
@@ -65,6 +75,8 @@ public:
 		arp_rx = std::regex(R"delim(^(\d\S+)\s+?\S+?\s+?\S+?\s+?\s+?(\S+)\s+?\S+?\W+?(\S+?)$)delim",
         	std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
 		getInterfaceIpAddresses();
+		dCip.debug_set(Debug);
+		dCcname.debug_set(Debug);
 	}
 	virtual ~HostCache() {
 		if (Debug) {
@@ -86,9 +98,7 @@ public:
 	bool AddByMac (const MacAddress inMacAddress, const std::string inIpAddress = "");
 	bool AddFlow (const std::string srcip, const uint16_t srcport, const std::string dstip, const uint16_t dstport, const uint8_t protocol, const uint32_t expiration);
 	bool AddDnsQueryIp (const std::string clientip, const std::string fqdn, const std::string ip, const uint32_t expire = 86400);
-	bool AddDhcpRequest (const std::shared_ptr<DhcpRequest> inDhcpRequest_sptr);
-	bool AddDhcpRequest (const DhcpRequest &inDhcpRequest);
-	bool AddDhcpRequest (const std::string IpAddress, const MacAddress inMac, const std::string Hostname, const std::string DhcpHostname, const std::string DhcpVendor);
+    bool AddDhcpRequest (const std::string IpAddress, const MacAddress inMac, const std::string Hostname, const std::string DhcpVendor);
 	bool AddSsdpInfo (const std::shared_ptr<SsdpHost> insHost);
 
 	std::shared_ptr<Host> FindHostByIp (const std::string inIp);
@@ -98,6 +108,25 @@ public:
 
 	uint32_t Prune (bool Force = false);
 
+	void addorupdateDnsQueryCache (uint16_t id);
+	bool inDnsQueryCache (uint16_t id);
+	uint32_t pruneDnsQueryCache (bool Force = false);
+
+	// These functions are for the new DnsCache filled by the PacketSnoop class
+	void addorupdateDnsIpCache(std::string inFqdn, boost::asio::ip::address inIp, time_t inTtl) { dCip.addorupdateResourceRecord(inFqdn, inIp, inTtl); }
+	void addorupdateDnsCnameCache(std::string inFqdn, std::string inCname, time_t inTtl) { dCcname.addorupdateCname(inFqdn, inCname, inTtl);	}
+
+	uint32_t pruneDnsIpCache(bool Force = false) {
+		uint32_t deletecount = 0;
+		deletecount = dCip.pruneResourceRecords(Force);
+		return deletecount;
+	}
+    uint32_t pruneDnsCnameCache(bool Force = false) {
+        uint32_t deletecount = 0;
+        deletecount = dCcname.pruneCnames(Force);
+        return deletecount;
+    }
+	InterfaceMap * getInterfaceMap() { return ifMap; }
 	MacAddress MacLookup (const std::string inIpAddress, const int retries = 1);
 	MacAddress MacLookup (const std::string inIpAddress, const std::string inInterface, const int retries = 1);
 	bool SendUdpPing (const std::string DstIpAddress, const uint16_t DstPort);
@@ -105,14 +134,12 @@ public:
 
 	uint32_t RestApiCall (const std::string api, const json &j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
 	uint32_t UploadDeviceStats(const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
-	bool UploadTrafficStats(const time_t interval, const bool ReportRfc1918, const std::string ClientApiCertFile, const std::string ClientApiKeyFile,
-			bool doUpload = false);
+	bool UploadTrafficStats(const time_t interval, const bool ReportRfc1918, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
 	uint32_t ImportDeviceProfileMatches(const std::string filename);
 	bool ExportDeviceProfileMatches(const std::string filename, const bool detailed = false);
 	bool ImportDeviceInfo (json &j);
 
 	uint32_t HostCount() { return hC.size(); }
-	uint32_t HostDnsQueryCount (std::string IpAddress);
 	bool Debug_get() { return Debug; }
 };
 

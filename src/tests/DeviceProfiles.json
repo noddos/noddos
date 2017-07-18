@@ -1,6 +1,7 @@
 [
 {
     "DeviceProfileUuid": "f9e3b2c8-cef9-4d9c-a3d6-b3812f8446e5",
+	"DeviceProfileVersion": 1,
     "LastUpdated": "2017-04-15 05:44:47.634603+00:00",
     "UploadStats": true,
     "Manufacturer": "Actiontec",
@@ -11,7 +12,7 @@
             "IdentifyConfidenceLevel": "High",
             "EnforceConfidenceLevel": "None",
             "MustMatch": {
-                    "SsdpManufacturer": "ActionTec",
+                    "SsdpManufacturer": "Actiontec",
                     "SsdpModelName": "GT784WNV"
             }
         }
@@ -19,7 +20,28 @@
 }
 ,
 {
+    "DeviceProfileUuid": "4ebc1608-d662-4384-b2b6-dcb6aedabaac",
+    "DeviceProfileVersion": 1,
+    "LastUpdated": "2017-05-19 11:44:47.634603+00:00",
+    "UploadStats": true,
+    "Manufacturer": "Alcatel",
+    "Model": "IP Touch",
+	"ModelUrl": "http://enterprise.alcatel-lucent.com/?product=8SeriesIPTouchPhones&page=overview",
+    "ThingClass": "VoIP phone",
+    "Identifiers": [
+        {
+            "IdentifyConfidenceLevel": "High",
+            "EnforceConfidenceLevel": "Low",
+            "MustMatch": {
+                    "DhcpHostname": "alcatel.noe.0"
+            }
+        }
+    ]
+}
+,
+{
     "DeviceProfileUuid": "f574b260-6949-4a5b-b809-b13f1b9a2fd5",
+    "DeviceProfileVersion": 1,
     "LastUpdated": "2017-02-05 11:44:47.634603+00:00",
     "UploadStats": true,
     "Manufacturer": "Amazon",
@@ -41,6 +63,7 @@
 ,
 {
     "DeviceProfileUuid": "694e8c7e-69f0-400f-824d-b94af7c7b7cc",
+    "DeviceProfileVersion": 1,
     "LastUpdated": "2017-01-22 05:44:47.634603+00:00",
     "UploadStats": true,
     "Manufacturer": "Amazon",
@@ -60,6 +83,7 @@
 ,
 {
     "DeviceProfileUuid": "beae329a-1836-446b-974c-d429ad05862b",
+    "DeviceProfileVersion": 1,
     "LastUpdated": "2017-04-02 11:44:47.634603+00:00",
     "UploadStats": true,
     "Manufacturer": "Amazon",
@@ -81,7 +105,8 @@
 ,
 {
     "DeviceProfileUuid": "ea87ad80-4fd8-4c23-9301-86dd1742ef87",
-    "LastUpdated": "2017-01-22 05:44:47.634603+00:00",
+    "DeviceProfileVersion": 2,
+    "LastUpdated": "2017-05-19 05:44:47.634603+00:00",
     "UploadStats": true,
     "Manufacturer": "Apple",
     "Model": "IOS device",
@@ -93,7 +118,7 @@
             "MustContain": {
                 "DnsQueries": [
                     "init.itunes.apple.com",
-                    "apps.itunes.com",
+                    "apps.itunes.apple.com",
                     "time-ios.g.aaplimg.com"
                 ]
             }
@@ -103,6 +128,7 @@
 ,
 {
     "DeviceProfileUuid": "dff464bf-c954-43d2-8b5a-87ef4b632da5",
+    "DeviceProfileVersion": 1,
     "LastUpdated": "2017-01-22 05:44:47.634603+00:00",
     "UploadStats": true,
     "Manufacturer": "ASUSTeK",
@@ -123,6 +149,7 @@
 ,
 {
     "DeviceProfileUuid": "71f97609-41e4-41c5-a315-aeac3aadbd03",
+    "DeviceProfileVersion": 1,
     "LastUpdated": "2017-01-22 05:44:47.634603+00:00",
     "UploadStats": true,
     "Manufacturer": "Belkin",
@@ -144,6 +171,7 @@
 ,
 {
     "DeviceProfileUuid": "447313eb-dea0-4516-9c83-3df5bf0dd948",
+    "DeviceProfileVersion": 1,
     "LastUpdated": "2017-02-01 05:44:47.634603+00:00",
     "UploadStats": true,
     "Manufacturer": "Belkin",
@@ -164,7 +192,28 @@
 }
 ,
 {
+    "DeviceProfileUuid": "e43ce60a-9945-4df4-8e56-88c3513f21a5",
+    "DeviceProfileVersion": 1,
+    "LastUpdated": "2017-05-19 11:44:47.634603+00:00",
+    "UploadStats": true,
+    "Manufacturer": "Cisco",
+    "Model": "CP-7940",
+	"ModelUrl": "http://www.cisco.com/c/en/us/products/collaboration-endpoints/unified-ip-phone-7940g/index.html",
+    "ThingClass": "VoIP phone",
+    "Identifiers": [
+        {
+            "IdentifyConfidenceLevel": "High",
+            "EnforceConfidenceLevel": "Low",
+            "MustMatch": {
+                    "DhcpHostname": "Cisco Systems, Inc. IP Phone CP-7940"
+            }
+        }
+    ]
+}
+,
+{
     "DeviceProfileUuid": "2d9cbeab-06fb-4968-b905-63d867e892ad",
+    "DeviceProfileVersion": 1,
     "LastUpdated": "2017-02-01 05:44:47.634603+00:00",
     "UploadStats": true,
     "Manufacturer": "D-Link",
@@ -186,6 +235,7 @@
 ,
 {
     "DeviceProfileUuid": "6e617357-5a44-4f5a-8675-5ecba34055be",
+    "DeviceProfileVersion": 1,
     "LastUpdated": "2017-01-28 13:44:47.634603+00:00",
     "UploadStats": true,
     "Manufacturer": "Enphase",
@@ -211,7 +261,8 @@
 ,
 {
     "DeviceProfileUuid": "76905373-748b-4e25-a550-296b3e1c7086",
-    "LastUpdated": "2017-02-05 11:44:47.634603+00:00",
+    "DeviceProfileVersion": 2,
+    "LastUpdated": "2017-05-19 11:44:47.634603+00:00",
     "UploadStats": true,
     "Manufacturer": "Google",
     "Model": "Android device",
@@ -225,7 +276,7 @@
                     "DhcpVendor": "dhcpcd-5.5.6"
             },
             "MustContain": {
-                    "DnsQueries": [ "play.googleapis.com" ]
+                    "DnsQueries": [ "android.clients.google.com", "play.googleapis.com" ]
             }
         },
         {
@@ -233,15 +284,19 @@
             "EnforceConfidenceLevel": "Low",
             "MustMatch": {
                     "Hostname": "android-*",
-                    "DhcpVendor": "android-dhcp-7.0"
-            }
+                    "DhcpVendor": "android-dhcp-*"
+            },
+			"MustContain": {
+					"Dnsqueries": [ "android.clients.google.com", "play.googleapis.com" ]
+			}
         }
     ]
 }
 ,
 {
     "DeviceProfileUuid": "5551d6ff-5afb-45b2-b97f-670af552241e",
-    "LastUpdated": "2017-04-03 07:44:47.634603+00:00",
+    "DeviceProfileVersion": 2,
+    "LastUpdated": "2017-05-19 07:44:47.634603+00:00",
     "UploadStats": true,
     "Manufacturer": "Google",
     "Model": "Chromecast",
@@ -251,9 +306,35 @@
             "IdentifyConfidenceLevel": "High",
             "EnforceConfidenceLevel": "Low",
             "MustMatch": {
-                    "DhcpHostname": "Chromecast",
                     "SsdpManufacturer": "Google Inc.",
                     "SsdpModelName": "Eureka Dongle"
+            }
+        },
+        {
+            "IdentifyConfidenceLevel": "Medium",
+            "EnforceConfidenceLevel": "Low",
+            "MustMatch": {
+                    "DhcpHostname": "chromecast"
+            }
+        }
+    ]
+}
+,
+{
+    "DeviceProfileUuid": "a6e4e65d-e3ae-4a9a-bba6-2562ed06bacd",
+    "DeviceProfileVersion": 1,
+    "LastUpdated": "2017-06-19 07:44:47.634603+00:00",
+    "UploadStats": true,
+    "Manufacturer": "Google",
+    "Model": "OnHub-WiFi",
+    "ThingClass": "Home Gateway",
+    "Identifiers": [
+        {
+            "IdentifyConfidenceLevel": "Medium",
+            "EnforceConfidenceLevel": "Low",
+            "MustMatch": {
+                    "SsdpManufacturer": "Google",
+                    "SsdpModelName": "OnHub"
             }
         }
     ]
@@ -261,7 +342,8 @@
 ,
 {
     "DeviceProfileUuid": "290b8e6e-4ee2-4ec1-a73d-f2b9db1d8500",
-    "LastUpdated": "2017-02-05 11:44:47.634603+00:00",
+    "DeviceProfileVersion": 2,
+    "LastUpdated": "2017-05-19 11:44:47.634603+00:00",
     "UploadStats": false,
     "Manufacturer": "Microsoft",
     "Model": "Windows 7/8/8.1/10",
@@ -273,12 +355,20 @@
             "MustMatch": {
                     "DhcpVendor": "MSFT 5.0"
             }
+        },
+        {
+            "IdentifyConfidenceLevel": "Low",
+            "EnforceConfidenceLevel": "None",
+            "MustMatch": {
+                    "SsdpUserAgent": "Google Chrome/57.0.2987.133 Windows"
+            }
         }
     ]
 }
 ,
 {
     "DeviceProfileUuid": "13af20e3-3619-47d2-a5fc-7fda65d3a571",
+    "DeviceProfileVersion": 1,
     "LastUpdated": "2017-02-04 05:44:47.634603+00:00",
     "UploadStats": true,
     "Manufacturer": "Microsoft",
@@ -300,6 +390,7 @@
 ,
 {
     "DeviceProfileUuid": "7b50c7cd-d7b9-40ad-980d-0b520ad3d05e",
+    "DeviceProfileVersion": 1,
     "LastUpdated": "2017-01-22 05:44:47.634603+00:00",
     "UploadStats": true,
     "Manufacturer": "Microsoft",
@@ -320,7 +411,27 @@
 }
 ,
 {
+    "DeviceProfileUuid": "73ea1574-78af-4e75-8136-223df5ae4c74",
+    "DeviceProfileVersion": 1,
+    "LastUpdated": "2017-05-19 11:44:47.634603+00:00",
+    "UploadStats": true,
+    "Manufacturer": "Polycom",
+    "Model": "VoIP phone",
+    "ThingClass": "VoIP phone",
+    "Identifiers": [
+        {
+            "IdentifyConfidenceLevel": "High",
+            "EnforceConfidenceLevel": "Low",
+            "MustMatch": {
+                    "DhcpHostname": "Polycom-*"
+            }
+        }
+    ]
+}
+,
+{
     "DeviceProfileUuid": "5ec4dd66-22ee-4cd6-beed-fa4fdfd38c34",
+    "DeviceProfileVersion": 1,
     "LastUpdated": "2017-02-04 05:44:47.634603+00:00",
     "UploadStats": true,
     "Manufacturer": "Roku",
@@ -341,7 +452,27 @@
 }
 ,
 {
+    "DeviceProfileUuid": "81412b79-d2e4-426a-a5c6-0cab5d7e4e56",
+    "DeviceProfileVersion": 1,
+    "LastUpdated": "2017-05-19 11:44:47.634603+00:00",
+    "UploadStats": true,
+    "Manufacturer": "Samsung",
+    "Model": "Galaxy S6",
+    "ThingClass": "Phone Tablet",
+    "Identifiers": [
+        {
+            "IdentifyConfidenceLevel": "High",
+            "EnforceConfidenceLevel": "Low",
+            "MustMatch": {
+                    "DhcpHostname": "samsung-sm-g920a"
+            }
+        }
+    ]
+}
+,
+{
     "DeviceProfileUuid": "7d8f2ed0-38f9-455d-a816-89a1daeb6ae2",
+    "DeviceProfileVersion": 1,
     "LastUpdated": "2017-01-22 05:44:47.634603+00:00",
     "UploadStats": true,
     "Manufacturer": "Samsung",
@@ -363,6 +494,7 @@
 ,
 {
     "DeviceProfileUuid": "e44f91d6-01f1-46c0-a6bc-e0a921037de7",
+    "DeviceProfileVersion": 1,
     "LastUpdated": "2017-01-28 01:44:47.634603+00:00",
     "UploadStats": true,
     "Manufacturer": "Samsung",
@@ -391,6 +523,7 @@
 ,
 {
     "DeviceProfileUuid": "b2e13a63-c40b-4448-b524-3c2852bc1cb7",
+    "DeviceProfileVersion": 1,
     "LastUpdated": "2017-01-22 05:44:47.634603+00:00",
     "UploadStats": true,
     "Manufacturer": "Samsung",
@@ -412,7 +545,8 @@
 ,
 {
     "DeviceProfileUuid": "2ae4a61f-75f7-481f-b28c-e3534ee1e04b",
-    "LastUpdated": "2017-02-05 11:44:47.634603+00:00",
+    "DeviceProfileVersion": 2,
+    "LastUpdated": "2017-05-19 11:44:47.634603+00:00",
     "UploadStats": true,
     "Manufacturer": "Vizio",
     "Model": "TV",
@@ -426,7 +560,6 @@
             },
             "MustContain": {
                 "DnsQueries": [
-                    "ctv.zenfs.com",
                     "control.tvinteractive.tv",
                     "gallery.tv.widgets.yahoo.com"
                 ]
@@ -440,7 +573,7 @@
             },
             "MustContain": {
                 "DnsQueries": [
-                    "ctv.zenfs.com",
+					"control-zoo-dtsprod.tvinteractive.tv",
                     "control2.tvinteractive.tv",
                     "bis-tv-widgets.secure.yahoo.com"
                 ]

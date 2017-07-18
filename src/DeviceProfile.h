@@ -41,7 +41,7 @@ using nlohmann::json;
 class DeviceProfile {
 private:
 	std::string DeviceProfileUuid;
-	time_t LastUpdated;
+	time_t DeviceProfileVersion;
 	std::vector<std::shared_ptr<Identifier>> Identifiers;
 	bool UploadStats;
 	bool Valid;
@@ -49,7 +49,7 @@ private:
 
 public:
 	DeviceProfile(const json &j, const bool inDebug = false): Debug{inDebug} {
-		LastUpdated = 0;
+		DeviceProfileVersion = 0;
 		UploadStats = false;
 		Valid = false;
 		if (j.find("DeviceProfileUuid") == j.end()) {
@@ -68,7 +68,7 @@ public:
 	}
 
 	std::string Uuid_get () const { return DeviceProfileUuid; }
-	time_t LastUpdated_get ()  const { return LastUpdated; }
+	time_t DeviceProfileVersion_get ()  const { return DeviceProfileVersion; }
 	bool isValid() const { return Valid; }
 	bool UploadStats_get() const { return UploadStats; }
 
@@ -87,34 +87,24 @@ public:
 
 		syslog(LOG_DEBUG, "Read Device Profile for UUID %s", DeviceProfileUuid.c_str());
 
-		if (j.find("LastUpdated") == j.end()) {
-			syslog(LOG_ERR, "No LastUpdated value set, ignoring this Object");
+		if (j.find("DeviceProfileVersion") == j.end()) {
+			syslog(LOG_ERR, "No DeviceProfileVersion value set, ignoring this Object");
 			return false;
 		}
-		if (! j["LastUpdated"].is_string()) {
-			syslog(LOG_ERR, "LastUpdated is not a string, ignoring this Object");
+		if (! j["DeviceProfileVersion"].is_number()) {
+			syslog(LOG_ERR, "DeviceProfileVersion is not a number, ignoring this Object");
 			return false;
 		}
-	    std::string l = j["LastUpdated"];
-		struct tm timeDate;
-	    memset(&timeDate,0,sizeof(struct tm));
-	    strptime(l.c_str(),"%Y-%m-%d %T", &timeDate);
-	    time_t newtime = mktime(&timeDate);
-
-	    if (newtime < LastUpdated) {
-	    	syslog(LOG_DEBUG, "Ignoring DeviceProfile as it is older than there is a new one with the same UUID in memory");
-			return false;
-	    }
-	    LastUpdated = newtime;
+		DeviceProfileVersion = j["DeviceProfileVersion"].get<uint32_t>();
 
 		if (j.find("UploadStats") == j.end()) {
 			syslog(LOG_DEBUG, "No UploadStats value set, defaulting to false");
 			UploadStats = false;
-		} else if (! j["LastUpdated"].is_string()) {
-			syslog(LOG_DEBUG, "UploadStats is not a string, defaulting to false");
+		} else if (! j["UploadStats"].is_boolean()) {
+			syslog(LOG_DEBUG, "UploadStats is not a bool, defaulting to false");
 			UploadStats = false;
 		} else {
-			UploadStats = j["UploadStats"];
+			UploadStats = j["UploadStats"].get<bool>();
 		}
 
 		Identifiers.clear();

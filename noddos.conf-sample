@@ -6,7 +6,6 @@
     "ClientApiKeyFile": "/etc/noddos/noddosapiclient.key",
     "SignatureCertFile": "/etc/noddos/noddossignature.pem",
     "PidFile": "/var/lib/noddos/noddos.pid",
-    "DnsmasqLogFile": "/var/log/dnsmasq.log",
     "User": "noddos",
     "Group": "noddos",
     "WhitelistedIpv4Addresses": [
@@ -17,9 +16,10 @@
     "ReportTrafficToRfc1918": false,
     "ListenIpAddresses": [],
     "ListenInterfaces": [],
+    "LanInterfaces": ["eth0"],
+    "WanInterfaces": ["eth1"],
     "TrafficReportInterval": 3600,
     "DeviceReportInterval": 14400,
-    "ExpireDnsQuery": 86400,
     "ExpireHost": 604800,
     "UploadMode": "Anonymous"
 }

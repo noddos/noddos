@@ -22,8 +22,6 @@
 #include <map>
 #include <string>
 
-#include <sys/epoll.h>
-#include <stdlib.h>
 #include <ctime>
 #include <cstring>
 #include <fstream>
@@ -31,6 +29,8 @@
 #include <memory>
 #include <unordered_set>
 #include <csignal>
+#include <sys/epoll.h>
+#include <stdlib.h>
 #include <sys/signalfd.h>
 #include <unistd.h>
 #include <syslog.h>
@@ -39,19 +39,20 @@
 #include <grp.h>
 #include <sys/stat.h>
 #include <stdio.h>
-
+#include <net/if.h>
 #include <getopt.h>
 
 #include <curl/curl.h>
 
 #include "noddosconfig.h"
-#include "DnsmasqLogFile.h"
 #include "HostCache.h"
 #include "SsdpServer.h"
 #include "FlowTrack.h"
 #include "iDeviceInfoSource.h"
 #include "DeviceProfile.h"
 #include "Host.h"
+#include "PacketSnoop.h"
+#include "InterfaceMap.h"
 #include "Config.h"
 #include "noddos.h"
 
@@ -63,16 +64,21 @@ bool add_epoll_filehandle(int epfd, std::map<int, iDeviceInfoSource *> & epollma
 bool daemonize(Config &inConfig);
 bool write_pidfile(std::string pidfile);
 
-void parse_commandline(int argc, char** argv, bool& debug, bool& flowtrack, std::string& configfile, bool& daemon, bool& prune);
+void parse_commandline(int argc, char** argv, bool& debug, std::string& configfile, bool& daemon);
 
 int main(int argc, char** argv) {
     bool debug = false;
-    bool flowtrack = true;
 	std::string configfile = "/etc/noddos/noddos.conf";
 	bool daemon = true;
-	bool prune = true;
 
-	parse_commandline(argc, argv, debug, flowtrack, configfile, daemon, prune);
+	//
+	// Process management :
+	// - Command line args
+	// - daemonize the process
+	// - load configuration file,
+	// - write pid file
+	//
+	parse_commandline(argc, argv, debug, configfile, daemon);
 
 	if (daemon) {
 		openlog(argv[0], LOG_NOWAIT | LOG_PID, LOG_UUCP);
@@ -80,27 +86,38 @@ int main(int argc, char** argv) {
 		openlog(argv[0], LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
 	}
 	Config config(configfile, debug);
+	InterfaceMap ifMap(config.LanInterfaces,config.WanInterfaces, true);
 
 	if (daemon) {
 		daemonize(config);
 	}
 	write_pidfile(config.PidFile);
 
+
 	curl_global_init(CURL_GLOBAL_ALL);
 
-	HostCache hC(config.TrafficReportInterval, config.Debug);
-
+	//
+	// Set up HostCache instance
+	//
+	HostCache hC(ifMap, config.TrafficReportInterval, config.Debug);
 	hC.DeviceProfiles_load(config.DeviceProfilesFile);
 	hC.ImportDeviceProfileMatches(config.MatchFile);
 	hC.Whitelists_set(config.WhitelistedIpv4Addresses, config.WhitelistedIpv6Addresses, config.WhitelistedMacAddresses);
-	std::map<int,iDeviceInfoSource *> epollmap;
 
+
+	//
+	// Set up epoll
+	//
+	std::map<int,iDeviceInfoSource *> epollmap;
     int epfd = epoll_create1(0);
     if (epfd < 0) {
     	syslog(LOG_CRIT, "Can't create epoll instance");
     	exit(1);
     }
 
+    //
+    // Signal handler for SIGHUP, SIGUSR1, SIGUSR2, SIGTERM
+    //
     auto sfd = setup_signal_fd(-1);
     if (sfd < 0) {
     	syslog(LOG_ERR, "Setting up signal fd");
@@ -119,17 +136,25 @@ int main(int argc, char** argv) {
         }
     }
 
-    DnsmasqLogFile f(config.DnsmasqLogFile, hC, 86400, config.Debug);
-    add_epoll_filehandle(epfd, epollmap, f);
+    //
+    // Set up all the DeviceInfoSources
+    //
+    std::unordered_set<PacketSnoop *> pInstances;
+    std::unordered_set<std::string> allInterfaces = config.LanInterfaces;
+    allInterfaces.insert(config.WanInterfaces.begin(), config.WanInterfaces.end());
+    for (auto iface: allInterfaces) {
+        PacketSnoop *p = new PacketSnoop(hC, 64, config.Debug);
+        p->Open(iface, 64);
+        add_epoll_filehandle(epfd, epollmap, *p);
+        pInstances.insert(p);
+    }
 
     SsdpServer s(hC, 86400, "", config.Debug);
     add_epoll_filehandle(epfd, epollmap, s);
 
-    FlowTrack *t_ptr = nullptr;
-    if (flowtrack) {
-    	t_ptr = new FlowTrack(hC, config);
-    	add_epoll_filehandle(epfd, epollmap, *t_ptr);
-    }
+    FlowTrack ft(hC, config) ;
+    ft.Open();
+   	add_epoll_filehandle(epfd, epollmap, ft);
 
     if (config.User != "" && config.Group != "") {
     	drop_process_privileges(config);
@@ -138,7 +163,6 @@ int main(int argc, char** argv) {
     uint32_t NextPrune = time(nullptr) + config.PruneInterval + rand() % 15;
 	uint32_t NextDeviceUpload = time(nullptr) + config.DeviceReportInterval + rand() %5;
 	uint32_t NextTrafficUpload = time(nullptr) + config.TrafficReportInterval + rand() %5;
-
 
 	struct epoll_event* epoll_events = static_cast<epoll_event*>(calloc(MAXEPOLLEVENTS, sizeof (epoll_event)));
 	while (true) {
@@ -159,16 +183,13 @@ int main(int argc, char** argv) {
                     (not epoll_events[ev].events & EPOLLIN)) {
 				syslog(LOG_ERR, "Epoll event error for FD %d", epoll_events[ev].data.fd);
 				epollmap.erase(epoll_events[ev].data.fd);
-				if (epoll_events[ev].data.fd == t_ptr->GetFileHandle() && t_ptr != nullptr && geteuid() == 0) {
-					t_ptr->Close();
-					t_ptr->Open();
-			    	add_epoll_filehandle(epfd, epollmap, *t_ptr);
-				} else if (epoll_events[ev].data.fd == f.GetFileHandle()) {
-					f.Close();
-					f.Open(config.DnsmasqLogFile, 0); // 0: do not read file, just jump to the end and listen for writes to it
-					add_epoll_filehandle(epfd, epollmap, f);
+				if (epoll_events[ev].data.fd == ft.GetFileHandle() && geteuid() == 0) {
+					ft.Close();
+					ft.Open();
+			    	add_epoll_filehandle(epfd, epollmap, ft);
 				} else {
-					close(epoll_events[ev].data.fd);
+					syslog(LOG_ERR, "Closing file description without re-opening it %d", epoll_events[ev].data.fd);
+				    close(epoll_events[ev].data.fd);
 				}
 			} else {
 				if (config.Debug) {
@@ -224,13 +245,10 @@ int main(int argc, char** argv) {
 					hC.ExportDeviceProfileMatches(config.DumpFile, true);
 				}
 				if (t > NextDeviceUpload && config.DeviceReportInterval > 0) {
-					if (config.Debug) {
-						syslog(LOG_DEBUG, "Starting matching");
-					}
 					hC.UploadDeviceStats(config.ClientApiCertFile, config.ClientApiKeyFile, config.DeviceReportInterval != 0);
 					NextDeviceUpload = t + config.DeviceReportInterval;
 				}
-				if (t > NextTrafficUpload && flowtrack && config.TrafficReportInterval > 0) {
+				if (t > NextTrafficUpload && config.TrafficReportInterval > 0) {
 					if (config.Debug) {
 						syslog(LOG_DEBUG, "Starting traffic upload");
 					}
@@ -238,11 +256,14 @@ int main(int argc, char** argv) {
 							config.ClientApiKeyFile, config.TrafficReportInterval != 0);
 					NextTrafficUpload = t + config.TrafficReportInterval;
 				}
-				if (prune && t > NextPrune) {
+				if (t > NextPrune) {
 					if (config.Debug) {
 						syslog(LOG_DEBUG, "Starting prune");
 					}
 					hC.Prune();
+					for (auto p: pInstances) {
+					    p->pruneTcpSnoopInstances();
+					}
 					NextPrune = t + config.PruneInterval;
 				}
     		}
@@ -252,13 +273,11 @@ int main(int argc, char** argv) {
 exitprog:
 	hC.ExportDeviceProfileMatches(config.MatchFile);
 	hC.Prune();
-	f.Close();
 	s.Close();
-	if (flowtrack && t_ptr != nullptr) {
-		t_ptr->Close();
-		// Is this crashing when noddos exits?
-		delete t_ptr;
+	for (auto p: pInstances) {
+	    p->Close();
 	}
+	ft.Close();
 	close (epfd);
 	close (sfd);
 	closelog();
@@ -432,21 +451,19 @@ bool write_pidfile(std::string pidfile) {
 	} else {
 		syslog(LOG_ERR, "Error creating PID file %s", pidfile.c_str());
 	}
+	return false;
 
 }
 
-void parse_commandline(int argc, char** argv, bool& debug, bool& flowtrack, std::string& configfile, bool& daemon, bool& prune) {
+void parse_commandline(int argc, char** argv, bool& debug, std::string& configfile, bool& daemon) {
 	int debug_flag = 0;
 	int daemon_flag = 1;
 	int prune_flag = 1;
-	int flowtrack_flag = 1;
 	int help_flag = 0;
 	while (1) {
 		static struct option long_options[] = {
 	        {"debug",       no_argument,       &debug_flag, 1},
 	        {"nodaemon",    no_argument,       &daemon_flag, 0},
-	        {"noprune",     no_argument,       &prune_flag, 0},
-	        {"noflowtrack", no_argument,       &flowtrack_flag, 0},
 	        {"help",        no_argument,       &help_flag, 0},
 	        {"configfile",  required_argument, 0, 'c'},
 	        {0, 0, 0, 0}
@@ -468,20 +485,13 @@ void parse_commandline(int argc, char** argv, bool& debug, bool& flowtrack, std:
 	        case 'n':
 	        	daemon_flag = 0;
 	        	break;
-	        case 'p':
-	        	prune_flag = 0;
-	        	break;
-	        case 'f':
-	        	flowtrack_flag = 0;
-	        	break;
 	        case 'c':
 	        	configfile = optarg;
 	        	break;
 	        case '?':
-	        	break;
 	        case 'h':
 	        default:
-	        	printf ("Noddos usage: -d/--debug -n/--nodaemon -c/--configfile <filename> -f/--noflowtrack\n");
+	        	printf ("Noddos usage: -d/--debug -n/--nodaemon -c/--configfile <filename>\n");
 	        	exit (0);
 	    }
     }
@@ -490,12 +500,6 @@ void parse_commandline(int argc, char** argv, bool& debug, bool& flowtrack, std:
 	}
 	if (daemon_flag == 0) {
 		daemon = false;
-       }
-	if (prune_flag == 0) {
-		prune = false;
-	}
-	if (flowtrack_flag == 0) {
-		flowtrack = false;
-	}
+    }
 }
 

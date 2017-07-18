@@ -62,8 +62,22 @@ uint32_t HostCache::Prune (bool Force) {
 			prunedhosts++;
 		}
 	}
-	syslog(LOG_INFO, "Pruned %u hosts", prunedhosts);
-	return prunedhosts;
+	if (Debug == true) {
+	    syslog(LOG_DEBUG, "Pruned %u hosts", prunedhosts);
+	}
+	uint32_t count = pruneDnsQueryCache(Force);
+    if (Debug == true) {
+        syslog(LOG_DEBUG, "Pruned %u DNS queries", count);
+    }
+	count = pruneDnsIpCache(Force);
+    if (Debug == true) {
+        syslog(LOG_DEBUG, "Pruned %u DNS IP cache entries", count);
+    }
+    count = pruneDnsCnameCache(Force);
+    if (Debug == true) {
+        syslog(LOG_DEBUG, "Pruned %u DNS CNAME cache entries", count);
+    }
+  	return prunedhosts;
 }
 
 uint32_t HostCache::Match() {
@@ -201,6 +215,7 @@ bool HostCache::AddFlow (const std::string srcip, const uint16_t srcport, const 
 	return false;
 }
 
+
 bool HostCache::AddDnsQueryIp (const std::string clientip, const std::string fqdn, const std::string ip, const uint32_t expire) {
 	if (Debug == true) {
 		syslog(LOG_DEBUG, "Adding dns query for %s for host with IP %s", fqdn.c_str(), clientip.c_str());
@@ -211,44 +226,18 @@ bool HostCache::AddDnsQueryIp (const std::string clientip, const std::string fqd
 
 	std::shared_ptr<Host> h = FindOrCreateHostByIp(clientip);
 	if (h) {
-		h->DnsLogEntry_set(fqdn, ip);
+		h->addorupdateDnsQueryList(fqdn);
 		return true;
 	}
 	return false;
 }
 
-bool HostCache::AddDhcpRequest (const std::shared_ptr<DhcpRequest> inDhcpRequest_sptr) {
-	if (Debug == true) {
-		syslog(LOG_DEBUG, "Adding DHCP request for host with MAC %s & IP %s", inDhcpRequest_sptr->Mac.c_str(), inDhcpRequest_sptr->IpAddress.c_str());
-	}
-	if (inDhcpRequest_sptr->IpAddress == "" && inDhcpRequest_sptr->Mac.isValid() == false) {
-		syslog(LOG_WARNING, "No IpAdddress or Macaddress in DHCP request");
-		return false;
 
-	}
-	if (isWhitelisted(inDhcpRequest_sptr->IpAddress) || isWhitelisted(inDhcpRequest_sptr->Mac.str())) {
-		return false;
-    }
-
-	std::shared_ptr<Host> h;
-	if (inDhcpRequest_sptr->Mac.isValid() == true) {
-		h = FindOrCreateHostByMac(inDhcpRequest_sptr->Mac, "", inDhcpRequest_sptr->IpAddress);
-	} else {
-		h = FindOrCreateHostByIp(inDhcpRequest_sptr->IpAddress);
-	}
-
-	if (h) {
-		h->Dhcp_set(inDhcpRequest_sptr);
-		return true;
-	}
-	return false;
-}
-
-bool HostCache::AddDhcpRequest (const std::string IpAddress, const MacAddress inMac, const std::string Hostname, const std::string DhcpHostname, const std::string DhcpVendor) {
+bool HostCache::AddDhcpRequest (const std::string IpAddress, const MacAddress inMac, const std::string Hostname, const std::string DhcpVendor) {
 	if (Debug == true) {
 		syslog(LOG_DEBUG, "Adding DHCP request for host with MAC %s & IP %s", inMac.c_str(), IpAddress.c_str());
 	}
-	if (IpAddress == "" && inMac.isValid() == false) {
+	if ((IpAddress == "" || IpAddress == "0.0.0.0") && inMac.isValid() == false) {
 		syslog(LOG_WARNING, "No IpAdddress or Macaddress in DHCP request");
 		return false;
 
@@ -265,7 +254,7 @@ bool HostCache::AddDhcpRequest (const std::string IpAddress, const MacAddress in
 	}
 
 	if (h) {
-		h->Dhcp_set(IpAddress, inMac.str(), Hostname, DhcpHostname, DhcpVendor);
+		h->Dhcp_set(IpAddress, inMac.str(), Hostname, DhcpVendor);
 		return true;
 	}
 	return false;
@@ -274,7 +263,7 @@ bool HostCache::AddDhcpRequest (const std::string IpAddress, const MacAddress in
 
 bool HostCache::AddSsdpInfo (const std::shared_ptr<SsdpHost> sHost) {
 	if (Debug == true) {
-		syslog(LOG_DEBUG, "Adding SSPDP info for host with IP %s", sHost->IpAddress.c_str());
+		syslog(LOG_DEBUG, "Adding SSDP info for host with IP %s", sHost->IpAddress.c_str());
 	}
 	if (sHost->IpAddress == "") {
 		syslog(LOG_WARNING, "AddSsdpInfo: no IP address provided");
@@ -290,6 +279,40 @@ bool HostCache::AddSsdpInfo (const std::shared_ptr<SsdpHost> sHost) {
 		return true;
 	}
 	return false;
+}
+
+// These functions are for DnsQueryCache
+void HostCache::addorupdateDnsQueryCache (uint16_t id) {
+	DnsQueryCache[id] = time(nullptr) + 15;
+}
+
+bool HostCache::inDnsQueryCache (uint16_t id) {
+	if (DnsQueryCache.find(id) == DnsQueryCache.end()) {
+		return false;
+	}
+	// Entry might be in the cache but is already stale
+	if (DnsQueryCache[id] < time(nullptr)) {
+		return false;
+	}
+	return true;
+}
+
+uint32_t HostCache::pruneDnsQueryCache (bool Force) {
+	uint32_t deletecount = 0;
+	time_t now = time(nullptr);
+	auto i = DnsQueryCache.begin();
+	while (i != DnsQueryCache.end()) {
+		if (Force || i->second > now) {
+			if (Debug == true) {
+				syslog (LOG_DEBUG, "Deleting %u from DnsQueryCache as %lu is later than %lu", i->first, i->second, now);
+			}
+			i = DnsQueryCache.erase(i);
+			deletecount++;
+		} else {
+			i++;
+		}
+	}
+	return deletecount;
 }
 
 // TODO: Lookup MAC addresses in ARP table using IOCTL now works but you need to specify the Ethernet interface and we don't have code for that yet
@@ -647,14 +670,13 @@ uint32_t HostCache::UploadDeviceStats(const std::string ClientApiCertFile, const
 	return uploads;
 }
 
-bool HostCache::UploadTrafficStats(const time_t interval, const bool ReportRfc1918, const std::string ClientCertFile,
-		const std::string ClientApiKeyFile, bool doUpload) {
+bool HostCache::UploadTrafficStats(const time_t interval, const bool ReportRfc1918, const std::string ClientCertFile, const std::string ClientApiKeyFile, bool doUpload) {
 	uint32_t uploads = 0;
 	json j;
 	for (auto it : hC) {
 		if ( (not isWhitelisted(*(it.second))) && it.second->isMatched()) {
 			json h;
-			if (it.second->TrafficStats(h, interval, ReportRfc1918, LocalIpAddresses, false)) {
+			if (it.second->TrafficStats(h, interval, ReportRfc1918, LocalIpAddresses, dCip, false)) {
 				uploads++;
 				j.push_back(h);
 			}
@@ -737,9 +759,6 @@ bool HostCache::ImportDeviceInfo (json &j) {
 			IpAddress = j["Ipv4Address"].get<std::string>();
 		}
 	}
-	if (Debug == true) {
-		syslog(LOG_DEBUG, "Importing Device Profile for UUID %s with MacAddress %s", DeviceProfileUuid.c_str(), MacAddressString.c_str());
-	}
 
 	MacAddress Mac(MacAddressString);
 	auto hit = hC.find(Mac.get());
@@ -806,13 +825,4 @@ uint32_t HostCache::Whitelists_set (const std::unordered_set<std::string>& inIpv
 	return WhitelistedNodes.size();
 }
 
-uint32_t HostCache::HostDnsQueryCount (std::string IpAddress) {
-	auto it = Ip2MacMap.find(IpAddress);
-	if ( it == Ip2MacMap.end()) {
-		return 0;
-	}
-	auto Mac = it->second;
-	auto &h = hC[Mac];
-	return h->DnsLogEntryCount();
 
-}

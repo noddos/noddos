@@ -31,7 +31,6 @@ using nlohmann::json;
 #include "noddos.h"
 #include "DeviceProfile.h"
 #include "HostCache.h"
-#include "DnsmasqLogFile.h"
 
 static std::string deviceprofilesfile = "tests/DeviceProfiles.json";
 
@@ -39,7 +38,7 @@ bool test_match (std::string inIp, std::string inDpUuid, HostCache &hc);
 
 int main()
 {
-	openlog("DnsmasqLogFile_test", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
+	openlog("DeviceProfile_test", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
 	bool testfailed = false;
 	std::map<std::string, std::shared_ptr<DeviceProfile>> DeviceProfiles;
 	std::ifstream ifs(deviceprofilesfile);
@@ -56,7 +55,8 @@ int main()
 		  std::cout << "Invalid Device Profile " << uuid << std::endl;
 	  }
 	}
-	HostCache hc(0, true);
+	InterfaceMap ifMap;
+	HostCache hc(ifMap, 0, true);
 	hc.AddByMac (MacAddress("00:00:00:00:00:01"), "192.168.1.232");
 	hc.AddByMac (MacAddress("00:00:00:00:00:02"), "192.168.1.98");
 	hc.AddByMac (MacAddress("00:00:00:00:00:03"), "192.168.1.99");
@@ -83,7 +83,6 @@ int main()
 	hc.AddByMac (MacAddress("00:00:00:00:00:24"), "192.168.1.243");
 	hc.AddByMac (MacAddress("00:00:00:00:00:25"), "192.168.1.229");
 	hc.DeviceProfiles_load(deviceprofilesfile);
-	DnsmasqLogFile d ("tests/dnsmasqmatchdata.log", hc, 86400, true);
 
 
 	// pending good test data for dnsmasq.log that allows the matching of most of these.
@@ -96,7 +95,6 @@ int main()
 	// testfailed |= ! test_match ("192.168.1.229", "b2e13a63-c40b-4448-b524-3c2852bc1cb7", hc);
 	// testfailed |= ! test_match ("192.168.1.227", "2ae4a61f-75f7-481f-b28c-e3534ee1e04b", hc);
 	// testfailed |= ! test_match ("192.168.1.226", "76905373-748b-4e25-a550-296b3e1c7086", hc);
-	// testfailed |= ! test_match ("192.168.1.224", "76905373-748b-4e25-a550-296b3e1c7086", hc);
 	if (testfailed) {
 		exit (1);
     }

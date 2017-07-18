@@ -11,6 +11,7 @@ CMakeCache.txt
 .settings/
 Testing/
 bin/
+log.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

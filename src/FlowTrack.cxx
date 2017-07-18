@@ -26,6 +26,7 @@
 #include <syslog.h>
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 #include <libnetfilter_conntrack/libnetfilter_conntrack_tcp.h>
+#include <cstdio>
 
 // # include "boost/asio.hpp"
 
@@ -45,7 +46,6 @@ int netfilter_cb2(const struct nlmsghdr *nlh, enum nf_conntrack_msg_type type, s
     std::string line = buf;
 	std::smatch m;
 	if (std::regex_search(line, m, ct_rx)) {
-		struct Flow f;
 		// std::string connstatus = m.str(1);
 		// std::string protocol = m.str(2);
 		uint8_t protocol = std::stoi(m.str(3));
@@ -82,7 +82,6 @@ int netfilter_cb(enum nf_conntrack_msg_type type, struct nf_conntrack *ct, void 
     std::string line = buf;
 	std::smatch m;
 	if (std::regex_search(line, m, ct_rx)) {
-		struct Flow f;
 		// std::string connstatus = m.str(1);
 		// std::string protocol = m.str(2);
 		uint8_t protocol = std::stoi(m.str(3));
@@ -108,3 +107,36 @@ int netfilter_cb(enum nf_conntrack_msg_type type, struct nf_conntrack *ct, void 
 	return NFCT_CB_STOP;
 }
 
+int FlowTrack::parseLogLine() {
+	static const auto nf_rx = std::regex(R"delim(^(ipv\d)\s+?(\d+?)\s+?(\w+?)\s+?(\d+?)\s(\d+?)\s(\S+?)?\s?src=(\S+?)\s+dst=(\S+?)\s+sport=(\d+)\s+dport=(\d+))delim",
+			std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
+	char cline[300];
+	if (fgets(cline, 300, ctFilePointer) == NULL) {
+		return -1;
+	}
+	cline[strcspn(cline, "\n")] = 0;
+	std::string line = cline;
+	std::smatch m;
+	if (std::regex_search(line, m, nf_rx)) {
+		// std::string ipversion = m.str(1);
+		uint8_t ipversionnumber = std::stoi(m.str(2));
+		// std::string ipproto = m.str(3);
+		uint8_t ipprotonumber= std::stoi(m.str(4));
+		uint32_t expiration = std::stoi(m.str(5));
+		// std::string flowstatus = m.str(6);
+		std::string srcip = m.str(7);
+		std::string dstip = m.str(8);
+		uint16_t srcport = std::stoi(m.str(9));
+		uint16_t dstport = std::stoi(m.str(10));
+		if (hC.Debug_get()) {
+			syslog(LOG_DEBUG, "Conntrack matched: %s:%u - %s:%u %u exp %u", srcip.c_str(), srcport, dstip.c_str(), dstport, ipprotonumber, expiration);
+		}
+		hC.AddFlow(srcip, srcport, dstip, dstport, ipprotonumber, expiration);
+	} else {
+		if (hC.Debug_get()) {
+			syslog(LOG_DEBUG, "Conntrack not matched: %s", line.c_str());
+		}
+	}
+	return 0;
+
+}

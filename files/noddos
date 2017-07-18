@@ -14,24 +14,13 @@ reload_service() {
 }
 
 start_service() {
-    uci set dhcp.@dnsmasq[0].logqueries="1"
-    uci set dhcp.@dnsmasq[0].logdhcp="1"
-    uci commit dhcp
-
     netstat -nr | grep '224.0.0' > /dev/null
     if [ "$?" -gt "0" ]; then
-        route add -net 224.0.0.0 netmask 240.0.0.0 dev br-lan
+        route add -net 224.0.0.0 netmask 224.0.0.0 dev br-lan
     fi
 
     CONFFILE=/var/etc/noddos.conf
     cp /etc/noddos/noddos.conf-base $CONFFILE
-	dnsmasqlogfile=$(uci get dhcp.@dnsmasq[0].logfile)
-    if [[ -z $dnsmasqlogfile ]] || [ ! -f $dnsmasqlogfile ] ; then
-		dnsmasqlogfile=$(uci get system.@system[0].log_file)
-	fi
-    if [[ -n $dnsmasqlogfile ]]; then
-        echo '    "DnsmasqLogFile": "'$dnsmasqlogfile'",' >>$CONFFILE
-    fi
     if [ "$(uci get noddos.@noddos[0].rfc1918)" -eq "1" ]; then
         echo '    "ReportTrafficToRfc1918": true,' >>$CONFFILE
     else
@@ -51,10 +40,11 @@ start_service() {
         if [ "$firstentry" -eq "0" ]; then
             firstentry=1
         else
-            echo '        ,' >>$CONFFILE
+            echo ',' >>$CONFFILE
         fi
-        echo '        "'$ipv4'"' >>$CONFFILE
+        echo -n '        "'$ipv4'"' >>$CONFFILE
     done
+	echo '' >>$CONFFILE
     echo '    ],' >>$CONFFILE
 
     echo '    "WhitelistedIpv6Addresses": [' >> $CONFFILE
@@ -64,11 +54,12 @@ start_service() {
         if [ "$firstentry" -eq "0" ]; then
             firstentry=1
         else
-            echo '        ,' >>$CONFFILE
+            echo ',' >>$CONFFILE
         fi
 
-       echo '        "'$ipv6'"' >>$CONFFILE
+       echo -n '        "'$ipv6'"' >>$CONFFILE
     done
+	echo '' >>$CONFFILE
     echo '    ],' >>$CONFFILE
 
     echo '    "WhitelistedMacAddresses": [' >> $CONFFILE
@@ -78,10 +69,11 @@ start_service() {
         if [ "$firstentry" -eq "0" ]; then
             firstentry=1
         else
-            echo '        ,' >>$CONFFILE
+            echo ',' >>$CONFFILE
         fi
-        echo '        "'$mac'"' >>$CONFFILE
+        echo -n '        "'$mac'"' >>$CONFFILE
     done
+	echo '' >>$CONFFILE
     echo '    ]' >>$CONFFILE
     echo '}' >>$CONFFILE
 

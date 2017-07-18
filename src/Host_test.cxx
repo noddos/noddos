@@ -34,7 +34,8 @@ static std::string deviceprofilesfile = "tests/DeviceProfiles.json";
 int main () {
 	bool testfailed = false;
 	openlog("Host_test", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
-	HostCache hC;
+	InterfaceMap ifMap;
+	HostCache hC(ifMap);
 	hC.DeviceProfiles_load(deviceprofilesfile);
 	hC.AddByMac (MacAddress("00:00:00:00:00:01"), "192.168.1.232");
 	hC.AddByMac (MacAddress("00:00:00:00:00:02"), "192.168.1.98");
@@ -70,6 +71,8 @@ int main () {
 		testfailed = true;
 	}
 
+	// DELETE DNSMASQ
+	/*
 	auto dr = std::make_shared<DhcpRequest>();
 	dr->DhcpHostname = "udhcp 0.9.9-pre";
 	dr->IpAddress = "192.168.1.98";
@@ -99,6 +102,7 @@ int main () {
 	if (res4 != true) {
 		std::cout << "Test failure: Host with DhcpHostname " << dr->DhcpHostname << " and DnsQuery for " << "api.amazon.com" << " did not match" << std::endl;
 	}
+	*/
 	auto h = Host(MacAddress("01:01:01:01:01:01"), true);
 	if (h.inPrivateAddressRange("11.0.0.0")) {
 		std::cout << "Test failure: 11.0.0.0 is not RFC1918" << std::endl;

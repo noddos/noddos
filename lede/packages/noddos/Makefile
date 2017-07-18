@@ -24,10 +24,11 @@ PKG_RELEASE:=1
 PKG_LICENSE:=GPLv3
 CMAKE_INSTALL:=1
 
-#PKG_VERSION:=lede-opkg
-#PKG_SOURCE:=git
-#PKG_SOURCE_PROTO:=git
-#PKG_SOURCE_URL:=https://github.com/noddos/noddos
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_URL:=https://github.com/noddos/noddos.git
+PKG_SOURCE_VERSION:=v0.3.0
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_SOURCE_VERSION).tar.gz
+PKG_SOURCE_SUBDIR:=$(PKG_NAME)
 
 # This specifies the directory where we're going to build the program.
 # The root build directory, $(BUILD_DIR), is by default the build_mipsel
@@ -45,13 +46,13 @@ define Package/noddos
 	CATEGORY:=Network
 	TITLE:=noddos -- device-aware cloud-powered firewall
 	URL:=https://www.noddos.io/
-	DEPENDS:=+libstdcpp +libc +libnetfilter-conntrack +libcurl +libopenssl +openssl-util +libustream-openssl +ca-bundle +ca-certificates +wget +bzip2
+	DEPENDS:=+libstdcpp +libc +libnetfilter-conntrack +libcurl +libopenssl +openssl-util +libustream-openssl +ca-bundle +ca-certificates +wget +bzip2 +libtins
 endef
 
 define Package/noddos/description
-Noddos doscovers what devices you have in your network and tailers the firewall rules based on whitelisted flows
-for that device. Noddos downloads the firewall rules periodically from the cloud. In order to create these
-whitelisted flows, noddos can optionally upload anonimized traffic statistics for each device to the cloud.
+Noddos discovers what devices you have in your network and tailors the firewall rules based on whitelisted flows
+for that device. Noddos downloads the firewall rules periodically from the cloud. In order to support creating these
+firewall rules, noddos can optionally upload anonimized traffic statistics for each device to the cloud.
 endef
 
 define Package/noddos/conffiles
@@ -66,10 +67,10 @@ endef
 # PKG_SOURCE which is not defined here to download the source from the web.
 # In order to just build a simple program that we have just written, it is
 # much easier to do it this way.
-define Build/Prepare
-	mkdir -p $(PKG_BUILD_DIR)
-	$(CP) ./src/* $(PKG_BUILD_DIR)/
-endef
+#define Build/Prepare
+#	mkdir -p $(PKG_BUILD_DIR)
+#	$(CP) ./src/* $(PKG_BUILD_DIR)/
+#endef
 
 # We do not need to define Build/Configure or Build/Compile directives
 # The defaults are appropriate for compiling a simple program such as this one
@@ -90,22 +91,21 @@ define Package/noddos/install
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_DIR) $(1)/etc/noddos
 	$(INSTALL_DIR) $(1)/var/lib/noddos
-	#$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_DIR) $(1)/usr/lib/lua
 	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/model/cbi/admin_network
 	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/view/admin_status
 	$(INSTALL_DIR) $(1)/www/cgi-bin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/noddos $(1)/usr/sbin/
-	$(INSTALL_BIN) ./tools/getnoddosdeviceprofiles $(1)/usr/bin
-	$(INSTALL_BIN) ./tools/makenoddoscert.sh $(1)/usr/bin
-	$(INSTALL_BIN) ./files/noddos $(1)/etc/init.d
-	$(INSTALL_DATA) ./files/noddos.conf-base $(1)/etc/noddos
-	$(INSTALL_DATA) ./files/noddosconfig.pem $(1)/etc/noddos
-	$(INSTALL_BIN) ./files/clientdetails $(1)/www/cgi-bin
-	$(INSTALL_DATA) ./files/noddos.lua $(1)/usr/lib/lua/luci/model/cbi/admin_network
-	$(INSTALL_DATA) ./files/clients.htm $(1)/usr/lib/lua/luci/view/admin_status
-	$(INSTALL_DATA) ./files/dkjson.lua $(1)/usr/lib/lua
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/src/noddos $(1)/usr/sbin/
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/tools/getnoddosdeviceprofiles $(1)/usr/bin
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/tools/makenoddoscert.sh $(1)/usr/bin
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/noddos $(1)/etc/init.d
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/noddos.conf-base $(1)/etc/noddos
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/noddosconfig.pem $(1)/etc/noddos
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/clientdetails $(1)/www/cgi-bin
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/noddos.lua $(1)/usr/lib/lua/luci/model/cbi/admin_network
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/clients.htm $(1)/usr/lib/lua/luci/view/admin_status
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/dkjson.lua $(1)/usr/lib/lua
 endef
 
 define Package/noddos/postinst
@@ -123,18 +123,6 @@ define Package/noddos/postinst
 		cd /etc/rc.d
 		/etc/init.d/noddos enable
 	fi
-
-	#echo "Setting system log to be written to /etc/system.log"
-	#uci set "system.@system[0].log_file=/tmp/system.log"
-	#uci commit system
-	#/etc/init.d/log restart
-
-	echo "Adding dnsmasq configuration settings for noddos: logdhcp, logqueries"
-	uci set "dhcp.@dnsmasq[0].logqueries=1"
-	uci set "dhcp.@dnsmasq[0].logdhcp=1"
-	uci set "dhcp.@dnsmasq[0].logfile=/tmp/dnsmasq.log"
-	uci commit dhcp
-	/etc/init.d/dnsmasq restart
 
 	if [ ! -f /var/lib/noddos/DeviceDump.json ]; then
 		echo "[]" >/var/lib/noddos/DeviceDump.json
