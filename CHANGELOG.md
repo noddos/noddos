@@ -1,7 +1,9 @@
-___Noddos v0.3.0  - 7/23/2017___
+___Noddos v0.3.0  - 7/17/2017___
 
-Use AF_PACKET_MMAP for DNS and DHCP snooping to avoid dependency on dnsmasq
-Use /proc/net/nf_conntract is available and noddos configuration doesn't disable it
+New features:
+* Use AF_PACKET_MMAP for DNS and DHCP snooping to avoid dependency on dnsmasq
+* Use /proc/net/nf_conntract is available and noddos configuration doesn't disable it
+* Disable travis CI as there are issues with IPv6 in the libc included in Ubuntu 14.04 as made available by travis
 
 ___Noddos v0.2.3 - 6/14/2017___
 
