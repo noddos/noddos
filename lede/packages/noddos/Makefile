@@ -1,20 +1,9 @@
-##############################################
-# OpenWrt Makefile for Noddos (https://github.com/noddos/noddos/)
 #
+# Copyright (C) 2017 Steven Hessing
 #
-# Most of the variables used here are defined in
-# the include directives below. We just need to
-# specify a basic description of the package,
-# where to build our program, where to find
-# the source files, and where to install the
-# compiled program on the router.
+# This is free software, licensed under the GNU General Public License v2.
+# See /LICENSE for more information.
 #
-# Be very careful of spacing in this file.
-# Indents should be tabs, not spaces, and
-# there should be no trailing whitespace in
-# lines that are not commented.
-#
-##############################################
 
 include $(TOPDIR)/rules.mk
 
@@ -22,37 +11,28 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=noddos
 PKG_RELEASE:=1
 PKG_LICENSE:=GPLv3
+
+PKG_SOURCE_VERSION:=0.3.0
+PKG_SOURCE_URL:=https://github.com/noddos/noddos/releases/download/v$(PKG_SOURCE_VERSION)/
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_SOURCE_VERSION).tar.xz
+PKG_HASH:=81a220745e1ecf9b005f4eb84c4744843fe8def1795a4a49aef7101e49e180db
+
+PKG_BUILD_DIR := $(BUILD_DIR)/$(PKG_NAME)-$(PKG_SOURCE_VERSION)
+
 CMAKE_INSTALL:=1
-
-PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL:=https://github.com/noddos/noddos.git
-PKG_SOURCE_VERSION:=v0.3.0
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_SOURCE_VERSION).tar.gz
-PKG_SOURCE_SUBDIR:=$(PKG_NAME)
-
-# This specifies the directory where we're going to build the program.
-# The root build directory, $(BUILD_DIR), is by default the build_mipsel
-# directory in your OpenWrt SDK directory
-PKG_BUILD_DIR := $(BUILD_DIR)/$(PKG_NAME)
-
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
 
-
-# Specify package information for this program.
-# The variables defined here should be self explanatory.
 define Package/noddos
 	SECTION:=net
 	CATEGORY:=Network
 	TITLE:=noddos -- device-aware cloud-powered firewall
 	URL:=https://www.noddos.io/
-	DEPENDS:=+libstdcpp +libc +libnetfilter-conntrack +libcurl +libopenssl +openssl-util +libustream-openssl +ca-bundle +ca-certificates +wget +bzip2 +libtins
+	DEPENDS:=+libstdcpp +libnetfilter-conntrack +libcurl +libopenssl +openssl-util +ca-bundle +ca-certificates +wget +bzip2 +libtins
 endef
 
 define Package/noddos/description
-Noddos discovers what devices you have in your network and tailors the firewall rules based on whitelisted flows
-for that device. Noddos downloads the firewall rules periodically from the cloud. In order to support creating these
-firewall rules, noddos can optionally upload anonimized traffic statistics for each device to the cloud.
+Noddos discovers what devices you have in your network and tailors the firewall rules based on whitelisted flows for that device. Noddos downloads the firewall rules periodically from the cloud. In order to support creating these firewall rules, noddos can optionally upload anonimized traffic statistics for each device to the cloud.
 endef
 
 define Package/noddos/conffiles
@@ -60,52 +40,18 @@ define Package/noddos/conffiles
 	noddosconfig.pem
 endef
 
-
-# Specify what needs to be done to prepare for building the package.
-# In our case, we need to copy the source files to the build directory.
-# This is NOT the default. The default uses the PKG_SOURCE_URL and the
-# PKG_SOURCE which is not defined here to download the source from the web.
-# In order to just build a simple program that we have just written, it is
-# much easier to do it this way.
-#define Build/Prepare
-#	mkdir -p $(PKG_BUILD_DIR)
-#	$(CP) ./src/* $(PKG_BUILD_DIR)/
-#endef
-
-# We do not need to define Build/Configure or Build/Compile directives
-# The defaults are appropriate for compiling a simple program such as this one
-
-#define Build/Compile
-#    $(MAKE) noddos
-#endef
-
-# Specify where and how to install the program. Since we only have one file,
-# the noddos executable, install it by copying it to the /bin directory on
-# the router. The $(1) variable represents the root directory on the router running
-# OpenWrt. The $(INSTALL_DIR) variable contains a command to prepare the install
-# directory if it does not already exist. Likewise $(INSTALL_BIN) contains the
-# command to copy the binary file from its current location (in our case the build
-# directory) to the install directory.
 define Package/noddos/install
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_DIR) $(1)/etc/noddos
 	$(INSTALL_DIR) $(1)/var/lib/noddos
 	$(INSTALL_DIR) $(1)/etc/init.d
-	$(INSTALL_DIR) $(1)/usr/lib/lua
-	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/model/cbi/admin_network
-	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/view/admin_status
-	$(INSTALL_DIR) $(1)/www/cgi-bin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/src/noddos $(1)/usr/sbin/
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/tools/getnoddosdeviceprofiles $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/tools/makenoddoscert.sh $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/noddos $(1)/etc/init.d
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/noddos.conf-base $(1)/etc/noddos
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/noddosconfig.pem $(1)/etc/noddos
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/clientdetails $(1)/www/cgi-bin
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/noddos.lua $(1)/usr/lib/lua/luci/model/cbi/admin_network
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/clients.htm $(1)/usr/lib/lua/luci/view/admin_status
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/dkjson.lua $(1)/usr/lib/lua
 endef
 
 define Package/noddos/postinst
@@ -130,7 +76,7 @@ define Package/noddos/postinst
 
 	if [ ! -f /etc/config/noddos ]; then
 		echo 'config noddos' >/etc/config/noddos
-		echo "        option upload '1'" >>/etc/config/noddos
+		echo "        option upload '0'" >>/etc/config/noddos
 		echo "        option rfc1918 '0'" >>/etc/config/noddos
 		echo "        list whitelistipv4 '127.0.0.1'" >>/etc/config/noddos
 		echo "        list whitelistipv6 ''" >>/etc/config/noddos
@@ -160,9 +106,4 @@ define Package/noddos/postrm
 	exit 0
 endef
 
-
-# This line executes the necessary commands to compile our program.
-# The above define directives specify all the information needed, but this
-# line calls BuildPackage which in turn actually uses this information to
-# build a package.
 $(eval $(call BuildPackage,noddos))

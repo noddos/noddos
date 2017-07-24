@@ -65,6 +65,7 @@ uint32_t HostCache::Prune (bool Force) {
 	if (Debug == true) {
 	    syslog(LOG_DEBUG, "Pruned %u hosts", prunedhosts);
 	}
+	// uint32_t count = 99999;
 	uint32_t count = pruneDnsQueryCache(Force);
     if (Debug == true) {
         syslog(LOG_DEBUG, "Pruned %u DNS queries", count);
@@ -490,6 +491,7 @@ bool HostCache::SendUdpPing (const std::string DstIpAddress, const uint16_t DstP
 	return true;
 }
 
+
 bool HostCache::ExportDeviceProfileMatches(const std::string filename, bool detailed) {
 	std::ofstream ofs(filename);
 	json j;
@@ -713,6 +715,42 @@ uint32_t HostCache::ImportDeviceProfileMatches(const std::string filename) {
 	}
 	syslog(LOG_INFO, "DeviceMatches read: %u", matches);
 	return matches;
+}
+
+bool HostCache::exportDnsCache (const std::string filename) {
+    std::ofstream ofs(filename);
+    if (not ofs.is_open()) {
+        syslog(LOG_WARNING, "Couldn't open %s", filename.c_str());
+        return true;
+    }
+    json j;
+    dCip.exportJson(j);
+    dCcname.exportJson(j);
+
+    ofs << std::setw(4) << j << std::endl;
+    ofs.close();
+    return false;
+}
+
+bool HostCache::importDnsCache (const std::string filename) {
+    std::ifstream ifs(filename);
+    if (not ifs.is_open()) {
+        syslog(LOG_WARNING, "Couldn't open %s for reading", filename.c_str());
+        return true;
+    }
+    json j;
+    ifs >> j;
+
+    size_t dnsRecords = dCip.importJson(j);
+    if (Debug == true) {
+        syslog(LOG_DEBUG, "Read %zu cached DNS IP address records", dnsRecords);
+    }
+    dnsRecords = dCcname.importJson(j);
+    if (Debug == true) {
+        syslog(LOG_DEBUG, "Read %zu cached DNS CNAME records", dnsRecords);
+    }
+    ifs.close();
+    return false;
 }
 
 bool HostCache::ImportDeviceInfo (json &j) {

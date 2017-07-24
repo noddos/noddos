@@ -26,35 +26,77 @@
 
 #include "DnsCache.h"
 
+#include <fstream>
+
 int main () {
     bool testfailed = false;
-    openlog("Host_test", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
+    openlog("DnsCache_test", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
 
     DnsCnameCache c(true);
     DnsIpCache <boost::asio::ip::address> i(true);
 
-    boost::asio::ip::address ip4 = boost::asio::ip::address::from_string("52.216.86.51");
-    i.addorupdateResourceRecord("s3-1-w.amazonaws.com", ip4, 900);
-    std::vector<std::string> fqdns = i.getAllFqdns(ip4);
-    if (fqdns.size() != 1) {
-        syslog (LOG_DEBUG,"Simple reverse lookup for 52.216.86.51 returned %lu fqdns", fqdns.size());
+    std::string filename = "tests/DnsCache.json";
+    std::ifstream ifs(filename);
+    if (not ifs.is_open()) {
+        syslog(LOG_WARNING, "Couldn't open %s", filename.c_str());
         testfailed = true;
     }
-    c.addorupdateCname("ping.enphaseenergy.com.s3.amazonaws.com","s3-1-w.amazonaws.com", 300);
-    c.addorupdateCname("ping.enphaseenergy.com", "ping.enphaseenergy.com.s3.amazonaws.com", 300);
+    json k;
+    ifs >> k;
+    size_t importedRecords = i.importJson(k);
+    if (importedRecords != 288) {
+        testfailed = true;
+        syslog(LOG_WARNING, "Imported A/AAAA records %lu", importedRecords);
+
+    }
+
+    importedRecords = c.importJson(k);
+    if (importedRecords != 284) {
+        testfailed = true;
+        syslog(LOG_WARNING, "Imported CNAME records %lu", importedRecords);
+
+    }
+    ifs.close();
+    boost::asio::ip::address ip4 = boost::asio::ip::address::from_string("216.58.216.46");
+    std::vector<std::string> fqdns = i.getAllFqdns(ip4);
+    if (fqdns.size() != 5) {
+        syslog (LOG_DEBUG,"Simple reverse lookup for 216.58.216.46 returned %lu fqdns", fqdns.size());
+        testfailed = true;
+    }
 
     std::string rootfqdn = c.lookupCname(fqdns[0]);
-    if (rootfqdn != "ping.enphaseenergy.com") {
-        syslog(LOG_DEBUG, "Cname lookup failed");
+    if (rootfqdn != "clients3.google.com") {
+        syslog(LOG_DEBUG, "Cname lookup failed %s", rootfqdn.c_str());
         testfailed = true;
     }
+    std::ofstream ofs("/tmp/DnsCache.json");
+    if (not ofs.is_open()) {
+        syslog(LOG_WARNING, "Couldn't open %s", filename.c_str());
+        return true;
+    }
+    json j;
+    auto exportRecords = i.exportJson(j);
+    if (exportRecords != 288) {
+        testfailed = true;
+        syslog(LOG_WARNING, "Exported A/AAAA records %lu", exportRecords);
+    }
+    exportRecords = c.exportJson(j);
+    if (exportRecords != 284) {
+        testfailed = true;
+        syslog(LOG_WARNING, "Exported CNAME records %lu", exportRecords);
+    }
+
+    ofs << std::setw(4) << j << std::endl;
+    ofs.close();
+    unlink("/tmp/DnsCache.json");
+
     uint32_t prunecount = c.pruneCnames(true);
-    if (prunecount != 2) {
+    if (prunecount != 284) {
         syslog (LOG_DEBUG, "Pruned %u DNS cnames", prunecount);
         testfailed = 1;
     }
     prunecount=i.pruneResourceRecords(true);
-    if (prunecount != 2) {
+    if (prunecount != 2416) {
         syslog (LOG_DEBUG, "Pruned %u DNS IP records", prunecount);
         testfailed = 1;
     }

@@ -58,7 +58,7 @@ private:
 	uint32_t FlowExpiration;
 
 public:
-	HostCache(InterfaceMap &inifMap, const uint32_t inFlowExpiration = FLOWDEFAULTEXPIRATION, const bool inDebug = false):
+	HostCache(InterfaceMap &inifMap, const std::string inDnsCacheFilename = "", const uint32_t inFlowExpiration = FLOWDEFAULTEXPIRATION, const bool inDebug = false):
 			ifMap{&inifMap}, Debug{inDebug} {
 		if (Debug) {
 			syslog (LOG_DEBUG, "Initializing HostCache instance");
@@ -77,6 +77,9 @@ public:
 		getInterfaceIpAddresses();
 		dCip.debug_set(Debug);
 		dCcname.debug_set(Debug);
+		if (inDnsCacheFilename != "") {
+		    importDnsCache(inDnsCacheFilename);
+		}
 	}
 	virtual ~HostCache() {
 		if (Debug) {
@@ -113,9 +116,11 @@ public:
 	uint32_t pruneDnsQueryCache (bool Force = false);
 
 	// These functions are for the new DnsCache filled by the PacketSnoop class
-	void addorupdateDnsIpCache(std::string inFqdn, boost::asio::ip::address inIp, time_t inTtl) { dCip.addorupdateResourceRecord(inFqdn, inIp, inTtl); }
-	void addorupdateDnsCnameCache(std::string inFqdn, std::string inCname, time_t inTtl) { dCcname.addorupdateCname(inFqdn, inCname, inTtl);	}
+	void addorupdateDnsIpCache(std::string inFqdn, boost::asio::ip::address inIp, time_t inTtl = 604800) { dCip.addorupdateResourceRecord(inFqdn, inIp, inTtl); }
+	void addorupdateDnsCnameCache(std::string inFqdn, std::string inCname, time_t inTtl = 604800) { dCcname.addorupdateCname(inFqdn, inCname, inTtl);	}
 
+	bool exportDnsCache (const std::string filename);
+    bool importDnsCache (const std::string filename);
 	uint32_t pruneDnsIpCache(bool Force = false) {
 		uint32_t deletecount = 0;
 		deletecount = dCip.pruneResourceRecords(Force);

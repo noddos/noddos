@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
 	//
 	// Set up HostCache instance
 	//
-	HostCache hC(ifMap, config.TrafficReportInterval, config.Debug);
+	HostCache hC(ifMap, config.DnsCacheFile, config.TrafficReportInterval, config.Debug);
 	hC.DeviceProfiles_load(config.DeviceProfilesFile);
 	hC.ImportDeviceProfileMatches(config.MatchFile);
 	hC.Whitelists_set(config.WhitelistedIpv4Addresses, config.WhitelistedIpv6Addresses, config.WhitelistedMacAddresses);
@@ -221,6 +221,7 @@ int main(int argc, char** argv) {
 						NextMatch = time(nullptr) + config.MatchInterval;
 						hC.ExportDeviceProfileMatches(config.MatchFile, false);
 						hC.ExportDeviceProfileMatches(config.DumpFile, true);
+						hC.exportDnsCache(config.DnsCacheFile);
 					} else if (si.ssi_signo == SIGUSR2) {
 						syslog(LOG_INFO, "Processing signal event SIGUSR2");
 						hC.Match();
@@ -272,7 +273,8 @@ int main(int argc, char** argv) {
     }
 exitprog:
 	hC.ExportDeviceProfileMatches(config.MatchFile);
-	hC.Prune();
+    hC.exportDnsCache(config.DnsCacheFile);
+    hC.Prune();
 	s.Close();
 	for (auto p: pInstances) {
 	    p->Close();

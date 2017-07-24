@@ -25,11 +25,16 @@
 
 #include <map>
 #include <vector>
+#include <unordered_set>
 #include "syslog.h"
 #include "boost/asio.hpp"
 
+#include <json.hpp>
+using nlohmann::json;
+
 class DnsCnameCache {
 private:
+    // FIXME: there may be multiple CNAMEs for an FQDN
     std::map<std::string,std::pair<std::string,time_t>> DnsCache;
     bool Debug;
 public:
@@ -39,7 +44,7 @@ public:
     void debug_set (bool inDebug) {
         Debug = inDebug;
     }
-    void addorupdateCname (const std::string inFqdn, const std::string inCname, const time_t inTtl=86400) {
+    void addorupdateCname (const std::string inFqdn, const std::string inCname, const time_t inTtl=604800) {
         time_t Ttl = inTtl;
         if (Ttl < 4 * 3600) {
             Ttl = 4 * 3600;
@@ -78,6 +83,32 @@ public:
         }
     }
 
+    size_t importJson (json &j) {
+        size_t dnsRecords = 0;
+        auto cj = j.find("CnameRecords");
+        if (cj == j.end()) {
+            return true;
+        }
+        if (not cj->is_object()) {
+            return true;
+        }
+        for (json::iterator it = cj->begin(); it != cj->end(); ++it) {
+            dnsRecords++;
+            std::string cname = it.key();
+            std::string fqdn = it.value();
+            addorupdateCname (fqdn, cname, 86400);
+        }
+        return dnsRecords;
+    }
+    size_t exportJson (json &j) {
+        size_t dnsRecords = 0;
+        j["CnameRecords"] = json::object();
+        for (auto it_resource: DnsCache) {
+            dnsRecords++;
+            j["CnameRecords"][it_resource.first]= it_resource.second.first;
+        }
+        return dnsRecords;
+    }
     size_t pruneCnames (const bool Force = false) {
         size_t deleted = 0;
         auto now = time(nullptr);
@@ -108,7 +139,7 @@ public:
 	DnsIpCache(const bool inDebug=false): Debug{inDebug} {};
 	~DnsIpCache() {};
 
-	void addorupdateResourceRecord (const std::string inFqdn, const T inIpAddress, const time_t inTtl = 86400) {
+	void addorupdateResourceRecord (const std::string inFqdn, const T inIpAddress, const time_t inTtl = 604800) {
 		time_t Ttl = inTtl;
 		if (Ttl < 4 * 3600) {
 			Ttl = 4 * 3600;
@@ -129,6 +160,42 @@ public:
 	void debug_set (bool inDebug) {
 		Debug = inDebug;
 	}
+
+    size_t importJson (json &j) {
+        size_t dnsRecords = 0;
+        auto cj = j.find("AddressRecords");
+        if (cj == j.end()) {
+            return true;
+        }
+        if (not cj->is_object()) {
+            return true;
+        }
+        for (json::iterator it = cj->begin(); it != cj->end(); ++it) {
+            dnsRecords++;
+            std::string fqdn = it.key();
+            std::unordered_set<std::string> records = (*cj)[fqdn].get<std::unordered_set<std::string>>();
+            for (auto record: records) {
+                T IpAddress = T::from_string(record);
+                addorupdateResourceRecord (fqdn, IpAddress, 86400);
+            }
+        }
+        return dnsRecords;
+    }
+
+	size_t exportJson(json &j) {
+	    size_t dnsRecords = 0;
+	    j["AddressRecords"] = json::object();;
+	    for (auto it_resource: DnsFwdCache) {
+            dnsRecords++;
+	        j["AddressRecords"][it_resource.first] = json::array();
+	        for (auto it_record: it_resource.second) {
+	            j["AddressRecords"][it_resource.first].push_back(it_record.first.to_string());
+	        }
+
+	    }
+	    return dnsRecords;
+	}
+
 	std::vector<std::string>  getAllFqdns  (T const inIpAddress) const {
 		std::vector<std::string> fqdns;
 		std::string ipstring = inIpAddress.to_string();
@@ -158,7 +225,7 @@ public:
 				while (it_record != it_resource->second.end()) {
 					if (Force || now > (it_record->second + 1)) {
 						if (Debug == true) {
-							syslog(LOG_DEBUG, "DnsCache: pruning %s pointing to %s with TTL %lu while now is %lu",
+							syslog(LOG_DEBUG, "DnsCache: pruning %s pointing to %s with expiration %lu while now is %lu",
 									it_resource->first.c_str(), it_record->first.to_string().c_str(), it_record->second, now);
 						}
 						it_record = it_resource->second.erase(it_record);
@@ -187,7 +254,7 @@ public:
 				while (it_record != it_resource->second.end()) {
 					if (Force || now > (it_record->second + 1)) {
 						if (Debug == true) {
-							syslog(LOG_DEBUG, "DnsCache: pruning entry %s pointing to %s  with TTL %lu while now is %lu",
+							syslog(LOG_DEBUG, "DnsCache: pruning entry %s pointing to %s  with expiration %lu while now is %lu",
 									it_resource->first.to_string().c_str(), it_record->first.c_str(), it_record->second, now);
 						}
                         it_record = it_resource->second.erase(it_record);

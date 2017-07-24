@@ -585,13 +585,13 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
                                 it.data().c_str());
                     }
                     boost::asio::ip::address ipv4 = boost::asio::ip::address::from_string(it.data());
-                    hC->addorupdateDnsIpCache(it.dname(), ipv4, it.ttl());
+                    hC->addorupdateDnsIpCache(it.dname(), ipv4);
                     break;
                 }
                 case Tins::DNS::QueryType::AAAA: {
                     boost::asio::ip::address ipv6 = boost::asio::ip::address::from_string(it.data());
 
-                    hC->addorupdateDnsIpCache(it.dname(), ipv6, it.ttl());
+                    hC->addorupdateDnsIpCache(it.dname(), ipv6);
                     if (Debug == true) {
                         syslog(LOG_DEBUG, "PacketSnoop: AAAA record: %s",
                                 ipv6.to_string().c_str());
@@ -599,7 +599,7 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
                     break;
                 }
                 case Tins::DNS::QueryType::CNAME:
-                    hC->addorupdateDnsCnameCache(it.dname(), dnsdata, it.ttl());
+                    hC->addorupdateDnsCnameCache(it.dname(), dnsdata);
                     if (Debug == true) {
                         syslog(LOG_DEBUG, "PacketSnoop: CNAME record: %s", dnsdata.c_str());
                     }

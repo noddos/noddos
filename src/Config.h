@@ -46,6 +46,7 @@ public:
 	std::string DeviceProfilesFile = "/var/lib/noddos/DeviceProfiles.json";
 	std::string MatchFile = "/etc/noddos/DeviceMatches.json";
 	std::string DumpFile = "/var/lib/noddos/DeviceDump.json";
+    std::string DnsCacheFile = "/var/lib/noddos/DnsCache.json";
 	std::string ClientApiCertFile = "/etc/noddos/noddosapiclient.pem";
 	std::string ClientApiKeyFile = "/etc/noddos/noddosapiclient.key";
 	std::string SignatureCertFile = "/etc/noddos/noddossignature.pem";
@@ -90,6 +91,7 @@ public:
 		std::string newDeviceProfilesFile = DeviceProfilesFile;
 		std::string newMatchFile = DeviceProfilesFile;
 		std::string newDumpFile = DumpFile;
+        std::string newDnsCacheFile = DnsCacheFile;
 		std::string newClientApiCertFile = ClientApiCertFile;
 		std::string newClientApiKeyFile = ClientApiKeyFile;
 		std::string newSignatureCertFile = SignatureCertFile;
@@ -123,6 +125,9 @@ public:
 			if (j.count("DumpFile")) {
 				newDumpFile = j["DumpFile"].get<std::string>();
 			}
+            if (j.count("DnsCacheFile")) {
+                newDnsCacheFile = j["DnsCacheFile"].get<std::string>();
+            }
 			if (j.count("ClientApiCertFile")) {
 				newClientApiCertFile = j["ClientApiCertFile"].get<std::string>();
 			}
@@ -194,6 +199,7 @@ public:
 		DeviceProfilesFile = newDeviceProfilesFile;
 		MatchFile = newMatchFile;
 		DumpFile = newDumpFile;
+        DnsCacheFile = newDnsCacheFile;
 		ClientApiCertFile = newClientApiCertFile;
 		ClientApiKeyFile = newClientApiKeyFile;
 		SignatureCertFile = newSignatureCertFile;

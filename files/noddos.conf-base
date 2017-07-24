@@ -2,6 +2,7 @@
     "DeviceProfilesFile": "/var/lib/noddos/DeviceProfiles.json",
     "MatchFile": "/etc/noddos/DeviceMatches.json",
     "DumpFile": "/var/lib/noddos/DeviceDump.json",
+    "DnsCacheFile": "/var/lib/noddos/DnsCache.json",
     "ClientApiCertFile": "/etc/noddos/noddosapiclient.pem",
     "ClientApiKeyFile": "/etc/noddos/noddosapiclient.key",
     "SignatureCertFile": "/etc/noddos/noddossignature.pem",

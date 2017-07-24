@@ -113,11 +113,9 @@ In the firmware build menu:
 - Enable building of the noddos package, go to "Network" menu, have noddos build as module ('M')
 - Select the Save menu option, save to '.config' and then select 'Exit' and again 'Exit'
 
-Now we just have to build to package:
+Now we just have to build the packages:
 
-    make -j1
-	# libtins builds fail the first attempt because it detects C++11 is not available so we rerun
-    make -j1
+    make -j4
 
 Change the architecture directory and architecture ipkg to match your HGW platform
 
@@ -199,9 +197,11 @@ The noddos client configuration file (Default: /etc/noddos/noddos.conf) is a JSO
 
 __DeviceProfilesFile__: The list of deviceprofiles for matching hosts against. This file is saved to this location by the shell script that downloads the file from the cloud and checks its signature. Default: /var/lib/noddos/DeviceProfiles.json
 
-__MatchFile__: Noddos will write all current matched devices to this file after receiving a SIGTERM signal. At startup, Noddos will read this file to have an initial list of matched devices. Default: /var/lib/noddos/DeviceMatches.json on Linux systems and /etc/noddos/DeviceMatches.json on routers wit hLede firmware
+__MatchFile__: Noddos will write all current matched devices to this file after receiving a SIGTERM signal. At startup, Noddos will read this file to have an initial list of matched devices. Default: /var/lib/noddos/DeviceMatches.json on Linux systems and /etc/noddos/DeviceMatches.json on routers with Lede firmware
 
-__DumpFile__: Noddos will write all informaiton it has on devices to this file after received a SIGUSR1 signal. Default /var/lib/nodds/DeviceDump.json on Linux systems and /tmp/Devicedump.json on routers with Lede firmware
+__DumpFile__: Noddos will write all informaiton it has on devices to this file after received a SIGUSR1 signal. Default /var/lib/noddos/DeviceDump.json on Linux systems and /tmp/Devicedump.json on routers with Lede firmware
+
+__DnsCacheFile__: Noddos will write all cached DNS data to this file after received a SIGUSR1 signal or at program exit. Default /var/lib/noddos/DnsCache.json.
 
 __ClientApiCertFile__: certificate for key used to authenticate against Noddos API. Default: /etc/noddos/noddosapiclient.pem
 
