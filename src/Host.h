@@ -83,7 +83,9 @@ public:
 		IdentifyConfidenceLevel = EnforceConfidenceLevel = ConfidenceLevel::None;
 	}
 	virtual ~Host() {
-		syslog (LOG_DEBUG, "Destroying Host instance: %s", Ipv4Address.c_str());
+	    if (Debug == true) {
+	        syslog (LOG_DEBUG, "Destroying Host instance: %s", Ipv4Address.c_str());
+	    }
 	};
 	bool Match(const DeviceProfileMap& dpMap);
 	ConfidenceLevel Match(const DeviceProfile& dp);

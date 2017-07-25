@@ -85,7 +85,9 @@ public:
 		if (DeviceProfileUuid != j["DeviceProfileUuid"].get<std::string>())
 			return false;
 
-		syslog(LOG_DEBUG, "Read Device Profile for UUID %s", DeviceProfileUuid.c_str());
+        if (Debug == true) {
+            syslog(LOG_DEBUG, "Read Device Profile for UUID %s", DeviceProfileUuid.c_str());
+        }
 
 		if (j.find("DeviceProfileVersion") == j.end()) {
 			syslog(LOG_ERR, "No DeviceProfileVersion value set, ignoring this Object");
