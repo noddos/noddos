@@ -51,7 +51,6 @@
 // if_ether.h causes redefinition conflicts
 // #include <linux/if_ether.h>
 #include <linux/ipv6.h>
-// #include <linux/if.h>
 #include <linux/if_packet.h>
 #include <netinet/in.h>
 
@@ -128,7 +127,7 @@ public:
 			const boost::asio::ip::address inDest, const uint16_t destPort);
 	void addTcpSnoopInstance(const boost::asio::ip::address inSrc, const uint16_t inSrcPort,
 			const boost::asio::ip::address inDest, const uint16_t inDestPort, const std::shared_ptr<TcpSnoop> ts_ptr);
-    void pruneTcpSnoopInstance(const boost::asio::ip::address inSrc, const uint16_t inSrcPort,
+    void clearTcpSnoopInstance(const boost::asio::ip::address inSrc, const uint16_t inSrcPort,
             const boost::asio::ip::address inDest, const uint16_t inDestPort);
     uint32_t pruneTcpSnoopInstances(const bool Force = false);
 };

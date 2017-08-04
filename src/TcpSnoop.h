@@ -50,7 +50,7 @@ private:
 	uint16_t firstPacketOffset = 0;
 	uint16_t dnsMessageLength = 0;
 	uint32_t streamLength = 0;
-	time_t Expiration;
+	time_t Expiration = 0;
 	bool Debug;
 	// std::vector<unsigned char> tcpPayload;
 

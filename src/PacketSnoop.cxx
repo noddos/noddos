@@ -76,17 +76,12 @@ int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
     struct sock_fprog bpf = { .len = size(bpfcode), .filter = bpfcode, };
 
     // ETH_P_ALL is required to also capture outgoing packets
-    // However, with ETH_P_ALL we get some packets twice with same sequence number but different packet size
-    // https://www.spinics.net/lists/netdev/msg159788.html or something like that
     // TPACKET_V3: https://gist.github.com/giannitedesco/5863705
     // Kernel 3.19 required: http://www.spinics.net/lists/netdev/msg309630.html
     if (Debug == true) {
         syslog(LOG_DEBUG, "PacketSnoop: Opening AF_PACKET SOCK_RAW with ETH_P_ALL on interface %s",
             input.c_str());
     }
-    // sock = socket( AF_PACKET, SOCK_RAW, htons(ETH_P_ALL)) ;
-    // sock = socket( AF_PACKET, SOCK_RAW, htons(ETH_P_IP));
-    // sock = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_IP));
     sock = socket( AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
     if (sock < 0) {
         syslog(LOG_CRIT, "PacketSnoop: Socket Error");
@@ -379,12 +374,15 @@ bool PacketSnoop::Parse(unsigned char *frame) {
                     if (Debug == true) {
                         syslog (LOG_DEBUG, "PacketSnoop: saw FIN or RST for TCP stream, pruning TcpSnoop instance");
                     }
-                    pruneTcpSnoopInstance(src, srcPort, dest, destPort);
+                    clearTcpSnoopInstance(src, srcPort, dest, destPort);
                 }
                 return true;
             }
             if (tsPtr == nullptr) {
                 tsPtr = std::make_shared<TcpSnoop>(Debug);
+                if (Debug == true) {
+                    syslog (LOG_DEBUG, "Creating TcpSnoop shared pointer at %p", tsPtr);
+                }
                 addTcpSnoopInstance(src, srcPort, dest, destPort, tsPtr);
             }
             //
@@ -457,7 +455,7 @@ std::shared_ptr<TcpSnoop> PacketSnoop::getTcpSnoopInstance(
     return dpit->second;
 }
 
-void PacketSnoop::pruneTcpSnoopInstance(const boost::asio::ip::address inSrc, const uint16_t inSrcPort,
+void PacketSnoop::clearTcpSnoopInstance(const boost::asio::ip::address inSrc, const uint16_t inSrcPort,
         const boost::asio::ip::address inDest, const uint16_t inDestPort) {
     tcpSnoops[inSrc][inSrcPort][inDest][inDestPort] = nullptr;
 }
@@ -472,7 +470,7 @@ uint32_t PacketSnoop::pruneTcpSnoopInstances(const bool Force) {
             while (dit != spit->second.end()) {
                 auto dpit = dit->second.begin();
                 while (dpit != dit->second.end()) {
-                    if (Force == true || dpit->second->isExpired() == true) {
+                    if (Force == true || dpit->second == nullptr || dpit->second->isExpired() == true) {
                         dpit = dit->second.erase(dpit);
                     } else {
                         ++dpit;
@@ -502,6 +500,9 @@ uint32_t PacketSnoop::pruneTcpSnoopInstances(const bool Force) {
 void PacketSnoop::addTcpSnoopInstance(const boost::asio::ip::address inSrc,
         const uint16_t inSrcPort, const boost::asio::ip::address inDest,
         const uint16_t inDestPort, const std::shared_ptr<TcpSnoop> ts_ptr) {
+    if (Debug == true) {
+        syslog (LOG_DEBUG, "Adding TcpSnoop shared pointer at %p", ts_ptr);
+    }
     tcpSnoops[inSrc][inSrcPort][inDest][inDestPort] = ts_ptr;
 }
 
