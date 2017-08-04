@@ -49,11 +49,11 @@ To make sure Luci picks up the menu and module changes, execute:
 
 Now we can install the actual Noddos package (and the libtins package that is also needed) that  you can download from the releases menu on Github
 
-    wget https://github.com/noddos/noddos/releases/download/v0.3.0/noddos_v0.3.0-1_<arch>.ipk
-    wget https://github.com/noddos/noddos/releases/download/v0.3.0/libtins_v3.5-1_<arch>.ipk
+    wget https://github.com/noddos/noddos/releases/download/v0.3.1/noddos_v0.3.1-1_<arch>.ipk
+    wget https://github.com/noddos/noddos/releases/download/v0.3.1/libtins_v3.5-1_<arch>.ipk
 	opkg update
 	opkg install libtins_v3.5-1_<arch>.ipk
-	opkg install noddos_v0.3.0-1_<arch>.ipk
+	opkg install noddos_v0.3.1-1_<arch>.ipk
 
 Go to the Luci -> Network -> Client Firewall page to configure Noddos. Make sure to include the Loopback, WAN and LAN IP- or MAC-addresses of your router in the whitelists. Populate the lists of LanInterfaces and WanInterfaces with your interface names as DNS and DHCP snooping use that to select the interfaces they accept traffic from. You may also want to whitelist addresses of your PCs that you use daily as collecting traffic statistics for them is of not much use with the traffic they generate to so many destinations. You may also want to add the MAC addresses of phones or tablets. 
 
@@ -75,14 +75,14 @@ Sorry, there are no packages yet for Ubuntu / Fedora / CentOS / Gentoo. For now,
 ## Compilation
 Compilation instructions are available for Home Gateways and regular Linux systems.
 
-### Compilation for a Home Gateway running firmware of the [Lede project](https://lede-project.org/) for Noddos v0.3.0
+### Compilation for a Home Gateway running firmware of the [Lede project](https://lede-project.org/) for Noddos v0.3.1
 Noddos is now up and running on Lede firmware installed on a a Linksys WRT 1200AC. There is also the package for Asus/Netgear/D-Link/Buffalo routers. If you have a HGW using a differnet platform then you can use these instructions to generate your own package. These instructions are based on the Lede 17.01.2 release.
 
 	mkdir -p noddosbuild/package/{noddos,libtins}
 	cd noddosbuild/package/noddos
-	wget https://github.com/noddos/noddos/tree/v0.3.0/lede/packages/noddos/Makefile
+	wget https://github.com/noddos/noddos/blob/master/lede/packages/noddos/Makefile
 	cd ../libtins
-	wget https://github.com/noddos/noddos/tree/v0.3.0/lede/packages/libtins/Makefile
+	wget https://github.com/noddos/noddos/blob/master/lede/packages/libtins/Makefile
 	cd ../..
 	ROOTDIR=$PWD
 
@@ -120,7 +120,7 @@ Now we just have to build the packages:
 Change the architecture directory and architecture ipkg to match your HGW platform
 
     scp bin/packages/arm_cortex-a9_vfpv3/custom/libtins-v.3.5-1_arm_cortex-a9_vfpv3.ipk root@<HGW-IP>:
-    scp bin/packages/arm_cortex-a9_vfpv3/custom/noddos-v0.3.0-1_arm_cortex-a9_vfpv3.ipk root@<HGW-IP>:
+    scp bin/packages/arm_cortex-a9_vfpv3/custom/noddos-v0.3.1-1_arm_cortex-a9_vfpv3.ipk root@<HGW-IP>:
 
 Follow the installation instructions from this point onwards.
 
