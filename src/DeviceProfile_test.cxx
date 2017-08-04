@@ -56,7 +56,7 @@ int main()
 	  }
 	}
 	InterfaceMap ifMap;
-	HostCache hc(ifMap, 0, true);
+	HostCache hc(ifMap, "", 0, true);
 	hc.AddByMac (MacAddress("00:00:00:00:00:01"), "192.168.1.232");
 	hc.AddByMac (MacAddress("00:00:00:00:00:02"), "192.168.1.98");
 	hc.AddByMac (MacAddress("00:00:00:00:00:03"), "192.168.1.99");
