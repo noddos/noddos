@@ -44,10 +44,20 @@ int main(int argc, char** argv) {
         }
     }
     Ipset m("noddosmac", "hash:mac");
-    MacAddress Mac("aa:bb:cc:dd:ee:ff");
+    MacAddress Mac("AA:BB:CC:DD:EE:FF");
     if (m.Add(Mac) == false ) {
         testfailed = 1;
         std::cout << "Failed to add MAC address to hash:mac ipset" << std::endl;
+    } else {
+        if (m.In(Mac) == false) {
+            testfailed = 1;
+            std::cout << "Couldn't find MAC address in hash:mac ipset" << std::endl;
+        } else {
+            if (m.Remove(Mac) == false) {
+                testfailed = 1;
+                std::cout << "Couldn't remove MAC address from hash:mac ipset" << std::endl;
+            }
+        }
     }
     return testfailed;
 }
