@@ -105,7 +105,6 @@ In the firmware build menu:
 Then execute the following commands:
 
     ./scripts/feeds update -a
-    ./scripts/feeds install libtins
     ./scripts/feeds install noddos
     make menuconfig
 
