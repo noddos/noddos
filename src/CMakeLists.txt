@@ -44,8 +44,8 @@ include_directories("${PROJECT_BINARY_DIR}")
  
 add_executable(noddos noddos.cxx Host.cxx 
     HostCache.cxx SsdpServer.cxx SsdpLocation.cxx FlowTrack.cxx Config.cxx
-    opensslfingerprint.cxx PacketSnoop.cxx)
-target_link_libraries(noddos libnetfilter_conntrack.so ssl crypto curl tins)
+    opensslfingerprint.cxx PacketSnoop.cxx Ipset.cxx)
+target_link_libraries(noddos libnetfilter_conntrack.so ssl crypto curl tins ipset)
 
 enable_testing()
 
@@ -73,6 +73,10 @@ add_executable(Identifier_test Identifier_test.cxx)
 add_test (Config Config_test)
 add_executable(Config_test Config_test.cxx opensslfingerprint.cxx)
 target_link_libraries(Config_test curl ssl crypto)
+
+add_test (Ipset Ipset_test)
+add_executable(Ipset_test Ipset_test.cxx Ipset.cxx)
+target_link_libraries(Ipset_test ipset)
 
 add_test (SsdpServer SsdpServer_test)
 add_executable(SsdpServer_test SsdpServer_test.cxx 

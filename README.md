@@ -32,7 +32,7 @@ We need to modify the menu structure of the Luci web interface to point to the N
     	entry({"admin", "status", "clients"}, template("admin_status/clients"), _("Clients"), 3)
     end
 
-Then edit /usr/lib/lua/luci/controller/admin/network.lua, insert on line l16:
+Then edit /usr/lib/lua/luci/controller/admin/network.lua, insert on line 116:
 
     if nixio.fs.access("/usr/lib/lua/luci/model/cbi/admin_network/noddos.lua") then
         page = entry({"admin", "network", "noddos"}, cbi("admin_network/noddos"), nil)
@@ -79,11 +79,9 @@ Compilation instructions are available for Home Gateways and regular Linux syste
 Noddos is now up and running on Lede firmware installed on a a Linksys WRT 1200AC. There is also the package for Asus/Netgear/D-Link/Buffalo routers. If you have a HGW using a differnet platform then you can use these instructions to generate your own package. These instructions are based on the Lede 17.01.2 release.
 
 	mkdir -p noddosbuild/package/{noddos,libtins}
-	cd noddosbuild/package/noddos
-	wget https://github.com/noddos/noddos/blob/master/lede/packages/noddos/Makefile
-	cd ../libtins
-	wget https://github.com/noddos/noddos/blob/master/lede/packages/libtins/Makefile
-	cd ../..
+	cd noddosbuild
+	wget https://raw.githubusercontent.com/noddos/noddos/master/lede/packages/noddos/Makefile -O package/noddos/Makefile
+	wget https://raw.githubusercontent.com/noddos/noddos/master/lede/packages/libtins/Makefile  -O package/libtins/Makefile
 	ROOTDIR=$PWD
 
 Download the Lede project SDK v17.01.2 for your platform from [Lede Table of Hardware](https://lede-project.org/toh/start)
@@ -105,7 +103,6 @@ In the firmware build menu:
 Then execute the following commands:
 
     ./scripts/feeds update -a
-    ./scripts/feeds install libtins
     ./scripts/feeds install noddos
     make menuconfig
 
