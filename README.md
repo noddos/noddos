@@ -81,7 +81,7 @@ Noddos is now up and running on Lede firmware installed on a a Linksys WRT 1200A
 	mkdir -p noddosbuild/package/{noddos,libtins}
 	cd noddosbuild
 	wget https://raw.githubusercontent.com/noddos/noddos/master/lede/packages/noddos/Makefile -O package/noddos/Makefile
-    wget https://raw.githubusercontent.com/noddos/noddos/master/lede/packages/libtins/Makefile  -O package/libtins/Makefile
+	wget https://raw.githubusercontent.com/noddos/noddos/master/lede/packages/libtins/Makefile  -O package/libtins/Makefile
 	ROOTDIR=$PWD
 
 Download the Lede project SDK v17.01.2 for your platform from [Lede Table of Hardware](https://lede-project.org/toh/start)
