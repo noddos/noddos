@@ -87,8 +87,7 @@ bool Ipset::try_cmd(enum ipset_cmd cmd, const MacAddress &Mac, uint32_t timeout)
 
 bool Ipset::try_create() {
       const struct ipset_type *type;
-      int r;
-      r = ipset_session_data_set(session, IPSET_SETNAME, setName.c_str());
+      int r = ipset_session_data_set(session, IPSET_SETNAME, setName.c_str());
       /* since the IPSET_SETNAME option is valid, this should never fail */
       // assert(r == 0);
       ipset_session_data_set(session, IPSET_OPT_TYPENAME, setType.c_str());
@@ -104,8 +103,8 @@ bool Ipset::try_create() {
           ipset_session_data_set(session, IPSET_OPT_FAMILY, &family);
       } else if (setType == "hash:mac") {
           throw std::logic_error("Creating ipsets of type hash:mac not supported yet");
-          uint8_t family = NFPROTO_UNSPEC;
-          ipset_session_data_set(session, IPSET_OPT_FAMILY, &family);
+          // uint8_t family = NFPROTO_UNSPEC;
+          // ipset_session_data_set(session, IPSET_OPT_FAMILY, &family);
       }
       r = ipset_cmd(session, IPSET_CMD_CREATE, 0);
       return r == 0;
