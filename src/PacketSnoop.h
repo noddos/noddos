@@ -110,11 +110,16 @@ private:
 public:
 	PacketSnoop(HostCache &inHc, const size_t inNumBlocks, const bool inDebug = false):	hC{&inHc}, numBlocks{inNumBlocks}, Debug{inDebug} {
 		if (Debug == true) {
-			syslog (LOG_DEBUG, "Constructing PacketSnoop instance");
+			syslog (LOG_DEBUG, "PacketSnoop: constructing instance");
 		}
 	};
 
-	virtual ~PacketSnoop() { Close(); };
+	virtual ~PacketSnoop() {
+	    Close();
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "PacketSnoop: destructing instance");
+        }
+	};
 	int Open(std::string input, uint32_t inExpiration);
 	int GetFileHandle() { return sock; }
 	bool Close();

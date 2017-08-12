@@ -85,19 +85,19 @@ int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
     sock = socket( AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
     if (sock < 0) {
         syslog(LOG_CRIT, "PacketSnoop: Socket Error");
-        return -1;
+        throw std::system_error(errno, std::system_category());
     }
     int val = TPACKET_V3;
     if (setsockopt(sock, SOL_PACKET, PACKET_VERSION, &val, sizeof(val))) {
         syslog(LOG_CRIT, "PacketSnoop: setsockopt(TPACKET_V3)");
         Close();
-        return -1;
+        throw std::system_error(errno, std::system_category());
     }
     int ret = setsockopt(sock, SOL_SOCKET, SO_ATTACH_FILTER, &bpf, sizeof(bpf));
     if (ret < 0) {
         syslog(LOG_CRIT, "PacketSnoop: setsockopt Error");
         Close();
-        return -1;
+        throw std::system_error(errno, std::system_category());
     }
 
     struct tpacket_req3 req;
@@ -113,7 +113,7 @@ int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
     if (setsockopt(sock, SOL_PACKET, PACKET_RX_RING, (char *)&req, sizeof(req))) {
         syslog(LOG_CRIT,"PacketSnoop: setsockopt(PACKET_RX_RING)");
         Close();
-        return -1;
+        throw std::system_error(errno, std::system_category());
     };
 
     map_sz = req.tp_block_size * req.tp_block_nr;
@@ -128,7 +128,7 @@ int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
         if ( ioctl(sock, SIOCGIFINDEX, &ifr) ) {
             syslog(LOG_CRIT,"PacketSnoop: ioctl");
             Close();
-            return -1;
+            throw std::system_error(errno, std::system_category());
         }
         ifindex = ifr.ifr_ifindex;
     }else{
@@ -143,14 +143,14 @@ int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
     if ( bind(sock, (struct sockaddr *)&sll, sizeof(sll)) ) {
         syslog(LOG_CRIT, "PacketSnoop: bind()");
         Close();
-        return -1;
+        throw std::system_error(errno, std::system_category());
     }
 
     map = (uint8_t *) mmap(nullptr, map_sz, PROT_READ | PROT_WRITE, MAP_SHARED, sock, 0);
     if ((char *) map == MAP_FAILED) {
         syslog(LOG_CRIT, "PacketSnoop: mmap()");
         Close();
-        return -1;
+        throw std::system_error(errno, std::system_category());
     }
 
     return sock;
@@ -161,7 +161,7 @@ bool PacketSnoop::Close () {
 
     if (map != nullptr && (char *) map != MAP_FAILED) {
         if (munmap(map, map_sz)) {
-            syslog(LOG_ERR, "munmap");
+            syslog(LOG_ERR, "Packetsnoop: munmap");
             return true;
         }
     }

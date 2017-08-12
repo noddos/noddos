@@ -30,7 +30,6 @@
 
 // # include "boost/asio.hpp"
 
-// #include <plog/Log.h>
 #include "FlowTrack.h"
 
 #include "HostCache.h"
@@ -58,12 +57,12 @@ int netfilter_cb2(const struct nlmsghdr *nlh, enum nf_conntrack_msg_type type, s
 		// std::string bidirectional = m.str(10);
 		// std::string assured = m.str(12);
 		if (hC.Debug_get()) {
-			syslog(LOG_DEBUG, "Conntrack matched: %s:%u %s:%u %u expiration: %u", srcip.c_str(), srcport, dstip.c_str(), dstport, protocol, expiration);
+			syslog(LOG_DEBUG, "Flowtrack matched %s:%u %s:%u %u expiration: %u", srcip.c_str(), srcport, dstip.c_str(), dstport, protocol, expiration);
 		}
 		hC.AddFlow(srcip, srcport, dstip, dstport, protocol, expiration);
 	} else {
 		if (hC.Debug_get()) {
-			syslog(LOG_DEBUG, "Conntrack not matched: %s", line.c_str());
+			syslog(LOG_DEBUG, "Flowtrack: not matched %s", line.c_str());
 		}
 	}
 
@@ -94,12 +93,12 @@ int netfilter_cb(enum nf_conntrack_msg_type type, struct nf_conntrack *ct, void 
 		// std::string bidirectional = m.str(10);
 		// std::string assured = m.str(12);
 		if (hC.Debug_get()) {
-			syslog(LOG_DEBUG, "Conntrack matched: %s:%u - %s:%u %u exp %u", srcip.c_str(), srcport, dstip.c_str(), dstport, protocol, expiration);
+			syslog(LOG_DEBUG, "Flowtrack: matched %s:%u - %s:%u %u exp %u", srcip.c_str(), srcport, dstip.c_str(), dstport, protocol, expiration);
 		}
 		hC.AddFlow(srcip, srcport, dstip, dstport, protocol, expiration);
 	} else {
 		if (hC.Debug_get()) {
-			syslog(LOG_DEBUG, "Conntrack not matched: %s", line.c_str());
+			syslog(LOG_DEBUG, "Flowtrack: not matched %s", line.c_str());
 		}
 	}
 
@@ -129,12 +128,12 @@ int FlowTrack::parseLogLine() {
 		uint16_t srcport = std::stoi(m.str(9));
 		uint16_t dstport = std::stoi(m.str(10));
 		if (hC.Debug_get()) {
-			syslog(LOG_DEBUG, "Conntrack matched: %s:%u - %s:%u %u exp %u", srcip.c_str(), srcport, dstip.c_str(), dstport, ipprotonumber, expiration);
+			syslog(LOG_DEBUG, "FlowTrack: matched %s:%u - %s:%u %u exp %u", srcip.c_str(), srcport, dstip.c_str(), dstport, ipprotonumber, expiration);
 		}
 		hC.AddFlow(srcip, srcport, dstip, dstport, ipprotonumber, expiration);
 	} else {
 		if (hC.Debug_get()) {
-			syslog(LOG_DEBUG, "Conntrack not matched: %s", line.c_str());
+			syslog(LOG_DEBUG, "FlowTrack: not matched %s", line.c_str());
 		}
 	}
 	return 0;

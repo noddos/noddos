@@ -30,6 +30,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <syslog.h>
 
 #include <libipset/linux_ip_set.h>
 #include <libipset/types.h>
@@ -42,13 +43,17 @@ private:
     struct ipset_session *session;
     std::string setType;
     std::string setName;
+    bool Debug;
 
     bool try_cmd(enum ipset_cmd cmd, const struct in_addr *addr, uint32_t timeout = 0);
     bool try_cmd(enum ipset_cmd cmd, const MacAddress &Mac, uint32_t timeout = 0);
     bool try_create();
 
 public:
-    Ipset(const std::string insetName, std::string insetType): setName{insetName}, setType{insetType} {
+    Ipset(const std::string insetName, std::string insetType, bool inDebug = false): setName{insetName}, setType{insetType}, Debug{inDebug} {
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "Ipset: new instance");
+        }
         ipset_load_types();
 
         session = ipset_session_init(printf);
@@ -75,6 +80,9 @@ public:
     }
 
     ~Ipset(void) {
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "Ipset: deleting instance");
+        }
         ipset_session_fini(session);
     }
     bool Exists() {

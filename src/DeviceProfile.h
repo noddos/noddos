@@ -49,8 +49,11 @@ private:
 
 public:
 	DeviceProfile(const json &j, const bool inDebug = false): Debug{inDebug} {
-		DeviceProfileVersion = 0;
-		UploadStats = false;
+		if (Debug == true) {
+		    syslog (LOG_DEBUG, "DeviceProfile: constructing instance");
+		}
+        DeviceProfileVersion = 0;
+        UploadStats = false;
 		Valid = false;
 		if (j.find("DeviceProfileUuid") == j.end()) {
 			syslog(LOG_ERR, "No DeviceProfileUuid set, ignoring this Object");
@@ -64,7 +67,7 @@ public:
 		}
 	}
 	~DeviceProfile() {
-		syslog (LOG_DEBUG, "Destroying DeviceProfile instance");
+		syslog (LOG_DEBUG, "DeviceProfile: Deleting instance");
 	}
 
 	std::string Uuid_get () const { return DeviceProfileUuid; }
@@ -125,7 +128,6 @@ public:
 			auto i = std::make_shared<Identifier>(*it);
 			Identifiers.push_back(i);
 		}
-
 		return true;
 	}
 };

@@ -21,45 +21,48 @@ private:
 	std::unordered_map<uint32_t, std::string> wanInterfaceMap;
 	bool Debug;
 
+	bool LoadInterfaces (std::unordered_set<std::string> &set, std::unordered_map<uint32_t, std::string> &map) {
+	    set.clear();
+        uint32_t index;
+        bool failure = false;
+        for (auto i : set) {
+            if (Debug == true) {
+                syslog(LOG_DEBUG, "InterfaceMap: Looking up interface %s", i.c_str());
+            }
+            if ((index = if_nametoindex(i.c_str())) > 0) {
+                if (Debug == true) {
+                    syslog(LOG_DEBUG, "Interface: %s -> Index %d", i.c_str(), index);
+                }
+                map[index] = i;
+            } else {
+                syslog (LOG_ERR, "Can't find interface %s", i.c_str());
+                failure = true;
+            }
+        }
+        return failure;
+	}
+
 public:
 	InterfaceMap (bool inDebug = false): Debug{inDebug} {};
 	InterfaceMap(std::unordered_set<std::string> inLanInterfaces, std::unordered_set<std::string> inWanInterfaces, bool inDebug = false): Debug{inDebug} {
-		Load(inLanInterfaces, inWanInterfaces);
+		if (Debug == true) {
+		    syslog (LOG_DEBUG, "InterfaceMap: constructing instance");
+		}
+	    Load(inLanInterfaces, inWanInterfaces);
 	}
-	~InterfaceMap() {};
+	~InterfaceMap() {
+	    if (Debug == true) {
+	        syslog (LOG_DEBUG, "InterfaceMap: deleting instance");
+	    }
+	};
 
-	bool Load (std::unordered_set<std::string> inLanInterfaces, std::unordered_set<std::string> inWanInterfaces) {
-		bool failure = false;
-		// We may have received SIGHUP so clear the interface map first if interfaces in the system has changed
-		lanInterfaceMap.clear();
-		wanInterfaceMap.clear();
-		uint32_t index;
-		{
-			for (auto i : inLanInterfaces) {
-				if ((index = if_nametoindex(i.c_str())) > 0) {
-					if (Debug == true) {
-						syslog(LOG_DEBUG, "Interface: %s -> Index %d", i.c_str(), index);
-					}
-					lanInterfaceMap[index] = i;
-				} else {
-					syslog (LOG_ERR, "Can't find LAN interface %s", i.c_str());
-					failure = true;
-				}
-			}
+	bool Load (std::unordered_set<std::string> &inLanInterfaces, std::unordered_set<std::string> &inWanInterfaces) {
+		if (Debug == true) {
+		    syslog (LOG_DEBUG, "InterfaceMap: loading interfaces");
 		}
-		{
-			for (auto i : inWanInterfaces) {
-				if ((index = if_nametoindex(i.c_str())) > 0) {
-					if (Debug == true) {
-						syslog(LOG_DEBUG, "Interface: %s -> Index %d", i.c_str(), index);
-					}
-					wanInterfaceMap[index] = i;
-				} else {
-					syslog (LOG_ERR, "Can't find WAN interface %s", i.c_str());
-					failure = true;
-				}
-			}
-		}
+	    bool failure = false;
+		failure |= LoadInterfaces(inLanInterfaces, lanInterfaceMap);
+        failure |= LoadInterfaces(inWanInterfaces, wanInterfaceMap);
 		return failure;
 	}
 	bool isLanInterface (int ifIndex) {

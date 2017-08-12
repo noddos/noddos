@@ -12,23 +12,23 @@ PKG_NAME:=noddos
 PKG_RELEASE:=1
 PKG_LICENSE:=GPLv3
 
-PKG_SOURCE_VERSION:=0.3.1
-PKG_SOURCE_URL:=https://github.com/noddos/noddos/releases/download/v$(PKG_SOURCE_VERSION)/
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_SOURCE_VERSION).tar.xz
-PKG_HASH:=a90150bba4ff4af07dc2cb1bab857c87d74369816c5884fc52b917cd865aec1b
+PKG_SOURCE_VERSION:=master
+PKG_SOURCE_PROTO:=git
+PKG_SOURCE_URL:=https://github.com/noddos/noddos.git
 
 PKG_BUILD_DIR := $(BUILD_DIR)/$(PKG_NAME)-$(PKG_SOURCE_VERSION)
 
 CMAKE_INSTALL:=1
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
+CMAKE_OPTIONS += -DCMAKE_BUILD_TYPE=Debug
 
 define Package/noddos
 	SECTION:=net
 	CATEGORY:=Network
 	TITLE:=noddos -- device-aware cloud-powered firewall
 	URL:=https://www.noddos.io/
-	DEPENDS:=+libstdcpp +libnetfilter-conntrack +libcurl +libopenssl +openssl-util +ca-bundle +ca-certificates +wget +bzip2 +libtins
+	DEPENDS:=+libstdcpp +libnetfilter-conntrack +libcurl +libopenssl +openssl-util +ca-bundle +ca-certificates +wget +bzip2 +libtins +ipset
 endef
 
 define Package/noddos/description

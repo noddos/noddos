@@ -59,15 +59,9 @@ private:
 
 public:
 	HostCache(InterfaceMap &inifMap, const std::string inDnsCacheFilename = "", const uint32_t inFlowExpiration = FLOWDEFAULTEXPIRATION, const bool inDebug = false):
-			ifMap{&inifMap}, Debug{inDebug} {
+			ifMap{&inifMap}, FlowExpiration{inFlowExpiration}, Debug{inDebug} {
 		if (Debug) {
-			syslog (LOG_DEBUG, "Initializing HostCache instance");
-		}
-		if (inFlowExpiration == 0) {
-			// Stats upload is disabled so we set a reasonable default to expire the flow cache
-			FlowExpiration = FLOWDEFAULTEXPIRATION;
-		} else {
-			FlowExpiration = inFlowExpiration;
+			syslog (LOG_DEBUG, "HostCache: constructing instance");
 		}
 		dev_rx = std::regex(R"delim(^([^:]?):)delim",
 				std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
@@ -83,7 +77,7 @@ public:
 	}
 	virtual ~HostCache() {
 		if (Debug) {
-			syslog (LOG_DEBUG, "Destroying HostCache instance");
+			syslog (LOG_DEBUG, "HostCache: destructing instance");
 		}
 	}
 

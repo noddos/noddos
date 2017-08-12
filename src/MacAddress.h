@@ -19,11 +19,12 @@ class MacAddress {
 private:
 	unsigned long long Mac;
 	std::string MacString;
+	bool Debug;
 
 public:
-	MacAddress (): Mac{0}, MacString{""} {}
-	MacAddress (const unsigned long long inMac): Mac{inMac} { create_string(); }
-	MacAddress (const unsigned char inMac[ETH_ALEN]) {
+	MacAddress (bool inDebug = false): Mac{0}, MacString{""}, Debug{inDebug} {}
+	MacAddress (const unsigned long long inMac, bool inDebug = false): Mac{inMac}, Debug{inDebug} { create_string(); }
+	MacAddress (const unsigned char inMac[ETH_ALEN], bool inDebug = false): Debug{inDebug} {
 		Mac = uint64_t(inMac[0]) << 40 |
 				uint64_t(inMac[1]) << 32 |
 			    uint64_t(inMac[2]) << 24 |
@@ -50,7 +51,7 @@ public:
 		int rc = sscanf(inMacString.c_str(), "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx%n",
 				a + 0, a + 1, a + 2, a + 3, a + 4, a + 5, &last);
 		if(rc < 6)
-			throw std::runtime_error("invalid mac address format " + inMacString);
+			throw std::runtime_error("PacketSnoop: invalid mac address format " + inMacString);
 		Mac =  uint64_t(a[0]) << 40 |
 			uint64_t(a[1]) << 32 |
 		    uint64_t(a[2]) << 24 |

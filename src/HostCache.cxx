@@ -56,6 +56,9 @@ using nlohmann::json;
 
 
 uint32_t HostCache::Prune (bool Force) {
+	if (Debug == true) {
+	    syslog (LOG_DEBUG, "HostCache: starting prune");
+	}
 	uint32_t prunedhosts = 0;
 	for (auto it : hC) {
 		if (it.second->Prune(Force)) {
@@ -65,7 +68,6 @@ uint32_t HostCache::Prune (bool Force) {
 	if (Debug == true) {
 	    syslog(LOG_DEBUG, "Pruned %u hosts", prunedhosts);
 	}
-	// uint32_t count = 99999;
 	uint32_t count = pruneDnsQueryCache(Force);
     if (Debug == true) {
         syslog(LOG_DEBUG, "Pruned %u DNS queries", count);
@@ -373,12 +375,15 @@ MacAddress HostCache::MacLookup (const std::string inIpAddress, const std::strin
 }
 
 uint32_t HostCache::getInterfaceIpAddresses() {
+    if (Debug == true) {
+        syslog (LOG_DEBUG, "HostCache: discovering IP addresses of network interfaces");
+    }
     struct ifaddrs *ifaddr, *ifa;
     int family, s, n;
     char host[NI_MAXHOST];
 
     if (getifaddrs(&ifaddr) == -1) {
-        syslog(LOG_ERR, "Can't loop through local interfaces: getifaddrs");
+        syslog(LOG_ERR, "HostCache: Can't loop through local interfaces: getifaddrs");
         return 0;
     }
 
@@ -396,26 +401,25 @@ uint32_t HostCache::getInterfaceIpAddresses() {
         //   form of the latter for the common families)
 
         if (Debug == true) {
-        	syslog(LOG_DEBUG, "Interface %-8s %s (%d)", ifa->ifa_name,
+        	syslog(LOG_DEBUG, "HostCache: Interface %-8s %s (%d)", ifa->ifa_name,
                (family == AF_PACKET) ? "AF_PACKET" :
                (family == AF_INET) ? "AF_INET" :
                (family == AF_INET6) ? "AF_INET6" : "???", family);
         }
         LocalInterfaces.insert(ifa->ifa_name);
-        // For an AF_INET* interface address, display the address
 
         if (family == AF_INET || family == AF_INET6) {
             s = getnameinfo(ifa->ifa_addr,
                 (family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6),
                 host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
             if (s != 0) {
-                syslog(LOG_ERR, "getnameinfo() failed: %s\n", gai_strerror(s));
+                syslog(LOG_ERR, "HostCache: getnameinfo() failed: %s\n", gai_strerror(s));
                 freeifaddrs(ifaddr);
                 return 0;
             }
 
             if(Debug == true) {
-            	syslog (LOG_DEBUG, "Interface %s with IP address: %s", ifa->ifa_name, host);
+            	syslog (LOG_DEBUG, "HostCache: Interface %s with IP address: %s", ifa->ifa_name, host);
             }
             LocalIpAddresses.insert(host);
         }
@@ -427,6 +431,9 @@ uint32_t HostCache::getInterfaceIpAddresses() {
 
 MacAddress HostCache::MacLookup (const std::string inIpAddress, const int retries) {
 	// TODO: we should cache ARP table and only refresh it if a MAC lookup fails
+	if (Debug == true) {
+	    syslog (LOG_DEBUG, "HostCache: deprecated MacLookup of %s", inIpAddress.c_str());
+	}
 	std::ifstream ifs("/proc/net/arp");
 	std::string line;
 	MacAddress Mac;
@@ -653,8 +660,6 @@ uint32_t HostCache::UploadDeviceStats(const std::string ClientApiCertFile, const
 	uint32_t uploads = 0;
 	json j;
 	for (auto it : hC) {
-		// FIXME
-		// if ( (not isWhitelisted(*(it.second))) && not it.second->isMatched() && it.second->UploadsEnabled()) {
 		if ( (not isWhitelisted(*(it.second))) && not it.second->isMatched()) {
 		json h;
 			if (it.second->DeviceStats(h, 604800, false, false)) {
@@ -695,16 +700,20 @@ bool HostCache::UploadTrafficStats(const time_t interval, const bool ReportRfc19
 
 uint32_t HostCache::ImportDeviceProfileMatches(const std::string filename) {
 	if (Debug == true) {
-		syslog(LOG_DEBUG, "Opening & reading %s", filename.c_str());
+		syslog(LOG_DEBUG, "HostCache: Importing Device Profile matches from %s", filename.c_str());
 	}
 
 	std::ifstream ifs(filename);
 	if (not ifs.is_open()) {
-		syslog(LOG_WARNING, "Couldn't open %s", filename.c_str());
+		syslog(LOG_WARNING, "HostCache: Couldn't open %s", filename.c_str());
 		return false;
 	}
 	json j;
-	ifs >> j;
+	try {
+	    ifs >> j;
+	} catch (...) {
+	    syslog (LOG_ERR, "HostCache: failed to parse Device Matches json data from %s", filename.c_str());
+	}
 	ifs.close();
 
 	uint32_t matches = 0;
@@ -713,7 +722,7 @@ uint32_t HostCache::ImportDeviceProfileMatches(const std::string filename) {
 		   matches++;
 	   }
 	}
-	syslog(LOG_INFO, "DeviceMatches read: %u", matches);
+	syslog(LOG_INFO, "HostCache: DeviceMatches read: %u", matches);
 	return matches;
 }
 
@@ -733,21 +742,32 @@ bool HostCache::exportDnsCache (const std::string filename) {
 }
 
 bool HostCache::importDnsCache (const std::string filename) {
+    if (Debug == true) {
+        syslog (LOG_DEBUG, "HostCache: Importing DnsCache from %s", filename.c_str());
+    }
     std::ifstream ifs(filename);
     if (not ifs.is_open()) {
-        syslog(LOG_WARNING, "Couldn't open %s for reading", filename.c_str());
+        syslog(LOG_WARNING, "HostCache: Couldn't open %s for reading", filename.c_str());
         return true;
     }
     json j;
-    ifs >> j;
-
-    size_t dnsRecords = dCip.importJson(j);
-    if (Debug == true) {
-        syslog(LOG_DEBUG, "Read %zu cached DNS IP address records", dnsRecords);
+    try {
+        ifs >> j;
+    } catch (...) {
+        syslog (LOG_ERR, "HostCache: failed to parse Dns Cache json data from %s", filename.c_str());
     }
-    dnsRecords = dCcname.importJson(j);
-    if (Debug == true) {
-        syslog(LOG_DEBUG, "Read %zu cached DNS CNAME records", dnsRecords);
+
+    try {
+        size_t dnsRecords = dCip.importJson(j);
+        if (Debug == true) {
+            syslog(LOG_DEBUG, "Read %zu cached DNS IP address records", dnsRecords);
+        }
+        dnsRecords = dCcname.importJson(j);
+        if (Debug == true) {
+            syslog(LOG_DEBUG, "Read %zu cached DNS CNAME records", dnsRecords);
+        }
+    } catch (...) {
+        syslog (LOG_ERR, "HostCache: Failure parsing DnsCache json data");
     }
     ifs.close();
     return false;
@@ -825,7 +845,11 @@ uint32_t HostCache::DeviceProfiles_load(const std::string filename) {
 		return 0;
 	}
 	json j;
-	ifs >> j;
+    try {
+        ifs >> j;
+    } catch (...) {
+        syslog (LOG_ERR, "HostCache: failed to parse Device Profiles json data from %s", filename.c_str());
+    }
 
 	// Track which DeviceProfileUuids were read from the file
 	std::unordered_set<std::string> uuids;
@@ -856,7 +880,10 @@ uint32_t HostCache::DeviceProfiles_load(const std::string filename) {
 uint32_t HostCache::Whitelists_set (const std::unordered_set<std::string>& inIpv4Addresses,
 		const std::unordered_set<std::string>& inIpv6Addresses,
 		const std::unordered_set<std::string>& inMacAddresses) {
-	WhitelistedNodes.clear();
+    if (Debug == true) {
+        syslog (LOG_DEBUG, "HostCache: set whitelists");
+    }
+    WhitelistedNodes.clear();
 	WhitelistedNodes.insert(inIpv4Addresses.begin(), inIpv4Addresses.end());
 	WhitelistedNodes.insert(inIpv6Addresses.begin(), inIpv6Addresses.end());
 	WhitelistedNodes.insert(inMacAddresses.begin(), inMacAddresses.end());

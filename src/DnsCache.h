@@ -38,8 +38,16 @@ private:
     std::map<std::string,std::pair<std::string,time_t>> DnsCache;
     bool Debug;
 public:
-    DnsCnameCache(const bool inDebug=false): Debug{inDebug} {};
-    ~DnsCnameCache() {};
+    DnsCnameCache(const bool inDebug=false): Debug{inDebug} {
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "DnsCnameCache: constructing instance");
+        }
+    };
+    ~DnsCnameCache() {
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "DnsCnameCache: deletinginstance");
+        }
+    };
 
     void debug_set (bool inDebug) {
         Debug = inDebug;
@@ -57,7 +65,7 @@ public:
 
         auto now = time(nullptr);
         if (Debug == true) {
-            syslog (LOG_DEBUG, "DnsCache: Setting %s to CNAME %s with TTL %lu", fqdn.c_str(), cname.c_str(), Ttl);
+            syslog (LOG_DEBUG, "DnsCnameCache: Setting %s to CNAME %s with TTL %lu", fqdn.c_str(), cname.c_str(), Ttl);
         }
         DnsCache[cname] = std::make_pair(fqdn, now + Ttl);
     }
@@ -67,7 +75,7 @@ public:
             return inCname;
         }
         if (Debug == true) {
-            syslog (LOG_DEBUG, "DnsCache: Seeing if %s is a CNAME", inCname.c_str());
+            syslog (LOG_DEBUG, "DnsCnameCache: Seeing if %s is a CNAME", inCname.c_str());
         }
         std::string cname = inCname;
         std::transform(cname.begin(), cname.end(), cname.begin(), ::tolower);
@@ -75,7 +83,7 @@ public:
         auto it = DnsCache.find(cname);
         if (it != DnsCache.end()) {
             if (Debug == true) {
-                syslog (LOG_DEBUG, "DnsCache: Found reverse CNAME from %s to %s", cname.c_str(), it->second.first.c_str());
+                syslog (LOG_DEBUG, "DnsCnameCache: Found reverse CNAME from %s to %s", cname.c_str(), it->second.first.c_str());
             }
             return lookupCname(it->second.first, recdepth + 1);
         } else {
@@ -84,6 +92,9 @@ public:
     }
 
     size_t importJson (json &j) {
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "DnsCnameCache: importing json with cnames");
+        }
         size_t dnsRecords = 0;
         auto cj = j.find("CnameRecords");
         if (cj == j.end()) {
@@ -101,6 +112,9 @@ public:
         return dnsRecords;
     }
     size_t exportJson (json &j) {
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "DnsCnameCache: exporting cnames to json");
+        }
         size_t dnsRecords = 0;
         j["CnameRecords"] = json::object();
         for (auto it_resource: DnsCache) {
@@ -110,6 +124,9 @@ public:
         return dnsRecords;
     }
     size_t pruneCnames (const bool Force = false) {
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "DnsCnameCache: pruning cnames");
+        }
         size_t deleted = 0;
         auto now = time(nullptr);
         auto it = DnsCache.begin();
@@ -136,8 +153,16 @@ private:
     bool Debug;
 
 public:
-	DnsIpCache(const bool inDebug=false): Debug{inDebug} {};
-	~DnsIpCache() {};
+	DnsIpCache(const bool inDebug=false): Debug{inDebug} {
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "DnsIpCache: constructing instance");
+        }
+	};
+	~DnsIpCache() {
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "DnsIpCache: destructing instance");
+        }
+	};
 
 	void addorupdateResourceRecord (const std::string inFqdn, const T inIpAddress, const time_t inTtl = 604800) {
 		time_t Ttl = inTtl;
@@ -151,7 +176,7 @@ public:
         auto now = time(nullptr);
 		std::string ipstring = inIpAddress.to_string();
 		if (Debug == true) {
-			syslog (LOG_DEBUG, "DnsCache: Setting %s to %s with TTL %lu", inFqdn.c_str(), ipstring.c_str(), Ttl);
+			syslog (LOG_DEBUG, "DnsIpCache: Setting %s to %s with TTL %lu", inFqdn.c_str(), ipstring.c_str(), Ttl);
 		}
 		DnsFwdCache[inFqdn].insert(std::make_pair(inIpAddress, now + Ttl));
 		DnsRevCache[inIpAddress].insert(std::make_pair(inFqdn, now + Ttl));
@@ -162,6 +187,9 @@ public:
 	}
 
     size_t importJson (json &j) {
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "DnsIpCache: importing json");
+        }
         size_t dnsRecords = 0;
         auto cj = j.find("AddressRecords");
         if (cj == j.end()) {
@@ -183,6 +211,9 @@ public:
     }
 
 	size_t exportJson(json &j) {
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "DnsIpCache: export to json");
+        }
 	    size_t dnsRecords = 0;
 	    j["AddressRecords"] = json::object();;
 	    for (auto it_resource: DnsFwdCache) {
@@ -204,13 +235,13 @@ public:
 			const std::map<std::string,time_t> &m = it->second;
 			for (auto itf : m) {
 				if (Debug == true) {
-					syslog (LOG_DEBUG, "DnsCache: AllFqdns adding %s", itf.first.c_str());
+					syslog (LOG_DEBUG, "DnsIpCache: AllFqdns adding %s", itf.first.c_str());
 				}
 				fqdns.push_back(itf.first);
 			}
 		} else {
 			if (Debug == true) {
-				syslog(LOG_DEBUG, "DnsCache: couldn't find DNS mappings for %s", ipstring.c_str());
+				syslog(LOG_DEBUG, "DnsIpCache: couldn't find DNS mappings for %s", ipstring.c_str());
 			}
 		}
 		return fqdns;
@@ -225,7 +256,7 @@ public:
 				while (it_record != it_resource->second.end()) {
 					if (Force || now > (it_record->second + 1)) {
 						if (Debug == true) {
-							syslog(LOG_DEBUG, "DnsCache: pruning %s pointing to %s with expiration %lu while now is %lu",
+							syslog(LOG_DEBUG, "DnsIpCache: pruning %s pointing to %s with expiration %lu while now is %lu",
 									it_resource->first.c_str(), it_record->first.to_string().c_str(), it_record->second, now);
 						}
 						it_record = it_resource->second.erase(it_record);
@@ -236,11 +267,11 @@ public:
 				}
 				if (Force || it_resource->second.empty()) {
 					if (Debug == true) {
-						syslog(LOG_DEBUG, "DnsCache: Removing record for %s as there is no data left", it_resource->first.c_str());
+						syslog(LOG_DEBUG, "DnsIpCache: Removing record for %s as there is no data left", it_resource->first.c_str());
 					}
 					it_resource = DnsFwdCache.erase(it_resource);
 					if (Debug == true) {
-						syslog(LOG_DEBUG, "DnsCache: Deleted record");
+						syslog(LOG_DEBUG, "DnsIpCache: Deleted record");
 					}
 				} else {
 					it_resource++;
@@ -254,7 +285,7 @@ public:
 				while (it_record != it_resource->second.end()) {
 					if (Force || now > (it_record->second + 1)) {
 						if (Debug == true) {
-							syslog(LOG_DEBUG, "DnsCache: pruning entry %s pointing to %s  with expiration %lu while now is %lu",
+							syslog(LOG_DEBUG, "DnsIpCache: pruning entry %s pointing to %s  with expiration %lu while now is %lu",
 									it_resource->first.to_string().c_str(), it_record->first.c_str(), it_record->second, now);
 						}
                         it_record = it_resource->second.erase(it_record);
@@ -265,11 +296,11 @@ public:
 				}
 				if (Force || it_resource->second.empty()) {
 					if (Debug == true) {
-						syslog(LOG_DEBUG, "DnsCache: Removing record as there is no data left");
+						syslog(LOG_DEBUG, "DnsIpCache: Removing record as there is no data left");
 					}
 					it_resource = DnsRevCache.erase(it_resource);
 					if (Debug == true) {
-						syslog(LOG_DEBUG, "DnsCache: Deleted record");
+						syslog(LOG_DEBUG, "DnsIpCache: Deleted record");
 					}
 				} else {
 					it_resource++;

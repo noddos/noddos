@@ -70,22 +70,25 @@ public:
 	static const std::string ApiFqdn;
 
 	Config(std::string inConfigFile = "/etc/noddos/noddos.conf", bool inDebug = false): Debug{inDebug} {
-		Load(inConfigFile);
+		if (Debug == true) {
+		    syslog (LOG_DEBUG, "Config: constructing instance");
+		}
+	    Load(inConfigFile);
 	}
 	~Config() {
 		if (Debug) {
-			syslog (LOG_DEBUG, "Destroying Config instance");
+			syslog (LOG_DEBUG, "Config: destructing instance");
 		}
 	}
 	bool Load(std::string inConfigFile) {
 		if (Debug == true) {
-			syslog(LOG_DEBUG, "Opening & reading config file %s", inConfigFile.c_str());
+			syslog(LOG_DEBUG, "Config: opening & reading config file %s", inConfigFile.c_str());
 		}
 		bool configfailure=false;
 
 		std::ifstream ifs(inConfigFile);
 		if (!ifs.is_open()) {
-			syslog(LOG_CRIT, "Couldn't open %s", inConfigFile.c_str());
+			syslog(LOG_CRIT, "Config: Couldn't open %s", inConfigFile.c_str());
 			configfailure = true;
 		}
 		std::string newDeviceProfilesFile = DeviceProfilesFile;
@@ -113,7 +116,11 @@ public:
 		UploadMode newuMode = uMode;
 
 		json j;
-		ifs >> j;
+	    try {
+	        ifs >> j;
+	    } catch (...) {
+	        syslog (LOG_ERR, "HostCache: failed to parse Config json data from %s", inConfigFile.c_str());
+	    }
 		ifs.close();
 		try {
 			if (j.count("DeviceProfilesFile")) {
@@ -193,7 +200,7 @@ public:
 			}
 		}
 		catch (...) {
-			syslog (LOG_ERR, "Failure to load configuration file, ignoring its contents");
+			syslog (LOG_ERR, "Config: Failure to parse json data from Config file, ignoring its contents: %s", inConfigFile.c_str());
 			return configfailure;
 		}
 		DeviceProfilesFile = newDeviceProfilesFile;

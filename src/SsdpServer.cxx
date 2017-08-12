@@ -38,7 +38,7 @@
 
 bool SsdpServer::ProcessEvent (struct epoll_event &event) {
 	if (socket_fd != event.data.fd) {
-		syslog(LOG_CRIT, "Mismatch in socket FD between class object and epoll event");
+		syslog(LOG_CRIT, "SsdpServer: Mismatch in socket FD between class object and epoll event");
 	}
 	char msgbuf[MSGBUFSIZE];
 	memset(&msgbuf, 0, MSGBUFSIZE);
@@ -54,24 +54,24 @@ bool SsdpServer::ProcessEvent (struct epoll_event &event) {
 			struct sockaddr_in  *addr_in_ptr = (struct sockaddr_in *) &addr;
 			sHost->IpAddress = inet_ntoa(addr_in_ptr->sin_addr);
 			if(Debug) {
-				syslog(LOG_DEBUG, "Received multicast packet from %s with %d bytes", sHost->IpAddress.c_str(), nbytes);
+				syslog(LOG_DEBUG, "SsdpServer: Received multicast packet from %s with %d bytes", sHost->IpAddress.c_str(), nbytes);
 			}
 
 			if (ParseSsdpMessage(sHost, msgbuf, nbytes)) {
 				hCache.AddSsdpInfo(sHost);
 			} else {
 				if(Debug) {
-					syslog(LOG_DEBUG, "Didn't parse SSDP packet");
+					syslog(LOG_DEBUG, "SsdpServer: Didn't parse SSDP packet");
 				}
             }
 		} else {
-			syslog(LOG_WARNING, "Unknown address family: %u", addr.sa_family);
+			syslog(LOG_WARNING, "SsdpServer: Unknown address family: %u", addr.sa_family);
 		}
 
 		addrlen = sizeof(addr);
 	}
 	if (nbytes < 0) {
-		syslog(LOG_ERR, "recvfrom");
+		syslog(LOG_ERR, "SsdpServer: recvfrom");
 		return false;
 	}
 	return true;
@@ -89,7 +89,7 @@ bool SsdpServer::ParseSsdpMessage (std::shared_ptr<SsdpHost> host, const char * 
 			 if (line != "") {
 				 std::smatch m;
 				 if(Debug) {
-					 syslog(LOG_DEBUG, "Line %s", line.c_str());
+					 syslog(LOG_DEBUG, "SsdpServer: Line %s", line.c_str());
 				 }
 				 std::regex_search(line, m, ssdp_rx);
 				 if (not m.empty()) {
@@ -97,7 +97,7 @@ bool SsdpServer::ParseSsdpMessage (std::shared_ptr<SsdpHost> host, const char * 
 					 std::transform(header.begin(), header.end(), header.begin(), std::ptr_fun<int, int>(std::toupper));
 					 std::string value = m.str(2);
 					 if(Debug) {
-						 syslog(LOG_DEBUG, "Matched SSDP regex %s %s", header.c_str(), value.c_str());
+						 syslog(LOG_DEBUG, "SsdpServer: Matched SSDP regex %s %s", header.c_str(), value.c_str());
 					 }
 					 if (header == "SERVER") {
 						 host->Server = value;
@@ -127,18 +127,16 @@ bool SsdpServer::ParseSsdpMessage (std::shared_ptr<SsdpHost> host, const char * 
 int SsdpServer::Open (std::string input, uint32_t inExpiration) {
 	IpAddress = input;
 	if(Debug) {
-		syslog(LOG_DEBUG, "Opening SsdpServer socket");
+		syslog(LOG_DEBUG, "SsdpServer: Opening SsdpServer socket");
 	}
 	if ((socket_fd=socket(AF_INET,SOCK_DGRAM,0)) < 0) {
-		syslog(LOG_CRIT, "socket");
-		perror("socket");
-	 	exit(1);
+		syslog(LOG_CRIT, "SsdpServer: socket");
+		throw std::system_error(errno, std::system_category());
 	}
 	int yes = 1;
 	if (setsockopt(socket_fd,SOL_SOCKET,SO_REUSEADDR,&yes,sizeof(yes)) < 0) {
-		syslog(LOG_ERR, "Reusing ADDR failed");
-		perror("SO_REUSEADDR");
-		exit(1);
+		syslog(LOG_ERR, "SsdpServer: Reusing ADDR failed");
+		throw std::system_error(errno, std::system_category());
 	}
 
 	struct sockaddr_in addr;
@@ -148,14 +146,14 @@ int SsdpServer::Open (std::string input, uint32_t inExpiration) {
 	addr.sin_port=htons(1900);
 	if (bind(socket_fd,(struct sockaddr *) &addr,sizeof(addr)) < 0) {
 		syslog(LOG_CRIT, "bind");
-		exit(1);
+		throw std::system_error(errno, std::system_category());
 	}
 	int flags = fcntl(socket_fd, F_GETFD, 0);
 	if (flags == -1) {
 		flags = 0;
     }
 	if ((fcntl(socket_fd,F_SETFD,flags | O_NONBLOCK)) == -1) {
-		syslog(LOG_ERR, "Set socket O_NONBLOCK");
+		syslog(LOG_ERR, "SsdpServer: Set socket O_NONBLOCK");
 	}
 
 	// TODO: add support for multiple IP addresses or interfaces to join multicast groups with
@@ -169,7 +167,7 @@ int SsdpServer::Open (std::string input, uint32_t inExpiration) {
 	mreqn.imr_ifindex = 0;
 	if (setsockopt(socket_fd,IPPROTO_IP,IP_ADD_MEMBERSHIP,&mreqn,sizeof(mreqn)) < 0) {
 		syslog(LOG_CRIT, "setsockopt");
-		exit(1);
+		throw std::system_error(errno, std::system_category());
 	}
 	return socket_fd;
 }

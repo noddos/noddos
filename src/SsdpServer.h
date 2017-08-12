@@ -48,8 +48,11 @@ private:
 
 public:
 	SsdpServer(HostCache &inhCache, const time_t inExpiration, const std::string inIpAddress = "", const bool inDebug = false):
-		hCache{inhCache}, Expiration{inExpiration}, IpAddress{inIpAddress}, Debug{inDebug} {
-		ssdp_rx = std::regex(R"delim(^(SERVER|LOCATION|NT|USN|USER-AGENT): (.*)$)delim",
+	        hCache{inhCache}, Expiration{inExpiration}, IpAddress{inIpAddress}, Debug{inDebug} {
+		if (Debug == true) {
+		    syslog (LOG_DEBUG, "SsdpServer: constructing instance");
+		}
+	    ssdp_rx = std::regex(R"delim(^(SERVER|LOCATION|NT|USN|USER-AGENT): (.*)$)delim",
 				std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
 
 		socket_fd = -1;
@@ -59,7 +62,7 @@ public:
 	virtual ~SsdpServer() {
 		Close();
 		if(Debug) {
-			syslog (LOG_DEBUG, "Destroying SsdpServer instance");
+			syslog (LOG_DEBUG, "SsdpServer: destructing instance");
 		}
 	}
 
