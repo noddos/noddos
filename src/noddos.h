@@ -27,6 +27,8 @@
 
 #include <iostream>
 #include <unordered_map>
+#include <string>
+
 
 enum struct ConfidenceLevel : int { None, none, NONE, Low, low, LOW, Medium, medium, MEDIUM, High, high, HIGH };
 

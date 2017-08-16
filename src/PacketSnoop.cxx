@@ -152,6 +152,10 @@ int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
         Close();
         throw std::system_error(errno, std::system_category());
     }
+    if (Debug == true) {
+        syslog(LOG_DEBUG, "PacketSnoop: Successfully opened AF_PACKET SOCK_RAW with ETH_P_ALL on interface %s",
+            input.c_str());
+    }
 
     return sock;
 }

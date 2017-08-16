@@ -23,8 +23,11 @@
 #include <iostream>
 #include <unordered_set>
 #include <string>
-#include <cstring>
+#include <sstream>
 #include <fstream>
+#include <iterator>
+
+#include <cstring>
 #include <memory>
 
 #include <sys/types.h>
@@ -53,7 +56,6 @@ using nlohmann::json;
 #include <curl/curl.h>
 
 #include "HostCache.h"
-
 
 uint32_t HostCache::Prune (bool Force) {
 	if (Debug == true) {
@@ -831,8 +833,17 @@ bool HostCache::ImportDeviceInfo (json &j) {
 		syslog(LOG_WARNING, "HostCache: Failed to create Host with MacAddress %s and uuid %s", MacAddressString.c_str(), DeviceProfileUuid.c_str());
 		return false;
 	}
+	/*
+	try {
+	    std::string IpsetName = getIpsetName(DeviceProfileUuid, true);
+
+	} catch (...) {
+	    syslog (LOG_ERR, "HostCache: Ipset %s does not existing during import of DeviceMatches", IpsetName.c_str());
+	}
+	*/
 	return true;
 }
+
 
 uint32_t HostCache::DeviceProfiles_load(const std::string filename) {
 	if (Debug == true) {

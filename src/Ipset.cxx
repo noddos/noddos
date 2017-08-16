@@ -24,6 +24,32 @@
 #include <iostream>
 #include <stdexcept>
 
+std::string getIpsetUuid (const std::string inUuid) {
+    std::string res = "";
+    std::stringstream ss;
+    ss.str(inUuid);
+    std::string item;
+    uint8_t count = 0;
+    while (std::getline(ss, item, '-')) {
+        if (count == 0) {
+            res += item;
+        }
+        count++;
+    }
+    return res;
+}
+
+std::string getIpsetName (const std::string inUuid, bool inSrc) {
+    std::string res = "Nod";
+    if (inSrc == true) {
+        res += "src-";
+    } else {
+        res += "dst-";
+    }
+    res += getIpsetUuid(inUuid);
+    return res;
+}
+
 bool Ipset::try_cmd(enum ipset_cmd cmd, const struct in_addr *addr, uint32_t timeout) {
     int r = ipset_session_data_set(session, IPSET_SETNAME, setName.c_str());
 

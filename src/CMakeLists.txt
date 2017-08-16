@@ -51,21 +51,21 @@ enable_testing()
 
 add_test (Host Host_test)
 add_executable(Host_test Host_test.cxx 
-    Host.cxx HostCache SsdpServer.cxx SsdpLocation.cxx opensslfingerprint.cxx)
-target_link_libraries(Host_test curl ssl crypto)
+    Host.cxx HostCache SsdpServer.cxx SsdpLocation.cxx opensslfingerprint.cxx Ipset.cxx)
+target_link_libraries(Host_test curl ssl crypto ipset)
 
 add_test (HostCache Host_test)
-add_executable(HostCache_test HostCache_test.cxx 
+add_executable(HostCache_test HostCache_test.cxx  Ipset.cxx
     Host.cxx HostCache SsdpServer.cxx SsdpLocation.cxx
     opensslfingerprint.cxx)
-target_link_libraries(HostCache_test curl ssl crypto)
+target_link_libraries(HostCache_test curl ssl crypto ipset)
 
 
 add_test (DeviceProfile DeviceProfile_test)
 add_executable(DeviceProfile_test DeviceProfile_test.cxx 
 	FlowTrack.cxx Config.cxx HostCache.cxx Host.cxx SsdpServer.cxx
-	SsdpLocation.cxx opensslfingerprint.cxx)
-target_link_libraries(DeviceProfile_test curl ssl crypto netfilter_conntrack)
+	SsdpLocation.cxx opensslfingerprint.cxx Ipset.cxx)
+target_link_libraries(DeviceProfile_test curl ssl crypto netfilter_conntrack ipset)
 
 add_test (Identifier Identifier_test)
 add_executable(Identifier_test Identifier_test.cxx)
@@ -81,8 +81,8 @@ target_link_libraries(Ipset_test ipset)
 add_test (SsdpServer SsdpServer_test)
 add_executable(SsdpServer_test SsdpServer_test.cxx 
     HostCache.cxx Host.cxx SsdpServer.cxx SsdpLocation.cxx
-    opensslfingerprint.cxx)
-target_link_libraries(SsdpServer_test curl ssl crypto)
+    opensslfingerprint.cxx Ipset.cxx)
+target_link_libraries(SsdpServer_test curl ssl crypto ipset)
 
 add_test (MacAddress MacAddress_test)
 add_executable(MacAddress_test MacAddress_test.cxx)
@@ -96,8 +96,8 @@ target_link_libraries(Curl_test curl ssl crypto)
 
 add_executable (PacketSnoop_test PacketSnoop_test.cxx PacketSnoop.cxx 
 	HostCache.cxx Host.cxx SsdpServer.cxx SsdpLocation.cxx
-    opensslfingerprint.cxx)
-target_link_libraries(PacketSnoop_test curl ssl crypto tins)
+    opensslfingerprint.cxx Ipset.cxx)
+target_link_libraries(PacketSnoop_test curl ssl crypto tins ipset)
 
 add_test (Noddos noddos_test)
 add_executable(noddos_test noddos_test.cxx)

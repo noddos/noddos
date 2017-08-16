@@ -185,6 +185,9 @@ public:
         }
 
         nfct_callback_register(h, NFCT_T_ALL, netfilter_cb, &hC);
+        if (Debug) {
+            syslog (LOG_DEBUG, "FlowTrack: open competed succesfully");
+        }
 
         return 0;
 	}

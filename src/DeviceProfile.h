@@ -35,7 +35,7 @@ using nlohmann::json;
 
 #include "Identifier.h"
 #include "MatchCondition.h"
-
+#include "Ipset.h"
 
 
 class DeviceProfile {
@@ -46,6 +46,7 @@ private:
 	bool UploadStats;
 	bool Valid;
 	bool Debug;
+	// Ipset srcIpset, dstIpset;
 
 public:
 	DeviceProfile(const json &j, const bool inDebug = false): Debug{inDebug} {
@@ -65,6 +66,13 @@ public:
 				Valid = from_json(j);
 			}
 		}
+		/* try {
+		    srcIpset.Open(getIpsetName(DeviceProfileUuid, true), "hash:mac", Debug);
+		    dstIpset.Open(getIpsetName(DeviceProfileUuid, false), "hash:ip", Debug);
+		} catch (...) {
+		    syslog(LOG_DEBUG, "notyhing");
+		}
+		*/
 	}
 	~DeviceProfile() {
 		syslog (LOG_DEBUG, "DeviceProfile: Deleting instance");
@@ -74,6 +82,9 @@ public:
 	time_t DeviceProfileVersion_get ()  const { return DeviceProfileVersion; }
 	bool isValid() const { return Valid; }
 	bool UploadStats_get() const { return UploadStats; }
+
+	bool addHost (MacAddress inMac);
+	bool removeHost (MacAddress inMac);
 
 	const std::vector<std::shared_ptr<Identifier>> & Identifiers_get() const { return Identifiers; }
 	bool from_json(const json &j) {
