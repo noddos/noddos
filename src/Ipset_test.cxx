@@ -25,14 +25,16 @@
 
 #include <unistd.h>
 #include <sys/types.h>
+#include <syslog.h>
 
 int main(int argc, char** argv) {
+    openlog("Ipsettest", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
     bool testfailed = false;
     if (geteuid() != 0) {
         std::cout << "Skipping ipset test as we're not running as root" << std::endl;
         return 0;
     }
-    Ipset i("noddostest", "hash:ip");
+    Ipset i("noddostest", "hash:ip", true);
     struct in_addr sin;
     inet_aton ("192.168.1.1", &sin);
     if (i.Add(&sin) == false ) {

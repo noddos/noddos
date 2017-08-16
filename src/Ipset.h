@@ -38,9 +38,14 @@
 
 #include "MacAddress.h"
 
+
+std::string getIpsetUuid (const std::string inUuid);
+std::string getIpsetName (const std::string inUuid, bool inSrc);
+
+
 class Ipset {
 private:
-    struct ipset_session *session;
+    struct ipset_session *session = nullptr;
     std::string setType;
     std::string setName;
     bool Debug;
@@ -50,10 +55,35 @@ private:
     bool try_create();
 
 public:
+    Ipset (const bool inDebug = false): Debug{inDebug}, setType{""}, setName{""} {
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "Ipset: new instance");
+        }
+    };
+
     Ipset(const std::string insetName, std::string insetType, bool inDebug = false): setName{insetName}, setType{insetType}, Debug{inDebug} {
         if (Debug == true) {
             syslog (LOG_DEBUG, "Ipset: new instance");
         }
+        Open(insetName, insetType, inDebug);
+    }
+
+    ~Ipset(void) {
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "Ipset: deleting instance");
+        }
+        if (session != nullptr) {
+            ipset_session_fini(session);
+            session = nullptr;
+        }
+    }
+    void Open (const std::string insetName, std::string insetType, bool inDebug = false) {
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "Ipset: opening instance %s of type %s", insetName.c_str(), insetType.c_str());
+        }
+        setName = insetName;
+        setType = insetType;
+        Debug = inDebug;
         ipset_load_types();
 
         session = ipset_session_init(printf);
@@ -76,14 +106,6 @@ public:
         uint8_t * ptr = (uint8_t *) ipset_data_get (data, IPSET_OPT_FAMILY);
         printf ("%d\n", *ptr);
         */
-
-    }
-
-    ~Ipset(void) {
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "Ipset: deleting instance");
-        }
-        ipset_session_fini(session);
     }
     bool Exists() {
          ipset_session_data_set(session, IPSET_SETNAME, setName.c_str());

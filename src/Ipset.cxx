@@ -23,7 +23,41 @@
 #include "Ipset.h"
 #include <iostream>
 #include <stdexcept>
+#include <string>
+#include <sstream>
+#include <fstream>
+#include <iterator>
 
+/*
+ * This should be defined in the libipset header files but is not
+ * We need it because we re-use IPset sessions through 'ipset_data_reset(session->data)'
+ * Unfortunately, there is also no definition available for IPSET_NEST_MAX so we hardcode
+ * nested array to 4 elements based on
+ */
+/*
+struct ipset_session {
+    const struct ipset_transport *  transport;
+    struct ipset_handle *   handle;
+    struct ipset_data *     data;
+    enum ipset_cmd  cmd;
+    uint32_t    lineno;
+    uint32_t    printed_set;
+    char    saved_setname [IPSET_MAXNAMELEN];
+    const struct ipset_type *   saved_type;
+    struct nlattr *     nested [4];
+    uint8_t     nestid;
+    bool    version_checked;
+    char    outbuf [IPSET_OUTBUFLEN];
+    enum ipset_output_mode  mode;
+    ipset_outfn     outfn;
+    char    report [IPSET_ERRORBUFLEN];
+    char *  errmsg;
+    char *  warnmsg;
+    uint8_t     envopts;
+    size_t  bufsize;
+    void *  buffer;
+};
+*/
 std::string getIpsetUuid (const std::string inUuid) {
     std::string res = "";
     std::stringstream ss;
@@ -48,7 +82,8 @@ std::string getIpsetName (const std::string inUuid, bool inSrc) {
     }
     res += getIpsetUuid(inUuid);
     return res;
-}
+    }
+
 
 bool Ipset::try_cmd(enum ipset_cmd cmd, const struct in_addr *addr, uint32_t timeout) {
     int r = ipset_session_data_set(session, IPSET_SETNAME, setName.c_str());
@@ -67,6 +102,8 @@ bool Ipset::try_cmd(enum ipset_cmd cmd, const struct in_addr *addr, uint32_t tim
     r = ipset_cmd(session, cmd, 0);
     /* assume that errors always occur if NOT in set. To do it otherwise,
      * see lib/session.c for IPSET_CMD_TEST in ipset_cmd */
+//    r = ipset_commit(session);
+//    ipset_data_reset(session->data);
     return r == 0;
 }
 
@@ -105,12 +142,12 @@ bool Ipset::try_cmd(enum ipset_cmd cmd, const MacAddress &Mac, uint32_t timeout)
             return false;
         }
     }
-    r = ipset_commit(session);
+//    r = ipset_commit(session);
+//    ipset_data_reset(session->data);
     /* assume that errors always occur if NOT in set. To do it otherwise,
      * see lib/session.c for IPSET_CMD_TEST in ipset_cmd */
     return r == 0;
 }
-
 bool Ipset::try_create() {
       const struct ipset_type *type;
       int r = ipset_session_data_set(session, IPSET_SETNAME, setName.c_str());
@@ -133,6 +170,8 @@ bool Ipset::try_create() {
           // ipset_session_data_set(session, IPSET_OPT_FAMILY, &family);
       }
       r = ipset_cmd(session, IPSET_CMD_CREATE, 0);
+//      r = ipset_commit(session);
+//      ipset_data_reset(session->data);
       return r == 0;
 }
 
