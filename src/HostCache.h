@@ -26,6 +26,7 @@
 #include <regex>
 #include <memory>
 #include <unordered_set>
+#include <set>
 
 #include "Host.h"
 #include "DeviceProfile.h"
@@ -47,6 +48,7 @@ private:
 	// These maps cache IPv4 & IPv6 addresses and CNAMEs for at least the TrafficReport interval
 	DnsIpCache <boost::asio::ip::address> dCip;
 	DnsCnameCache dCcname;
+	std::map<std::string,std::set<std::string>> FqdnDeviceProfileMap;
 
 	DeviceProfileMap dpMap;
 	InterfaceMap *ifMap;
@@ -88,10 +90,12 @@ public:
 	bool isWhitelisted(const std::string inAddress) { return (WhitelistedNodes.find(inAddress) != WhitelistedNodes.end()); }
 	bool isWhitelisted(Host &inHost) { return isWhitelisted(inHost.MacAddress_get()) || isWhitelisted(inHost.Ipv4Address_get()) || isWhitelisted(inHost.Ipv6Address_get()); }
 
+	// Matching hosts with device profiles
 	uint32_t Match();
 	bool MatchByMac(const MacAddress &inMacAddress);
 	bool MatchByIpAddress(const std::string inIpAddress);
 
+    // Adding collected information to a Host instance
 	bool AddByMac (const MacAddress inMacAddress, const std::string inIpAddress = "");
 	bool AddFlow (const std::string srcip, const uint16_t srcport, const std::string dstip, const uint16_t dstport, const uint8_t protocol, const uint32_t expiration);
 	bool AddDnsQueryIp (const std::string clientip, const std::string fqdn, const std::string ip, const uint32_t expire = 86400);
@@ -103,16 +107,19 @@ public:
 	std::shared_ptr<Host> FindHostByMac (const MacAddress &inMac);
 	std::shared_ptr<Host> FindOrCreateHostByMac (const MacAddress inMac, const std::string Uuid = "", const std::string inIp = "");
 
+	// Prune Hosts, DnsCache etc
 	uint32_t Prune (bool Force = false);
 
+	// Manage short-lived cache entries needed for matching DNS answers to DNS queries
 	void addorupdateDnsQueryCache (uint16_t id);
 	bool inDnsQueryCache (uint16_t id);
 	uint32_t pruneDnsQueryCache (bool Force = false);
 
 	// These functions are for the new DnsCache filled by the PacketSnoop class
-	void addorupdateDnsIpCache(std::string inFqdn, boost::asio::ip::address inIp, time_t inTtl = 604800) { dCip.addorupdateResourceRecord(inFqdn, inIp, inTtl); }
-	void addorupdateDnsCnameCache(std::string inFqdn, std::string inCname, time_t inTtl = 604800) { dCcname.addorupdateCname(inFqdn, inCname, inTtl);	}
+	void addorupdateDnsIpCache(std::string inFqdn, boost::asio::ip::address inIp, time_t inTtl = 604800);
+	void addorupdateDnsCnameCache(std::string inFqdn, std::string inCname, time_t inTtl = 604800);
 
+	// DnsCache persistence
 	bool exportDnsCache (const std::string filename);
     bool importDnsCache (const std::string filename);
 	uint32_t pruneDnsIpCache(bool Force = false) {
@@ -125,6 +132,7 @@ public:
         deletecount = dCcname.pruneCnames(Force);
         return deletecount;
     }
+
 	InterfaceMap * getInterfaceMap() { return ifMap; }
 	MacAddress MacLookup (const std::string inIpAddress, const int retries = 1);
 	MacAddress MacLookup (const std::string inIpAddress, const std::string inInterface, const int retries = 1);
@@ -138,7 +146,7 @@ public:
 	bool ExportDeviceProfileMatches(const std::string filename, const bool detailed = false);
 	bool ImportDeviceInfo (json &j);
 
-	uint32_t HostCount() { return hC.size(); }
+	// uint32_t HostCount() { return hC.size(); }
 	bool Debug_get() { return Debug; }
 };
 

@@ -775,6 +775,21 @@ bool HostCache::importDnsCache (const std::string filename) {
     return false;
 }
 
+void HostCache::addorupdateDnsIpCache(std::string inFqdn, boost::asio::ip::address inIp, time_t inTtl) {
+    dCip.addorupdateResourceRecord(inFqdn, inIp, inTtl);
+    for (auto uuid_it = FqdnDeviceProfileMap.begin(); uuid_it != FqdnDeviceProfileMap.end(); uuid_it++) {
+        auto DeviceProfile_it = dpMap.find(uuid_it->first);
+        if (DeviceProfile_it == dpMap.end()) {
+            throw std::runtime_error("FqdnDeviceProfileMap contains Device Profile UUID that no longer exists");
+        }
+        DeviceProfile_it->second->addDestination(inIp, inTtl);
+    }
+}
+
+void HostCache::addorupdateDnsCnameCache(std::string inFqdn, std::string inCname, time_t inTtl) {
+    dCcname.addorupdateCname(inFqdn, inCname, inTtl);
+}
+
 bool HostCache::ImportDeviceInfo (json &j) {
 	std::string DeviceProfileUuid;
 	if (j.find("DeviceProfileUuid") == j.end()) {
@@ -813,10 +828,10 @@ bool HostCache::ImportDeviceInfo (json &j) {
 	if (Debug == true) {
 		syslog(LOG_DEBUG, "HostCache: Importing Device Profile for UUID %s with MacAddress %s", DeviceProfileUuid.c_str(), MacAddressString.c_str());
 	}
-	std::string IpAddress = "";
+	std::string Ipv4Address = "";
 	if (j.find("Ipv4Address") != j.end()) {
 		if (j["Ipv4Address"].is_string()) {
-			IpAddress = j["Ipv4Address"].get<std::string>();
+			Ipv4Address = j["Ipv4Address"].get<std::string>();
 		}
 	}
 
@@ -829,21 +844,26 @@ bool HostCache::ImportDeviceInfo (json &j) {
 			return false;
 		}
 	}
-	if (not FindOrCreateHostByMac(Mac, DeviceProfileUuid, IpAddress)) {
+	if (not FindOrCreateHostByMac(Mac, DeviceProfileUuid, Ipv4Address)) {
 		syslog(LOG_WARNING, "HostCache: Failed to create Host with MacAddress %s and uuid %s", MacAddressString.c_str(), DeviceProfileUuid.c_str());
 		return false;
 	}
-	/*
-	try {
-	    std::string IpsetName = getIpsetName(DeviceProfileUuid, true);
 
+	try {
+	    auto it = dpMap.find(DeviceProfileUuid);
+	    if (it == dpMap.end()) {
+	        syslog (LOG_NOTICE, "Importing device with non-existing Device Profile UUID");
+	        return false;
+	    }
+	    it->second->addHost(Mac);
 	} catch (...) {
-	    syslog (LOG_ERR, "HostCache: Ipset %s does not existing during import of DeviceMatches", IpsetName.c_str());
+	    syslog (LOG_ERR, "HostCache: Ipset host:mac does not exist for device profile %s during import of DeviceMatches", DeviceProfileUuid.c_str());
 	}
-	*/
 	return true;
 }
 
+// FIXME: need to remove IPsets for DeviceProfiles that no longer are specified in the DeviceProfiles file
+// FIXME: need to recreate AllowedEndpoint IPsets for DeviceProfiles that have a new / higher version number
 
 uint32_t HostCache::DeviceProfiles_load(const std::string filename) {
 	if (Debug == true) {

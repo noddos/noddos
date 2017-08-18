@@ -87,7 +87,7 @@ int main () {
 
 bool do_dpimport_test() {
 	InterfaceMap ifMap;
-	HostCache hC(ifMap, 0, true);
+	HostCache hC(ifMap, "", 0, true);
 	auto  matches = hC.ImportDeviceProfileMatches("tests/DeviceMatches.json");
 	if (matches != 9) {
 		std::cout << "Test failure: Expected 9 imported device profiles but got " << matches << std::endl;
