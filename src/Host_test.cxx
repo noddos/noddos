@@ -36,7 +36,7 @@ int main () {
 	openlog("Host_test", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
 	InterfaceMap ifMap;
 	HostCache hC(ifMap, "", 0, true);
-	hC.DeviceProfiles_load(deviceprofilesfile);
+	hC.loadDeviceProfiles(deviceprofilesfile);
 	hC.AddByMac (MacAddress("00:00:00:00:00:01"), "192.168.1.232");
 	hC.AddByMac (MacAddress("00:00:00:00:00:02"), "192.168.1.98");
 	hC.AddByMac (MacAddress("00:00:00:00:00:03"), "192.168.1.99");

@@ -38,6 +38,9 @@
 #include "DnsCache.h"
 #include "noddos.h"
 
+
+
+
 class HostCache {
 private:
 	std::map<unsigned long long, std::shared_ptr<Host>> hC; 	// map from Mac to Host
@@ -48,7 +51,7 @@ private:
 	// These maps cache IPv4 & IPv6 addresses and CNAMEs for at least the TrafficReport interval
 	DnsIpCache <boost::asio::ip::address> dCip;
 	DnsCnameCache dCcname;
-	std::map<std::string,std::set<std::string>> FqdnDeviceProfileMap;
+	std::map<std::string,std::set<std::shared_ptr<DeviceProfile>>> FqdnDeviceProfileMap;
 
 	DeviceProfileMap dpMap;
 	InterfaceMap *ifMap;
@@ -83,8 +86,10 @@ public:
 		}
 	}
 
-	uint32_t DeviceProfiles_load(const std::string filename);
-	const DeviceProfileMap & DeviceProfiles_getmap() { return dpMap; };
+	uint32_t loadDeviceProfiles(const std::string filename);
+	bool removeDeviceProfile(const std::string inUuid);
+	const DeviceProfileMap & getDeviceProfilesMap() { return dpMap; };
+
 
 	uint32_t Whitelists_set (const std::unordered_set<std::string>& inIpv4Addresses, const std::unordered_set<std::string>& inIpv6Addresses, const std::unordered_set<std::string>& inMacAddresses);
 	bool isWhitelisted(const std::string inAddress) { return (WhitelistedNodes.find(inAddress) != WhitelistedNodes.end()); }
@@ -116,21 +121,25 @@ public:
 	uint32_t pruneDnsQueryCache (bool Force = false);
 
 	// These functions are for the new DnsCache filled by the PacketSnoop class
-	void addorupdateDnsIpCache(std::string inFqdn, boost::asio::ip::address inIp, time_t inTtl = 604800);
-	void addorupdateDnsCnameCache(std::string inFqdn, std::string inCname, time_t inTtl = 604800);
+	void addorupdateDnsIpCache(const std::string inFqdn, const boost::asio::ip::address inIp, time_t inTtl = 604800);
+	void addorupdateDnsCnameCache(const std::string inFqdn, const std::string inCname, time_t inTtl = 604800);
 
 	// DnsCache persistence
 	bool exportDnsCache (const std::string filename);
     bool importDnsCache (const std::string filename);
 	uint32_t pruneDnsIpCache(bool Force = false) {
-		uint32_t deletecount = 0;
-		deletecount = dCip.pruneResourceRecords(Force);
-		return deletecount;
+		std::set<std::string> PrunedFqdns = dCip.pruneResourceRecords(Force);
+		for(auto Fqdn: PrunedFqdns) {
+		    FqdnDeviceProfileMap.erase(Fqdn);
+		}
+		return PrunedFqdns.size();
 	}
     uint32_t pruneDnsCnameCache(bool Force = false) {
-        uint32_t deletecount = 0;
-        deletecount = dCcname.pruneCnames(Force);
-        return deletecount;
+        std::set<std::string> PrunedCnames = dCcname.pruneCnames(Force);
+        for(auto Cname: PrunedCnames) {
+            FqdnDeviceProfileMap.erase(Cname);
+        }
+        return PrunedCnames.size();
     }
 
 	InterfaceMap * getInterfaceMap() { return ifMap; }

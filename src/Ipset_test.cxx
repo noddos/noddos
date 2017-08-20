@@ -40,8 +40,7 @@ int main(int argc, char** argv) {
     i.Open("noddostestv4", "hash:ip", true, true);
 
     boost::asio::ip::address ipfirst = boost::asio::ip::address::from_string("192.168.1.1");
-    struct in_addr sin;
-    inet_aton ("192.168.1.1", &sin);
+
     if (i.Add(ipfirst) == false ) {
         testfailed = 1;
         std::cout << "Failed to add IP address to hash:ip ipset" << std::endl;
@@ -60,7 +59,6 @@ int main(int argc, char** argv) {
         }
     }
     boost::asio::ip::address ipthird = boost::asio::ip::address::from_string("192.168.1.3");    struct in_addr sin3;
-    inet_aton ("192.168.3.3", &sin3);
     if (i.Add(ipthird) == false ) {
         testfailed = 1;
         std::cout << "Failed to add 3rd IP address to hash:ip ipset" << std::endl;
@@ -100,26 +98,30 @@ int main(int argc, char** argv) {
         }
     }
 
-    Ipset j("noddostest2", "hash:ip", NFPROTO_IPV4, true);
 
-    struct in_addr sin2;
-    inet_aton ("192.168.2.2", &sin2);
-    if (j.Add(&sin2) == false ) {
+    Ipset j("noddostest2", "hash:ip", NFPROTO_IPV4, true);
+    boost::asio::ip::address ipfourth = boost::asio::ip::address::from_string("192.168.1.1");
+
+    if (j.Add(ipfourth) == false ) {
         testfailed = 1;
         std::cout << "Failed to add IP address to second hash:ip ipset" << std::endl;
     } else {
         std::cout << "Added IP address to second hash:ip ipset" << std::endl;
-        if (j.In(&sin2) == false) {
+        if (j.In(ipfourth) == false) {
             testfailed = 1;
             std::cout << "Couldn't find IP address in second hash:ip ipset" << std::endl;
         } else {
-            if (j.Remove(&sin2) == false) {
+            if (j.Remove(ipfourth) == false) {
                 testfailed = 1;
                 std::cout << "Couldn't remove IP address from second hash:ip ipset" << std::endl;
             } else {
                 std::cout << "Removed IP address from second hash:ip ipset" << std::endl;
             }
         }
+    }
+    if (j.Destroy() == false) {
+        testfailed = 1;
+        std::cout << "Couldn't destroy hash:ip ipset" << std::endl;
     }
 
     // disable hash:mac test as it requires an existing ipset hash:map to exist

@@ -63,8 +63,16 @@ uint32_t HostCache::Prune (bool Force) {
 	}
 	uint32_t prunedhosts = 0;
 	for (auto it : hC) {
+        std::string mac = it.second->MacAddress_get();
+        std::string uuid = it.second->Uuid_get();
 		if (it.second->Prune(Force)) {
-			prunedhosts++;
+			if(uuid != "") {
+			    auto it = dpMap.find(uuid);
+			    if (it != dpMap.end()) {
+			        it->second->removeHost(mac);
+			    }
+			}
+		    prunedhosts++;
 		}
 	}
 	if (Debug == true) {
@@ -775,19 +783,48 @@ bool HostCache::importDnsCache (const std::string filename) {
     return false;
 }
 
-void HostCache::addorupdateDnsIpCache(std::string inFqdn, boost::asio::ip::address inIp, time_t inTtl) {
+void HostCache::addorupdateDnsIpCache(const std::string inFqdn, const boost::asio::ip::address inIp, time_t inTtl) {
     dCip.addorupdateResourceRecord(inFqdn, inIp, inTtl);
-    for (auto uuid_it = FqdnDeviceProfileMap.begin(); uuid_it != FqdnDeviceProfileMap.end(); uuid_it++) {
-        auto DeviceProfile_it = dpMap.find(uuid_it->first);
-        if (DeviceProfile_it == dpMap.end()) {
-            throw std::runtime_error("FqdnDeviceProfileMap contains Device Profile UUID that no longer exists");
-        }
-        DeviceProfile_it->second->addDestination(inIp, inTtl);
+    auto it = FqdnDeviceProfileMap.find(inFqdn);
+    if (it == FqdnDeviceProfileMap.end()) {
+        return;
+    }
+    for (auto DeviceProfile_sharedpointer_it: it->second) {
+        DeviceProfile_sharedpointer_it->addDestination(inIp, inTtl);
     }
 }
 
-void HostCache::addorupdateDnsCnameCache(std::string inFqdn, std::string inCname, time_t inTtl) {
+void HostCache::addorupdateDnsCnameCache(const std::string inFqdn, const std::string inCname, time_t inTtl) {
     dCcname.addorupdateCname(inFqdn, inCname, inTtl);
+    auto it = FqdnDeviceProfileMap.find(inFqdn);
+    if (it == FqdnDeviceProfileMap.end()) {
+        return;
+    }
+    // All traffic allowed to a FQDN is also allowed to its CNAME
+    // so if subsequently an A record is received for the CNAME,
+    // the ipsets for the device profiles must be updated
+    FqdnDeviceProfileMap[inCname].insert(it->second.begin(), it->second.end());
+}
+
+bool HostCache::removeDeviceProfile(const std::string inUuid) {
+    auto dp_it = dpMap.find(inUuid);
+    if (dp_it == dpMap.end()) {
+        throw std::runtime_error ("Device Profile " + inUuid + " not found");
+    }
+    std::set<std::string> dpFqdns = dp_it->second->getDestinations();
+    for (auto Fqdn: dpFqdns) {
+        std::string cname = Fqdn;
+        try {
+            while (1) {
+                auto fdpmap_it = FqdnDeviceProfileMap.find(cname);
+                if (fdpmap_it != FqdnDeviceProfileMap.end()) {
+                    fdpmap_it->second.erase(dp_it->second);
+                }
+                cname = dCcname.lookupCname(cname);
+            }
+        } catch (std::runtime_error &error) {}
+    }
+    return false;
 }
 
 bool HostCache::ImportDeviceInfo (json &j) {
@@ -865,7 +902,7 @@ bool HostCache::ImportDeviceInfo (json &j) {
 // FIXME: need to remove IPsets for DeviceProfiles that no longer are specified in the DeviceProfiles file
 // FIXME: need to recreate AllowedEndpoint IPsets for DeviceProfiles that have a new / higher version number
 
-uint32_t HostCache::DeviceProfiles_load(const std::string filename) {
+uint32_t HostCache::loadDeviceProfiles(const std::string filename) {
 	if (Debug == true) {
 		syslog(LOG_DEBUG, "HostCache: Opening & reading %s", filename.c_str());
 	}

@@ -36,7 +36,7 @@ std::string getIpsetUuid (const std::string inUuid) {
     std::string item;
     uint8_t count = 0;
     while (std::getline(ss, item, '-')) {
-        if (count == 0) {
+        if (count != 0) {
             res += item;
         }
         count++;
@@ -58,12 +58,104 @@ std::string getIpsetName (const std::string inUuid, bool inSrc, bool inIpv4) {
     }
     res += getIpsetUuid(inUuid);
     return res;
+}
+
+void Ipset::Open (const std::string inIpsetName, std::string inIpsetType, bool inisIpsetv4, bool inDebug) {
+    Debug = inDebug;
+    if (Debug == true) {
+        syslog (LOG_DEBUG, "Ipset: opening instance %s of type %s", inIpsetName.c_str(), inIpsetType.c_str());
     }
+    ipsetName = inIpsetName;
+    ipsetType = inIpsetType;
+    isIpsetv4 = inisIpsetv4;
+    ipset_load_types();
+
+    session = ipset_session_init(printf);
+    if (session == nullptr) {
+        throw std::runtime_error ("Cannot initialize ipset session.");
+    }
+
+    if (ipset_envopt_parse(session, IPSET_ENV_EXIST, NULL) < 0) {
+        throw std::runtime_error ("Can't set environment option.");
+    }
+    if (Exists()) {
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "Not creating set %s as it already exists", ipsetName.c_str());
+        }
+        return;
+    }
+
+    uint32_t timeout;
+
+    if (ipset_session_data_set(session, IPSET_SETNAME, ipsetName.c_str()) < 0) {
+        throw std::runtime_error("Can't set setname " + ipsetName + ": " + ipset_session_error(session));
+    }
+    if (ipset_session_data_set(session, IPSET_OPT_TYPENAME, ipsetType.c_str()) < 0) {
+        throw std::runtime_error("Can't set type " + ipsetType + ": " + ipset_session_error(session));
+    }
+    const struct ipset_type *type = ipset_type_get(session, IPSET_CMD_CREATE);
+    if (type == NULL) {
+        throw std::runtime_error("Can't create ipset " + ipsetName + ": " + ipset_session_error(session));
+    }
+
+    timeout = 0; /* default to infinity */
+    if (ipset_session_data_set(session, IPSET_OPT_TIMEOUT, &timeout) < 0) {
+        throw std::runtime_error("Can't set time-out " + ipsetName + ": " + ipset_session_error(session));
+    }
+    if (ipset_session_data_set(session, IPSET_OPT_TYPE, type)) {
+        throw std::runtime_error("Can't set ipset type: " + ipsetName + ": " + ipset_session_error(session));
+    }
+    uint8_t family = 0;
+    if (ipsetType == "hash:ip" && isIpsetv4 == true) {
+        family = NFPROTO_IPV4;
+    } else if (ipsetType == "hash:ip" && isIpsetv4 == false) {
+        family = NFPROTO_IPV6;
+    } else if (ipsetType == "hash:mac") {
+        family = NFPROTO_UNSPEC;
+     } else {
+        throw std::invalid_argument("Unknown ipset data type " + ipsetType);
+    }
+    ipset_session_data_set(session, IPSET_OPT_FAMILY, &family);
+
+    if (ipset_session_data_set(session, IPSET_OPT_FAMILY, &family) < 0) {
+        throw std::runtime_error("Cannot set ipset family: " + ipsetName + ": " + ipset_session_error(session));
+    }
+
+    if (ipset_cmd(session, IPSET_CMD_CREATE, /*lineno*/ 0)) {
+        throw std::runtime_error("Failed to create ipset " + ipsetName + ": " + ipset_session_error(session));
+    }
+    // ipset_commit(session);
+    // ipset_data_reset(session->data);
+}
+
+
+bool Ipset::ipset_exec(enum ipset_cmd cmd) {
+
+    if (Debug == true) {
+        syslog(LOG_DEBUG, "Ipset: received command %d for ipset %s", cmd, ipsetName.c_str());
+    }
+    int r = ipset_session_data_set(session, IPSET_SETNAME, ipsetName.c_str());
+
+    /* The below check actually fails but it doesn't seem to be needed
+    const struct ipset_type *type = ipset_type_get(session, cmd);
+    if (type == nullptr) {
+         return false;
+    }
+    */
+
+    r = ipset_cmd(session, cmd, 0);
+//    r = ipset_commit(session);
+//    ipset_data_reset(session->data);
+    return r == 0;
+}
 
 bool Ipset::ipset_exec(enum ipset_cmd cmd, const boost::asio::ip::address &inIpAddress, uint32_t timeout) {
 
     int r = ipset_session_data_set(session, IPSET_SETNAME, ipsetName.c_str());
 
+    if (Debug == true) {
+        syslog(LOG_DEBUG, "Ipset: received command %d for IP address %s for ipset %s", cmd, inIpAddress.to_string().c_str(), ipsetName.c_str());
+    }
     const struct ipset_type *type = ipset_type_get(session, cmd);
     if (type == NULL) {
          return false;
@@ -92,7 +184,10 @@ bool Ipset::ipset_exec(enum ipset_cmd cmd, const boost::asio::ip::address &inIpA
     return r == 0;
 }
 
-bool Ipset::ipset_exec(enum ipset_cmd cmd, const MacAddress &Mac, uint32_t timeout) {
+bool Ipset::ipset_exec(enum ipset_cmd cmd, const std::string Mac, uint32_t timeout) {
+    if (Debug == true) {
+        syslog(LOG_DEBUG, "Ipset: received command %d for MAC address %s for ipset %s", cmd, Mac.c_str(), ipsetName.c_str());
+    }
     int r;
     r = ipset_session_data_set(session, IPSET_SETNAME, ipsetName.c_str());
 

@@ -49,7 +49,7 @@ bool Host::Match(const DeviceProfileMap& dpMap) {
 	if (isMatched()) {
 		auto it = dpMap.find(Uuid);
 		if (it != dpMap.end()) {
-			if (matchversion > it->second->DeviceProfileVersion_get()) {
+			if (matchversion > it->second->getDeviceProfileVersion()) {
 				return true;
 			}
 		}
@@ -63,7 +63,7 @@ bool Host::Match(const DeviceProfileMap& dpMap) {
 		auto &dp = *(kv.second);
 		auto match = Match(dp);
 		if (match > bestmatch) {
-			UploadStats = kv.second->UploadStats_get();
+			UploadStats = kv.second->getUploadStats();
 			bestmatch = match;
 			matcheduuid = kv.first;
 			matchversion = time(nullptr);
@@ -80,7 +80,7 @@ bool Host::Match(const DeviceProfileMap& dpMap) {
 
 ConfidenceLevel Host::Match(const DeviceProfile& dp) {
 	ConfidenceLevel bestmatch = ConfidenceLevel::None;
-	auto v = dp.Identifiers_get();
+	auto v = dp.getIdentifiers();
 	for (auto& i : v) {
 		if(Debug) {
 			syslog (LOG_DEBUG, "Testing identifier");
@@ -277,7 +277,7 @@ bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportPriva
 			}
 			std::vector<std::string> fqdns = dCip.getAllFqdns(ip);
 			for (auto &itf : fqdns) {
-				std::string fqdn = dCcname.lookupCname(itf);
+				std::string fqdn = dCcname.resolveCname(itf);
                 if (Debug) {
                     syslog (LOG_DEBUG, "Reverse resolved %s to %s, might have CNAME %s", ip.to_string().c_str(), itf.c_str(), fqdn.c_str());
                 }

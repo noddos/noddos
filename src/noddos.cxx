@@ -103,7 +103,7 @@ int main(int argc, char** argv) {
 	// Set up HostCache instance
 	//
 	HostCache hC(ifMap, config.DnsCacheFile, config.TrafficReportInterval, config.Debug);
-	hC.DeviceProfiles_load(config.DeviceProfilesFile);
+	hC.loadDeviceProfiles(config.DeviceProfilesFile);
 	hC.ImportDeviceProfileMatches(config.MatchFile);
 	hC.Whitelists_set(config.WhitelistedIpv4Addresses, config.WhitelistedIpv6Addresses, config.WhitelistedMacAddresses);
 
@@ -219,7 +219,7 @@ int main(int argc, char** argv) {
 					} else if (si.ssi_signo == SIGHUP) {
 						syslog(LOG_INFO, "Noddos: Processing signal event SIGHUP");
 						config.Load(configfile);
-						hC.DeviceProfiles_load(config.DeviceProfilesFile);
+						hC.loadDeviceProfiles(config.DeviceProfilesFile);
 					} else if (si.ssi_signo == SIGUSR1) {
 						syslog(LOG_INFO, "Noddos: Processing signal event SIGUSR1");
 						hC.Match();

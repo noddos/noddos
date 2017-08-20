@@ -26,6 +26,7 @@
 #include <map>
 #include <vector>
 #include <unordered_set>
+#include <set>
 #include "syslog.h"
 #include "boost/asio.hpp"
 
@@ -70,12 +71,12 @@ public:
         DnsCache[cname] = std::make_pair(fqdn, now + Ttl);
     }
 
-    std::string lookupCname (const std::string inCname, const uint8_t recdepth = 0) const {
+    std::string resolveCname (const std::string inCname, const uint8_t recdepth = 0) const {
         if (recdepth > 5) {
             return inCname;
         }
         if (Debug == true) {
-            syslog (LOG_DEBUG, "DnsCnameCache: Seeing if %s is a CNAME", inCname.c_str());
+            syslog (LOG_DEBUG, "DnsCnameCache: Resolving CNAME %s ", inCname.c_str());
         }
         std::string cname = inCname;
         std::transform(cname.begin(), cname.end(), cname.begin(), ::tolower);
@@ -85,10 +86,24 @@ public:
             if (Debug == true) {
                 syslog (LOG_DEBUG, "DnsCnameCache: Found reverse CNAME from %s to %s", cname.c_str(), it->second.first.c_str());
             }
-            return lookupCname(it->second.first, recdepth + 1);
+            return resolveCname(it->second.first, recdepth + 1);
         } else {
             return inCname;
         }
+    }
+
+    std::string lookupCname (const std::string inCname) {
+        std::string cname = inCname;
+        std::transform(cname.begin(), cname.end(), cname.begin(), ::tolower);
+
+        auto it = DnsCache.find(cname);
+        if (it == DnsCache.end()) {
+            if (Debug == true) {
+                syslog (LOG_DEBUG, "DnsCnameCache: %s does not have a CNAME", cname.c_str());
+            }
+            throw std::runtime_error("No CNAME found for " + inCname);
+        }
+        return it->second.first;
     }
 
     size_t importJson (json &j) {
@@ -123,11 +138,11 @@ public:
         }
         return dnsRecords;
     }
-    size_t pruneCnames (const bool Force = false) {
+    std::set<std::string> pruneCnames (const bool Force = false) {
         if (Debug == true) {
             syslog (LOG_DEBUG, "DnsCnameCache: pruning cnames");
         }
-        size_t deleted = 0;
+        std::set<std::string> PrunedFqdns;
         auto now = time(nullptr);
         auto it = DnsCache.begin();
         while (it != DnsCache.end()) {
@@ -135,13 +150,13 @@ public:
                 if (Debug == true) {
                     syslog (LOG_DEBUG, "Deleting CNAME for %s pointing to %s with TTL %lu", it->first.c_str(), it->second.first.c_str(), it->second.second);
                 }
+                PrunedFqdns.insert(it->first);
                 it = DnsCache.erase(it);
-                deleted++;
             } else {
                 it++;
             }
         }
-        return deleted;
+        return PrunedFqdns;
     }
 };
 
@@ -246,8 +261,8 @@ public:
 		}
 		return fqdns;
 	}
-	uint32_t pruneResourceRecords (const bool Force = false) {
-		uint32_t deletecount = 0;
+	std::set<std::string> pruneResourceRecords (const bool Force = false) {
+		std::set<std::string> PrunedFqdns;
 		auto now = time(nullptr);
 		{
 			auto it_resource = DnsFwdCache.begin();
@@ -260,7 +275,6 @@ public:
 									it_resource->first.c_str(), it_record->first.to_string().c_str(), it_record->second, now);
 						}
 						it_record = it_resource->second.erase(it_record);
-						deletecount++;
 					} else {
 						it_record++;
 					}
@@ -269,6 +283,7 @@ public:
 					if (Debug == true) {
 						syslog(LOG_DEBUG, "DnsIpCache: Removing record for %s as there is no data left", it_resource->first.c_str());
 					}
+					PrunedFqdns.insert(it_resource->first);
 					it_resource = DnsFwdCache.erase(it_resource);
 					if (Debug == true) {
 						syslog(LOG_DEBUG, "DnsIpCache: Deleted record");
@@ -289,7 +304,6 @@ public:
 									it_resource->first.to_string().c_str(), it_record->first.c_str(), it_record->second, now);
 						}
                         it_record = it_resource->second.erase(it_record);
-						deletecount++;
 					} else {
 						it_record++;
 					}
@@ -307,7 +321,7 @@ public:
 				}
 			}
 		}
-		return deletecount;
+		return PrunedFqdns;
 	}
 
 };
