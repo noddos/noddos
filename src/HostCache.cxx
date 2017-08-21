@@ -393,9 +393,8 @@ uint32_t HostCache::getInterfaceIpAddresses() {
     // can free list later
 
     for (ifa = ifaddr, n = 0; ifa != NULL; ifa = ifa->ifa_next, n++) {
-        if (ifa->ifa_addr == NULL) {
-            freeifaddrs(ifaddr);
-            continue;
+        if (ifa->ifa_addr == nullptr || ifa->ifa_name == nullptr || ifa->ifa_name == "") {
+             continue;
         }
         family = ifa->ifa_addr->sa_family;
 
