@@ -36,13 +36,13 @@ public:
 	MacAddress Mac;
 	std::string IpAddress;
 
-	DhcpRequest(const time_t inExpiration = DHCPDEFAULTEXPIRATION) { Expiration_set(inExpiration); }
+	DhcpRequest(const time_t inExpiration = DHCPDEFAULTEXPIRATION) { setExpiration(inExpiration); }
 
 	// iCache interface methods.
-    time_t Expiration_set (time_t inExpiration = DHCPDEFAULTEXPIRATION) {
+    time_t setExpiration (time_t inExpiration = DHCPDEFAULTEXPIRATION) {
     	return iCache::Expires = time(nullptr) + inExpiration;
     }
-    time_t Expiration_get () { return iCache::Expires; }
+    time_t getExpiration () { return iCache::Expires; }
     bool isExpired() { return time(nullptr) >= iCache::Expires; }
     uint32_t Prune (bool Force = false) { return 0; }
 

@@ -188,7 +188,7 @@ int main(int argc, char** argv) {
                     (not epoll_events[ev].events & EPOLLIN)) {
 				syslog(LOG_ERR, "Noddos: Epoll event error for FD %d", epoll_events[ev].data.fd);
 				epollmap.erase(epoll_events[ev].data.fd);
-				if (epoll_events[ev].data.fd == ft.GetFileHandle() && geteuid() == 0) {
+				if (epoll_events[ev].data.fd == ft.getFileHandle() && geteuid() == 0) {
 					ft.Close();
 					ft.Open();
 			    	add_epoll_filehandle(epfd, epollmap, ft);
@@ -241,7 +241,7 @@ int main(int argc, char** argv) {
 					setup_signal_fd(sfd);
 				} else {
 					iDeviceInfoSource &i = *(epollmap[epoll_events[ev].data.fd]);
-					i.ProcessEvent(epoll_events[ev]);
+					i.processEvent(epoll_events[ev]);
 				}
 				auto t = time(nullptr);
 				if (t > NextMatch) {
@@ -296,7 +296,7 @@ exitprog:
 bool add_epoll_filehandle(int epfd, std::map<int,iDeviceInfoSource*> &epollmap, iDeviceInfoSource& i) {
 	struct epoll_event event;
     memset (&event, 0, sizeof (event));
-	event.data.fd = i.GetFileHandle();
+	event.data.fd = i.getFileHandle();
     event.events = EPOLLIN | EPOLLET;
     if (epoll_ctl(epfd, EPOLL_CTL_ADD, event.data.fd, &event) < 0) {
     	syslog(LOG_ERR, "Noddos: Can't add file handle to epoll");
@@ -381,7 +381,11 @@ bool drop_process_privileges(Config &inConfig) {
 
 
 bool daemonize (Config &inConfig) {
-	std::ifstream ifs(inConfig.PidFile);
+    std::ifstream ifs;
+    try {
+	    ifs.open(inConfig.PidFile);
+	} catch (...) {
+	}
 	std::string origpid;
 	if (ifs.is_open()) {
 		ifs >> origpid;
@@ -389,12 +393,12 @@ bool daemonize (Config &inConfig) {
 		fprintf (stderr, "Checking if pid file %s exists\n", pidprocpath.c_str());
 		struct stat buf;
 		if (stat (pidprocpath.c_str(), &buf) == 0) {
-		    throw std::runtime_error ("Pid file %s exists and contains PID of a running process" + inConfig.PidFile);
+		    throw std::runtime_error ("Pid file " + inConfig.PidFile + " exists and contains PID of a running process ");
 		}
 		fprintf (stderr, "Deleting stale pid file %s\n", pidprocpath.c_str());
 		unlink(inConfig.PidFile.c_str());
+		ifs.close();
 	}
-	ifs.close();
 
 	// Define variables
 	pid_t pid, sid;
@@ -403,7 +407,8 @@ bool daemonize (Config &inConfig) {
 	pid = fork();
 	// The parent process continues with a process ID greater than 0
 	if(pid > 0)	{
-	    throw std::system_error(errno, std::system_category());
+	    fprintf (stderr, "We've forked so existing parent process\n");
+	    exit(0);
 	}
 	// A process ID lower than 0 indicates a failure in either process
 	else if(pid < 0) {

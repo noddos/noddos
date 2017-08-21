@@ -53,7 +53,7 @@ int main()
 
 	HostCache hC(ifMap, 0, true);
     PacketSnoop ps(hC, true);
-    int sock_raw = ps.GetFileHandle();
+    int sock_raw = ps.getFileHandle();
 
     while(1)
     {

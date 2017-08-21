@@ -223,14 +223,14 @@ public:
 		return true;
 	}
 
-	virtual int GetFileHandle() {
+	virtual int getFileHandle() {
 		if (useNfct == false) {
 			return fileno(ctFilePointer);
 		}
 		return nfct_fd(h);
 	}
 
-	virtual bool ProcessEvent(struct epoll_event &event) {
+	virtual bool processEvent(struct epoll_event &event) {
 		char buf [24];
 		auto rawtime = time (nullptr);
 		struct tm * timeinfo = localtime (&rawtime);

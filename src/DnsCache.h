@@ -50,7 +50,7 @@ public:
         }
     };
 
-    void debug_set (bool inDebug) {
+    void setDebug (bool inDebug) {
         Debug = inDebug;
     }
     void addorupdateCname (const std::string inFqdn, const std::string inCname, const time_t inTtl=604800) {
@@ -197,7 +197,7 @@ public:
 		DnsRevCache[inIpAddress].insert(std::make_pair(inFqdn, now + Ttl));
 	}
 
-	void debug_set (bool inDebug) {
+	void setDebug (bool inDebug) {
 		Debug = inDebug;
 	}
 

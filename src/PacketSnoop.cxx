@@ -179,7 +179,7 @@ bool PacketSnoop::Close () {
     return false;
 }
 
-bool PacketSnoop::ProcessEvent(struct epoll_event &event) {
+bool PacketSnoop::processEvent(struct epoll_event &event) {
     int ret;
     if (Debug) {
         syslog (LOG_DEBUG, "PacketSnoop: Received AF_PACKET event");
@@ -610,6 +610,9 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
                     }
                     break;
                 default:
+                    if (Debug == true) {
+                        syslog(LOG_DEBUG, "PacketSnoop: unhandled resource record: %s", dnsdata.c_str());
+                    }
                     break;
                 }
             } else {

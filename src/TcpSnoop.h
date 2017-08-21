@@ -99,7 +99,7 @@ public:
 		uint16_t tcpPayloadLength = size - dataOffset;
 
 		if (Debug == true) {
-			syslog (LOG_DEBUG, "Parsing packet of size %u (header %u), sequence number %u, flags fin: %u, syn %u, rst %u, push %u, ack %u",
+			syslog (LOG_DEBUG, "TcpSnoop: Parsing packet of size %u (header %u), sequence number %u, flags fin: %u, syn %u, rst %u, push %u, ack %u",
 				size, dataOffset, packetSequenceNumber, finFlag, synFlag, rstFlag, pushFlag, ackFlag);
 		}
 
@@ -132,7 +132,7 @@ public:
 			dnsMessageLength = (firstByte << 8) + secondByte;
 			firstPacketOffset += 2;
 			if (Debug == true) {
-				syslog (LOG_DEBUG, "DNS Message length %u", dnsMessageLength);
+				syslog (LOG_DEBUG, "TcpSnoop: DNS Message length %u", dnsMessageLength);
 			}
 		}
 

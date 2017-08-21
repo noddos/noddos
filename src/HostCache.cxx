@@ -400,9 +400,8 @@ uint32_t HostCache::getInterfaceIpAddresses() {
     // Walk through linked list, maintaining head pointer so we
     // can free list later
 
-    for (ifa = ifaddr, n = 0; ifa != NULL; ifa = ifa->ifa_next, n++) {
-        if (ifa->ifa_addr == NULL) {
-            freeifaddrs(ifaddr);
+    for (ifa = ifaddr, n = 0; ifa != nullptr; ifa = ifa->ifa_next, n++) {
+        if (ifa->ifa_addr == nullptr || ifa->ifa_name == nullptr || ifa->ifa_name == "") {
             continue;
         }
         family = ifa->ifa_addr->sa_family;

@@ -74,8 +74,8 @@ public:
 		arp_rx = std::regex(R"delim(^(\d\S+)\s+?\S+?\s+?\S+?\s+?\s+?(\S+)\s+?\S+?\W+?(\S+?)$)delim",
         	std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
 		getInterfaceIpAddresses();
-		dCip.debug_set(Debug);
-		dCcname.debug_set(Debug);
+		dCip.setDebug(Debug);
+		dCcname.setDebug(Debug);
 		if (inDnsCacheFilename != "") {
 		    importDnsCache(inDnsCacheFilename);
 		}

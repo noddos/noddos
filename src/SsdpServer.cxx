@@ -36,7 +36,7 @@
 #define MSGBUFSIZE 10000
 
 
-bool SsdpServer::ProcessEvent (struct epoll_event &event) {
+bool SsdpServer::processEvent (struct epoll_event &event) {
 	if (socket_fd != event.data.fd) {
 		syslog(LOG_CRIT, "SsdpServer: Mismatch in socket FD between class object and epoll event");
 	}
@@ -180,5 +180,5 @@ bool SsdpServer::Close() {
 	return false;
 }
 
-int SsdpServer::GetFileHandle () { return socket_fd; }
+int SsdpServer::getFileHandle () { return socket_fd; }
 
