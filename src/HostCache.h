@@ -58,6 +58,7 @@ private:
 	std::regex arp_rx, dev_rx;
 	std::unordered_set<std::string> WhitelistedNodes;
 	bool Debug;
+	// FIXME: We don't actually use the data in below sets anymore
 	std::unordered_set<std::string> LocalInterfaces;
 	std::unordered_set<std::string> LocalIpAddresses;
 	uint32_t FlowExpiration;
@@ -73,6 +74,7 @@ public:
 
 		arp_rx = std::regex(R"delim(^(\d\S+)\s+?\S+?\s+?\S+?\s+?\s+?(\S+)\s+?\S+?\W+?(\S+?)$)delim",
         	std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
+		// FIXME: We don't really need the below anymore so should remove this call
 		getInterfaceIpAddresses();
 		dCip.setDebug(Debug);
 		dCcname.setDebug(Debug);

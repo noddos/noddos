@@ -22,7 +22,7 @@ private:
 	bool Debug;
 
 	bool LoadInterfaces (std::unordered_set<std::string> &set, std::unordered_map<uint32_t, std::string> &map) {
-	    set.clear();
+	    map.clear();
         uint32_t index;
         bool failure = false;
         for (auto i : set) {
