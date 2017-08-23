@@ -156,7 +156,7 @@ public:
 	bool ExportDeviceProfileMatches(const std::string filename, const bool detailed = false);
 	bool ImportDeviceInfo (json &j);
 
-	bool writeIptables(std::string inFilename, bool inDebug = false);
+	bool writeIptables(std::string inFilename, bool Ipv4 = true);
 
 	// uint32_t HostCount() { return hC.size(); }
 	bool Debug_get() { return Debug; }

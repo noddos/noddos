@@ -101,6 +101,8 @@ uint32_t HostCache::Match() {
 		}
 	}
 	updateDeviceProfileMatchesDnsData();
+	writeIptables("/etc/iptables/rules.v4");
+	writeIptables("/etc/iptables/rules.v6");
 	return matched;
 }
 
@@ -734,6 +736,8 @@ uint32_t HostCache::ImportDeviceProfileMatches(const std::string filename) {
 	}
 	syslog(LOG_INFO, "HostCache: DeviceMatches read: %u", matches);
 	updateDeviceProfileMatchesDnsData();
+    writeIptables("/etc/iptables/rules.v4");
+    writeIptables("/etc/iptables/rules.v6");
 	return matches;
 }
 
@@ -978,7 +982,7 @@ uint32_t HostCache::Whitelists_set (const std::unordered_set<std::string>& inIpv
 	return WhitelistedNodes.size();
 }
 
-bool HostCache::writeIptables(std::string inFilename, bool inDebug)  {
+bool HostCache::writeIptables(std::string inFilename, bool Ipv4)  {
     if (Debug == true) {
         syslog(LOG_DEBUG, "Iptables: Opening & reading %s", inFilename.c_str());
     }
@@ -990,27 +994,44 @@ bool HostCache::writeIptables(std::string inFilename, bool inDebug)  {
     }
     std::ofstream backupfs(inFilename + "-noddosbackup");
     std::ofstream outputfs(inFilename + "-noddos");
+    std::vector<std::string> ifaces = ifMap->getLanInterfaces();
     bool filtertable = false;
     for (std::string line; std::getline(ifs, line); ) {
-        backupfs << line;
-        if (filtertable == false || line.find("-I NODDOS") == std::string::npos) {
-            outputfs << line;
+        backupfs << line << std::endl;
+        if (filtertable == false ||
+                (line.find("-A NODDOS") == std::string::npos && line.find("-N NODDOS"))) {
+            outputfs << line << std::endl;
         }
         if (line.find("*") != std::string::npos) {
             if (line.find("*filter") != std::string::npos) {
                 filtertable = true;
-            } else
+                outputfs << "-N NODDOS" << std::endl;
+            } else {
                 if(filtertable == true) {
                     // We have reached the end of the Filter table, let's write out the new rules for the Noods chain
                     for (auto dp_it: dpMap) {
-                        if (dp_it.second->hasAllowedEndpoints() ) {
-
+                        if (dp_it.second->hasAllowedEndpoints() && dp_it.second->hasHosts()) {
+                            std::string srcipset = getIpsetName(dp_it.second->getUuid(),true,false);
+                            std::string dstipset = getIpsetName(dp_it.second->getUuid(), false, Ipv4);
+                            for ( auto iface: ifaces) {
+                                outputfs << "-A NODDOS -i " + iface +
+                                        " -m set --match-set " + srcipset + " src " +
+                                        "-m set --match-set " +  dstipset + " dst -j ACCEPT" << std::endl;
+                                outputfs << "-A NODDOS -i " + iface +
+                                        " -m set --match-set " + srcipset + " src -j DROP" << std::endl;
+                            }
                         }
+
+                    }
+                    for (auto iface: ifaces) {
+                        outputfs << "-A NODDOS -i " + iface + " -j RETURN" << std::endl;
                     }
                 }
-                filtertable = false;
+            }
         }
     }
+    backupfs.close();
+    outputfs.close();
     return false;
 }
 
