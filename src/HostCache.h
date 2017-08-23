@@ -39,8 +39,6 @@
 #include "noddos.h"
 
 
-
-
 class HostCache {
 private:
 	std::map<unsigned long long, std::shared_ptr<Host>> hC; 	// map from Mac to Host
@@ -51,7 +49,7 @@ private:
 	// These maps cache IPv4 & IPv6 addresses and CNAMEs for at least the TrafficReport interval
 	DnsIpCache <boost::asio::ip::address> dCip;
 	DnsCnameCache dCcname;
-	std::map<std::string,std::set<std::shared_ptr<DeviceProfile>>> FqdnDeviceProfileMap;
+	FqdnDeviceProfileMap fdpMap;
 
 	DeviceProfileMap dpMap;
 	InterfaceMap *ifMap;
@@ -125,6 +123,7 @@ public:
 	// These functions are for the new DnsCache filled by the PacketSnoop class
 	void addorupdateDnsIpCache(const std::string inFqdn, const boost::asio::ip::address inIp, time_t inTtl = 604800);
 	void addorupdateDnsCnameCache(const std::string inFqdn, const std::string inCname, time_t inTtl = 604800);
+	void updateDeviceProfileMatchesDnsData ();
 
 	// DnsCache persistence
 	bool exportDnsCache (const std::string filename);
@@ -132,14 +131,14 @@ public:
 	uint32_t pruneDnsIpCache(bool Force = false) {
 		std::set<std::string> PrunedFqdns = dCip.pruneResourceRecords(Force);
 		for(auto Fqdn: PrunedFqdns) {
-		    FqdnDeviceProfileMap.erase(Fqdn);
+		    fdpMap.erase(Fqdn);
 		}
 		return PrunedFqdns.size();
 	}
     uint32_t pruneDnsCnameCache(bool Force = false) {
         std::set<std::string> PrunedCnames = dCcname.pruneCnames(Force);
         for(auto Cname: PrunedCnames) {
-            FqdnDeviceProfileMap.erase(Cname);
+            fdpMap.erase(Cname);
         }
         return PrunedCnames.size();
     }
@@ -156,6 +155,8 @@ public:
 	uint32_t ImportDeviceProfileMatches(const std::string filename);
 	bool ExportDeviceProfileMatches(const std::string filename, const bool detailed = false);
 	bool ImportDeviceInfo (json &j);
+
+	bool writeIptables(std::string inFilename, bool inDebug = false);
 
 	// uint32_t HostCount() { return hC.size(); }
 	bool Debug_get() { return Debug; }

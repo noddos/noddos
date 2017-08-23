@@ -27,12 +27,13 @@
 #include "boost/asio.hpp"
 
 #include "DnsCache.h"
-
+#include "DeviceProfile.h"
 
 int main () {
     bool testfailed = false;
     openlog("DnsCache_test", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
 
+    FqdnDeviceProfileMap fdpMap;
     DnsCnameCache c(true);
     DnsIpCache <boost::asio::ip::address> i(true);
 
@@ -44,14 +45,14 @@ int main () {
     }
     json k;
     ifs >> k;
-    size_t importedRecords = i.importJson(k);
+    size_t importedRecords = i.importJson(k, fdpMap);
     if (importedRecords != 288) {
         testfailed = true;
         syslog(LOG_WARNING, "Imported A/AAAA records %lu", importedRecords);
 
     }
 
-    importedRecords = c.importJson(k);
+    importedRecords = c.importJson(k,fdpMap);
     if (importedRecords != 284) {
         testfailed = true;
         syslog(LOG_WARNING, "Imported CNAME records %lu", importedRecords);

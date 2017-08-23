@@ -17,7 +17,7 @@
  * Ipset.cxx
  *
  *  Created on: Aug 9, 2017
- *      Author: Steven HEssing
+ *      Author: Steven Hessing
  */
 
 #include "Ipset.h"
@@ -49,7 +49,7 @@ std::string getIpsetName (const std::string inUuid, bool inSrc, bool inIpv4) {
     if (inSrc == true) {
         res += "src-";
     } else {
-        res += "dst";
+        res += "ds";
         if (inIpv4 == false) {
             res += "6-";
         } else {

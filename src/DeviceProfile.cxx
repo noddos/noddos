@@ -22,6 +22,28 @@
 
 #include "DeviceProfile.h"
 
+    void DeviceProfile::createorupdateIpsets (bool inForce) {
+        if (inForce || (hasAllowedEndpoints() && Hosts.size() > 0)) {
+            try {
+                srcIpset.Open(getIpsetName(DeviceProfileUuid, true), "hash:mac", false, true);
+                dstv4Ipset.Open(getIpsetName(DeviceProfileUuid, false), "hash:ip", true, true);
+                dstv6Ipset.Open(getIpsetName(DeviceProfileUuid, false), "hash:ip", false, true);
+            } catch (...) {
+            }
+
+            for (auto ip: AllowedIps) {
+                if (ip.is_v4()) {
+                    dstv4Ipset.Add(ip);
+                } else {
+                    dstv6Ipset.Add(ip);
+                }
+            }
+            for (auto host: Hosts) {
+                srcIpset.Add(host);
+            }
+        }
+    }
+
     bool DeviceProfile::from_json(const json &j) {
         if (j.find("DeviceProfileUuid") == j.end()) {
             syslog(LOG_ERR, "No DeviceProfileUuid set, ignoring this Object");
@@ -84,17 +106,13 @@
                 return false;
             }
             for (json::iterator it = ajson.begin(); it != ajson.end(); ++it ) {
+                withAllowedEndpoints = true;
                 std::string endpoint = it->get<std::string>();
                 if (Debug == true) {
                     syslog(LOG_DEBUG, "DeviceProfile: Adding allowed endpoint %s", endpoint.c_str());
                 }
                 try {
-                    boost::asio::ip::address ip = boost::asio::ip::address::from_string(endpoint);
-                    if (ip.is_v4()) {
-                        dstv4Ipset.Add(ip);
-                    } else {
-                        dstv6Ipset.Add(ip);
-                    }
+                    AllowedIps.insert(boost::asio::ip::address::from_string(endpoint));
                 } catch (...) {
                     // Boost threw an exception presumably because the string was not an IPv4 or IPv6 address
                     addDestination(endpoint);

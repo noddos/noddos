@@ -52,13 +52,15 @@ private:
 	std::vector<std::shared_ptr<Identifier>> Identifiers;
 	bool UploadStats;
 	bool Valid;
+	bool withAllowedEndpoints;
 	bool Debug;
 	Ipset srcIpset, dstv4Ipset, dstv6Ipset;
-	std::set<std::string> AllowedFqdns;
 	std::set<std::string> Hosts;
+	std::set<std::string> AllowedFqdns;
+	std::set<boost::asio::ip::address> AllowedIps;
 
 public:
-	DeviceProfile(const json &j, const bool inDebug = false): Debug{inDebug} {
+	DeviceProfile(const json &j, const bool inDebug = false): Debug{inDebug}, withAllowedEndpoints{false} {
 		if (Debug == true) {
 		    syslog (LOG_DEBUG, "DeviceProfile: constructing instance");
 		}
@@ -72,12 +74,6 @@ public:
 				syslog(LOG_ERR, "DeviceProfileUuid is not a string, ignoring this Object");
 			} else {
 				DeviceProfileUuid = j["DeviceProfileUuid"].get<std::string>();
-		        try {
-		            srcIpset.Open(getIpsetName(DeviceProfileUuid, true), "hash:mac", false, true);
-		            dstv4Ipset.Open(getIpsetName(DeviceProfileUuid, false), "hash:ip", true, true);
-		            dstv6Ipset.Open(getIpsetName(DeviceProfileUuid, false), "hash:ip", false, true);
-		        } catch (...) {
-		        }
 				Valid = from_json(j);
 			}
 		}
@@ -91,31 +87,45 @@ public:
 	bool isValid() const { return Valid; }
 	bool getUploadStats() const { return UploadStats; }
 
-	bool addHost (const MacAddress &inMac) {
+	void createorupdateIpsets (bool inForce = false);
+
+	bool hasHosts() { return Hosts.size() > 0; }
+	bool hasAllowedEndpoints() { return withAllowedEndpoints; }
+
+	// We only add/remove hosts to the std::set as adding removing hosts only happen
+	// when we import DeviceProfileMatches at noddos startup time or when
+	// we run the matching algorithm. In both cases we run 'createorupdateIpsets'
+	void addHost (const MacAddress &inMac) {
 	    Hosts.insert(inMac.str());
-	    return srcIpset.Add(inMac);
+	    // return srcIpset.Add(inMac);
 	}
-	void addDestination (const boost::asio::ip::address &inIpAddress, const time_t inTtl = 604800) {
-	    if(inIpAddress.is_v4()) {
-	        dstv4Ipset.Add(inIpAddress, inTtl);
-	    } else {
-            dstv6Ipset.Add(inIpAddress, inTtl);
+    void removeHost (const MacAddress inMac) {
+        Hosts.erase(inMac.str());
+        // return srcIpset.Remove(inMac.str());
+    }
+    void removeHost (const std::string inMac) {
+        Hosts.erase(inMac);
+        // return srcIpset.Remove(inMac);
+    }
+
+    // Adding destinations we do immediately as it is based on DNS lookups.
+    // We also add the IP to the list of AllowedEndpoints in case we don't have any
+    // matched hosts yet but need the data if later on we match a host to the device profile
+    void addDestination (const boost::asio::ip::address &inIpAddress, const time_t inTtl = 604800) {
+	    AllowedIps.insert(inIpAddress);
+	    if (withAllowedEndpoints == true && Hosts.size() > 0) {
+	        if(inIpAddress.is_v4()) {
+	            dstv4Ipset.Add(inIpAddress, inTtl);
+	        } else {
+	            dstv6Ipset.Add(inIpAddress, inTtl);
+	        }
 	    }
 	}
 	void addDestination (const std::string inFqdn) {
 	    AllowedFqdns.insert(inFqdn);
 	}
-
-	std::set<std::string> getDestinations() {
-	    return AllowedFqdns;
-	}
-	bool removeHost (const MacAddress inMac) {
-	    Hosts.erase(inMac.str());
-	    return srcIpset.Remove(inMac.str());
-	}
-    bool removeHost (const std::string inMac) {
-        Hosts.erase(inMac);
-        return srcIpset.Remove(inMac);
+    std::set<std::string> getDestinations() {
+        return AllowedFqdns;
     }
 
 	const std::vector<std::shared_ptr<Identifier>> & getIdentifiers() const { return Identifiers; }
@@ -125,6 +135,6 @@ public:
 
 
 typedef std::map<std::string, std::shared_ptr<DeviceProfile>> DeviceProfileMap;
-
+typedef std::map<std::string,std::set<std::shared_ptr<DeviceProfile>>> FqdnDeviceProfileMap;
 
 #endif /* DEVICEPROFILE_H_ */

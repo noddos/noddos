@@ -100,6 +100,7 @@ uint32_t HostCache::Match() {
 			matched++;
 		}
 	}
+	updateDeviceProfileMatchesDnsData();
 	return matched;
 }
 
@@ -732,9 +733,45 @@ uint32_t HostCache::ImportDeviceProfileMatches(const std::string filename) {
 	   }
 	}
 	syslog(LOG_INFO, "HostCache: DeviceMatches read: %u", matches);
+	updateDeviceProfileMatchesDnsData();
 	return matches;
 }
 
+void HostCache::updateDeviceProfileMatchesDnsData () {
+    for (auto dp_it: dpMap) {
+        // Now we need to update the ipset rules for Device Profiles with
+        // hasAllowedEndpoints and one or more hosts matched to it
+        dp_it.second->createorupdateIpsets();
+        std::set<std::string> fqdns = dp_it.second->getDestinations();
+        for (auto fqdn: fqdns) {
+            fdpMap[fqdn].insert(dp_it.second);
+            try {
+                std::map<boost::asio::ip::address, time_t> p = dCip.lookupResourceRecord(fqdn);
+                for (auto ip_it: p) {
+                    dp_it.second->addDestination(ip_it.first, ip_it.second);
+                }
+            } catch (std::runtime_error &e) {
+            }
+            std::string cname = fqdn;
+            try {
+                while (1) {
+                    cname = dCcname.lookupCname(cname);
+                    try {
+                        std::map<boost::asio::ip::address, time_t> p = dCip.lookupResourceRecord(cname);
+                        for (auto ip_it: p) {
+                            dp_it.second->addDestination(ip_it.first, ip_it.second);
+                        }
+                    } catch (std::runtime_error &e) {
+                    }
+                    // All traffic allowed to a FQDN is also allowed to its CNAME
+                    // so if subsequently an A record is received for the CNAME,
+                    // the ipsets for the device profiles must be updated
+                    fdpMap[cname].insert(dp_it.second);
+                }
+            } catch (std::runtime_error &error) {}
+        }
+    }
+}
 bool HostCache::exportDnsCache (const std::string filename) {
     std::ofstream ofs(filename);
     if (not ofs.is_open()) {
@@ -767,11 +804,11 @@ bool HostCache::importDnsCache (const std::string filename) {
     }
 
     try {
-        size_t dnsRecords = dCip.importJson(j);
+        size_t dnsRecords = dCip.importJson(j, fdpMap);
         if (Debug == true) {
             syslog(LOG_DEBUG, "HostCache: Read %zu cached DNS IP address records", dnsRecords);
         }
-        dnsRecords = dCcname.importJson(j);
+        dnsRecords = dCcname.importJson(j, fdpMap);
         if (Debug == true) {
             syslog(LOG_DEBUG, "HostCache: Read %zu cached DNS CNAME records", dnsRecords);
         }
@@ -783,26 +820,11 @@ bool HostCache::importDnsCache (const std::string filename) {
 }
 
 void HostCache::addorupdateDnsIpCache(const std::string inFqdn, const boost::asio::ip::address inIp, time_t inTtl) {
-    dCip.addorupdateResourceRecord(inFqdn, inIp, inTtl);
-    auto it = FqdnDeviceProfileMap.find(inFqdn);
-    if (it == FqdnDeviceProfileMap.end()) {
-        return;
-    }
-    for (auto DeviceProfile_sharedpointer_it: it->second) {
-        DeviceProfile_sharedpointer_it->addDestination(inIp, inTtl);
-    }
+    dCip.addorupdateResourceRecord(inFqdn, inIp, fdpMap, inTtl);
 }
 
 void HostCache::addorupdateDnsCnameCache(const std::string inFqdn, const std::string inCname, time_t inTtl) {
-    dCcname.addorupdateCname(inFqdn, inCname, inTtl);
-    auto it = FqdnDeviceProfileMap.find(inFqdn);
-    if (it == FqdnDeviceProfileMap.end()) {
-        return;
-    }
-    // All traffic allowed to a FQDN is also allowed to its CNAME
-    // so if subsequently an A record is received for the CNAME,
-    // the ipsets for the device profiles must be updated
-    FqdnDeviceProfileMap[inCname].insert(it->second.begin(), it->second.end());
+    dCcname.addorupdateCname(inFqdn, inCname, fdpMap, inTtl);
 }
 
 bool HostCache::removeDeviceProfile(const std::string inUuid) {
@@ -815,8 +837,8 @@ bool HostCache::removeDeviceProfile(const std::string inUuid) {
         std::string cname = Fqdn;
         try {
             while (1) {
-                auto fdpmap_it = FqdnDeviceProfileMap.find(cname);
-                if (fdpmap_it != FqdnDeviceProfileMap.end()) {
+                auto fdpmap_it = fdpMap.find(cname);
+                if (fdpmap_it != fdpMap.end()) {
                     fdpmap_it->second.erase(dp_it->second);
                 }
                 cname = dCcname.lookupCname(cname);
@@ -898,7 +920,7 @@ bool HostCache::ImportDeviceInfo (json &j) {
 	return true;
 }
 
-// FIXME: need to remove IPsets for DeviceProfiles that no longer are specified in the DeviceProfiles file
+// FIXME: need to remove IPsets for DeviceProfiles that no longer are specified in the DeviceProfiles file but only after iptables have been updated
 // FIXME: need to recreate AllowedEndpoint IPsets for DeviceProfiles that have a new / higher version number
 
 uint32_t HostCache::loadDeviceProfiles(const std::string filename) {
@@ -921,7 +943,6 @@ uint32_t HostCache::loadDeviceProfiles(const std::string filename) {
 	// Track which DeviceProfileUuids were read from the file
 	std::unordered_set<std::string> uuids;
 
-	// for (json::iterator it = j.begin(); it != j.end(); ++it) {
 	for (auto it = j.begin(); it != j.end(); ++it) {
 	  std::string uuid = (*it)["DeviceProfileUuid"].get<std::string>();
 	  dpMap[uuid] = std::make_shared<DeviceProfile>(*it, Debug);
@@ -957,4 +978,39 @@ uint32_t HostCache::Whitelists_set (const std::unordered_set<std::string>& inIpv
 	return WhitelistedNodes.size();
 }
 
+bool HostCache::writeIptables(std::string inFilename, bool inDebug)  {
+    if (Debug == true) {
+        syslog(LOG_DEBUG, "Iptables: Opening & reading %s", inFilename.c_str());
+    }
+    std::ifstream ifs;
+    ifs.open(inFilename);
+    if (not ifs.is_open()) {
+        syslog(LOG_WARNING, "Iptables: Couldn't open %s", inFilename.c_str());
+        return true;
+    }
+    std::ofstream backupfs(inFilename + "-noddosbackup");
+    std::ofstream outputfs(inFilename + "-noddos");
+    bool filtertable = false;
+    for (std::string line; std::getline(ifs, line); ) {
+        backupfs << line;
+        if (filtertable == false || line.find("-I NODDOS") == std::string::npos) {
+            outputfs << line;
+        }
+        if (line.find("*") != std::string::npos) {
+            if (line.find("*filter") != std::string::npos) {
+                filtertable = true;
+            } else
+                if(filtertable == true) {
+                    // We have reached the end of the Filter table, let's write out the new rules for the Noods chain
+                    for (auto dp_it: dpMap) {
+                        if (dp_it.second->hasAllowedEndpoints() ) {
+
+                        }
+                    }
+                }
+                filtertable = false;
+        }
+    }
+    return false;
+}
 

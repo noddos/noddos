@@ -92,7 +92,8 @@ add_test (MacAddress MacAddress_test)
 add_executable(MacAddress_test MacAddress_test.cxx)
 
 add_test (DnsCache DnsCache_test)
-add_executable(DnsCache_test DnsCache_test.cxx)
+add_executable(DnsCache_test DnsCache_test.cxx DeviceProfile.cxx Ipset.cxx)
+target_link_libraries(DnsCache_test ipset)
 
 add_test (Curl Curl_test)
 add_executable(Curl_test Curl_test.cxx)

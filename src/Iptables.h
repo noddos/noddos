@@ -8,11 +8,15 @@
 #ifndef IPTABLES_H_
 #define IPTABLES_H_
 
-class Iptables {
-public:
-    Iptables() {
-        // TODO Auto-generated constructor stub
+#include <fstream>
 
+#include <syslog.h>
+class Iptables {
+private:
+    bool Debug;
+
+public:
+    Iptables(){
     }
     ~Iptables() {
         // TODO Auto-generated destructor stub
