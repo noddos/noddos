@@ -101,8 +101,7 @@ uint32_t HostCache::Match() {
 		}
 	}
 	updateDeviceProfileMatchesDnsData();
-	writeIptables("/etc/iptables/rules.v4");
-	writeIptables("/etc/iptables/rules.v6");
+	writeIptables();
 	return matched;
 }
 
@@ -736,8 +735,7 @@ uint32_t HostCache::ImportDeviceProfileMatches(const std::string filename) {
 	}
 	syslog(LOG_INFO, "HostCache: DeviceMatches read: %u", matches);
 	updateDeviceProfileMatchesDnsData();
-    writeIptables("/etc/iptables/rules.v4");
-    writeIptables("/etc/iptables/rules.v6");
+	writeIptables();
 	return matches;
 }
 
@@ -954,12 +952,16 @@ uint32_t HostCache::loadDeviceProfiles(const std::string filename) {
 	}
 	ifs.close();
 
-	for (auto &kv : dpMap) {
-		if (uuids.find(kv.first) == uuids.end()) {
+	// Delete any Device Profile already in memory that was not
+	// in the file we just read and parsed
+	for (auto it = dpMap.begin(); it != dpMap.end();) {
+		if (uuids.find(it->first) == uuids.end()) {
 			if (Debug == true) {
-				syslog(LOG_DEBUG, "HostCache: Profile no longer in DeviceProfiles file: %s", kv.first.c_str());
+				syslog(LOG_DEBUG, "HostCache: Profile no longer in DeviceProfiles file: %s", it->first.c_str());
 			}
-			dpMap.erase(kv.first);
+			it = dpMap.erase(it);
+		} else {
+		    it++;
 		}
 	}
 	auto s = uuids.size();
@@ -982,56 +984,51 @@ uint32_t HostCache::Whitelists_set (const std::unordered_set<std::string>& inIpv
 	return WhitelistedNodes.size();
 }
 
-bool HostCache::writeIptables(std::string inFilename, bool Ipv4)  {
+void HostCache::writeIptables()  {
     if (Debug == true) {
-        syslog(LOG_DEBUG, "Iptables: Opening & reading %s", inFilename.c_str());
+        syslog(LOG_DEBUG, "Iptables: Writing firewall rules to %s", FirewallRulesFile.c_str());
     }
-    std::ifstream ifs;
-    ifs.open(inFilename);
-    if (not ifs.is_open()) {
-        syslog(LOG_WARNING, "Iptables: Couldn't open %s", inFilename.c_str());
-        return true;
-    }
-    std::ofstream backupfs(inFilename + "-noddosbackup");
-    std::ofstream outputfs(inFilename + "-noddos");
+    std::ofstream outputfs(FirewallRulesFile);
     std::vector<std::string> ifaces = ifMap->getLanInterfaces();
-    bool filtertable = false;
-    for (std::string line; std::getline(ifs, line); ) {
-        backupfs << line << std::endl;
-        if (filtertable == false ||
-                (line.find("-A NODDOS") == std::string::npos && line.find("-N NODDOS"))) {
-            outputfs << line << std::endl;
-        }
-        if (line.find("*") != std::string::npos) {
-            if (line.find("*filter") != std::string::npos) {
-                filtertable = true;
-                outputfs << "-N NODDOS" << std::endl;
-            } else {
-                if(filtertable == true) {
-                    // We have reached the end of the Filter table, let's write out the new rules for the Noods chain
-                    for (auto dp_it: dpMap) {
-                        if (dp_it.second->hasAllowedEndpoints() && dp_it.second->hasHosts()) {
-                            std::string srcipset = getIpsetName(dp_it.second->getUuid(),true,false);
-                            std::string dstipset = getIpsetName(dp_it.second->getUuid(), false, Ipv4);
-                            for ( auto iface: ifaces) {
-                                outputfs << "-A NODDOS -i " + iface +
-                                        " -m set --match-set " + srcipset + " src " +
-                                        "-m set --match-set " +  dstipset + " dst -j ACCEPT" << std::endl;
-                                outputfs << "-A NODDOS -i " + iface +
-                                        " -m set --match-set " + srcipset + " src -j DROP" << std::endl;
-                            }
-                        }
+    std::string action = "LOG";
+    if (FirewallBlockTraffic == true) {
+        action = "DROP";
+    }
 
-                    }
-                    for (auto iface: ifaces) {
-                        outputfs << "-A NODDOS -i " + iface + " -j RETURN" << std::endl;
-                    }
-                }
+    outputfs << "-N NODDOS" << std::endl;
+    outputfs << "*filter" << std::endl;
+
+    for (auto dp_it: dpMap) {
+        if (dp_it.second->hasAllowedEndpoints() && dp_it.second->hasHosts()) {
+            std::string srcipset = getIpsetName(dp_it.second->getUuid(),true,false);
+            std::string ipv46flag;
+            std::string dstipset;
+            for ( auto iface: ifaces) {
+                // IPv4 permit rule
+                dstipset = getIpsetName(dp_it.second->getUuid(), false, true);
+                ipv46flag = "--ipv4";
+                outputfs << "-A NODDOS -i " + iface + " " + ipv46flag +
+                        " -m set --match-set " + srcipset + " src " +
+                        "-m set --match-set " +  dstipset + " dst -j ACCEPT" << std::endl;
+
+                // IPv6 permit rule
+                dstipset = getIpsetName(dp_it.second->getUuid(), false, false);
+                ipv46flag = "--ipv6";
+                outputfs << "-A NODDOS -i " + iface + " " + ipv46flag +
+                        " -m set --match-set " + srcipset + " src " +
+                        "-m set --match-set " +  dstipset + " dst -j ACCEPT" << std::endl;
+
+                // Block all other traffic from the MAC addresses mapped to the Device Profile
+                outputfs << "-A NODDOS -i " + iface +
+                        " -m set --match-set " + srcipset + " src -j " + action << std::endl;
             }
         }
+
     }
-    backupfs.close();
+    for (auto iface: ifaces) {
+        outputfs << "-A NODDOS -j RETURN" << std::endl;
+    }
+    outputfs << "COMMIT" << std::endl;
     outputfs.close();
-    return false;
 }
 

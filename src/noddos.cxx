@@ -102,7 +102,8 @@ int main(int argc, char** argv) {
 	//
 	// Set up HostCache instance
 	//
-	HostCache hC(ifMap, config.DnsCacheFile, config.TrafficReportInterval, config.Debug);
+	HostCache hC(ifMap, config.DnsCacheFile, config.TrafficReportInterval,
+	        config.FirewallRulesFile, config.FirewallBlockTraffic, config.Debug);
 	hC.loadDeviceProfiles(config.DeviceProfilesFile);
 	hC.ImportDeviceProfileMatches(config.MatchFile);
 	hC.Whitelists_set(config.WhitelistedIpv4Addresses, config.WhitelistedIpv6Addresses, config.WhitelistedMacAddresses);

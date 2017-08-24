@@ -48,7 +48,7 @@ public:
     };
     ~DnsCnameCache() {
         if (Debug == true) {
-            syslog (LOG_DEBUG, "DnsCnameCache: deletinginstance");
+            syslog (LOG_DEBUG, "DnsCnameCache: deleting instance");
         }
     };
 

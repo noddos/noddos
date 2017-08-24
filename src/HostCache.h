@@ -60,10 +60,18 @@ private:
 	std::unordered_set<std::string> LocalInterfaces;
 	std::unordered_set<std::string> LocalIpAddresses;
 	uint32_t FlowExpiration;
+	bool FirewallBlockTraffic;
+	std::string FirewallRulesFile;
+
+    void writeIptables();
 
 public:
-	HostCache(InterfaceMap &inifMap, const std::string inDnsCacheFilename = "", const uint32_t inFlowExpiration = FLOWDEFAULTEXPIRATION, const bool inDebug = false):
-			ifMap{&inifMap}, FlowExpiration{inFlowExpiration}, Debug{inDebug} {
+	HostCache(InterfaceMap &inifMap, const std::string inDnsCacheFilename,
+	        const uint32_t inFlowExpiration, std::string inFirewallRulesFile,
+	        const bool inFirewallBlockTraffic, const bool inDebug = false):
+			ifMap{&inifMap}, FlowExpiration{inFlowExpiration}, Debug{inDebug},
+			FirewallRulesFile{inFirewallRulesFile},
+			FirewallBlockTraffic{inFirewallBlockTraffic} {
 		if (Debug) {
 			syslog (LOG_DEBUG, "HostCache: constructing instance");
 		}
@@ -155,8 +163,6 @@ public:
 	uint32_t ImportDeviceProfileMatches(const std::string filename);
 	bool ExportDeviceProfileMatches(const std::string filename, const bool detailed = false);
 	bool ImportDeviceInfo (json &j);
-
-	bool writeIptables(std::string inFilename, bool Ipv4 = true);
 
 	// uint32_t HostCount() { return hC.size(); }
 	bool Debug_get() { return Debug; }

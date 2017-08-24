@@ -25,9 +25,9 @@
     void DeviceProfile::createorupdateIpsets (bool inForce) {
         if (inForce || (hasAllowedEndpoints() && Hosts.size() > 0)) {
             try {
-                srcIpset.Open(getIpsetName(DeviceProfileUuid, true), "hash:mac", false, true);
-                dstv4Ipset.Open(getIpsetName(DeviceProfileUuid, false), "hash:ip", true, true);
-                dstv6Ipset.Open(getIpsetName(DeviceProfileUuid, false), "hash:ip", false, true);
+                srcIpset.Open(getIpsetName(DeviceProfileUuid, true, false), "hash:mac", false, true);
+                dstv4Ipset.Open(getIpsetName(DeviceProfileUuid, false, true), "hash:ip", true, true);
+                dstv6Ipset.Open(getIpsetName(DeviceProfileUuid, false, false), "hash:ip", false, true);
             } catch (...) {
             }
 

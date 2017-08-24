@@ -35,7 +35,7 @@ int main () {
 	bool testfailed = false;
 	openlog("Host_test", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
 	InterfaceMap ifMap;
-	HostCache hC(ifMap, "", 0, true);
+	HostCache hC(ifMap, "", 0, "", false, true);
 	hC.loadDeviceProfiles(deviceprofilesfile);
 	hC.AddByMac (MacAddress("00:00:00:00:00:01"), "192.168.1.232");
 	hC.AddByMac (MacAddress("00:00:00:00:00:02"), "192.168.1.98");

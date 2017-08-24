@@ -51,7 +51,7 @@ int main()
 	Config config("tests/noddos.conf", false);
 	InterfaceMap ifMap(config.LanInterfaces,config.WanInterfaces, true);
 
-	HostCache hC(ifMap, 0, true);
+	HostCache hC(ifMap, "", 0, "", false, true);
     PacketSnoop ps(hC, true);
     int sock_raw = ps.getFileHandle();
 
