@@ -46,9 +46,10 @@
 #include <linux/if_link.h>
 
 #include <syslog.h>
-#include <stdio.h>
+#include <cstdio>
 #include <iomanip>
-#include <string.h>
+#include <cstring>
+#include <cstdlib>
 
 #include <json.hpp>
 using nlohmann::json;
@@ -995,7 +996,6 @@ void HostCache::writeIptables()  {
         action = "DROP";
     }
 
-    outputfs << "-N NODDOS" << std::endl;
     outputfs << "*filter" << std::endl;
 
     for (auto dp_it: dpMap) {
@@ -1030,5 +1030,33 @@ void HostCache::writeIptables()  {
     }
     outputfs << "COMMIT" << std::endl;
     outputfs.close();
+
+    std::string command4 = "iptables-restore -T filter -n " + FirewallRulesFile;
+    std::string command6 = "ip6tables-restore -T filter -n " + FirewallRulesFile;
+    if (Debug == true) {
+        syslog (LOG_DEBUG, "HostCache: updating ip(6)tables");
+    }
+    int rc1 = system("iptables --flush NODDOS");
+    int rc2 = system(command4.c_str());
+    int rc3 = system("ip6tables --flush NODDOS");
+    int rc4 = system(command6.c_str());
+    if (rc1 == -1 || rc2 == -1 || rc3 == -1 || rc4 == 1) {
+        syslog(LOG_ERR, "HostCache: Could not create child process for 'system' call");
+    }
+    if (rc1 == 127|| rc2 == 127 || rc3 == 127 || rc4 == 127) {
+        syslog(LOG_ERR, "HostCache: Shell could not be executed in child process for 'system' call");
+    }
+    if (rc1 != 0) {
+        syslog(LOG_ERR, "HostCache: iptables existing with code %d", rc1);
+    }
+    if (rc2 != 0) {
+        syslog(LOG_ERR, "HostCache: iptables-restore existing with code %d", rc2);
+    }
+    if (rc3 != 0) {
+        syslog(LOG_ERR, "HostCache: ip6tables existing with code %d", rc3);
+    }
+    if (rc4 != 0) {
+        syslog(LOG_ERR, "HostCache: ip6tables-restore existing with code %d", rc4);
+    }
 }
 
