@@ -60,7 +60,7 @@ define Package/noddos/postinst
 	echo -n "Downloading Device Profiles and checking digital signature ... "
 	/usr/bin/getnoddosdeviceprofiles
 
-	echo -n "Creating iptables chain 'NODDOS'"
+	echo "Creating iptables chain 'NODDOS'"
 	/usr/sbin/iptables --new-chain NODDOS
 	/usr/sbin/iptables -t filter --insert FORWARD -j NODDOS
 	/usr/sbin/ip6tables --new-chain NODDOS
@@ -109,7 +109,7 @@ define Package/noddos/postrm
 		echo "Removing noddos directories"
 		rm -rf /etc/noddos /var/lib/noddos
 	fi
-	echo -n "Deleting iptables chain 'NODDOS'"
+	echo "Deleting iptables chain 'NODDOS'"
     iptables -t filter --delete FORWARD -j NODDOS
     iptables --flush NODDOS
     iptables --delete-chain NODDOS
