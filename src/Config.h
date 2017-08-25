@@ -50,6 +50,8 @@ public:
 	std::string ClientApiCertFile = "/etc/noddos/noddosapiclient.pem";
 	std::string ClientApiKeyFile = "/etc/noddos/noddosapiclient.key";
 	std::string SignatureCertFile = "/etc/noddos/noddossignature.pem";
+    std::string FirewallRulesFile = "/var/lib/noddos/iptables.rules";
+    bool FirewallBlockTraffic = false;
 	std::string PidFile = "/var/lib/noddos/noddos.pid";
 	bool UseNfConntrack = false;
 	std::string User = "";
@@ -98,7 +100,9 @@ public:
 		std::string newClientApiCertFile = ClientApiCertFile;
 		std::string newClientApiKeyFile = ClientApiKeyFile;
 		std::string newSignatureCertFile = SignatureCertFile;
-		std::string newPidFile = PidFile;
+	    std::string newFirewallRulesFile = FirewallRulesFile;
+	    bool newFirewallBlockTraffic = FirewallBlockTraffic;
+	    std::string newPidFile = PidFile;
 		bool newUseNfConntrack = UseNfConntrack;
 		std::string newUser = User;
 		std::string newGroup = Group;
@@ -144,7 +148,13 @@ public:
 			if (j.count("SignatureCertFile")) {
 				newSignatureCertFile = j["SignatureCertFile"].get<std::string>();
 			}
-			if (j.count("PidFile")) {
+            if (j.count("FirewallRulesFile")) {
+                newFirewallRulesFile = j["FirewallRulesFile"].get<std::string>();
+            }
+            if (j.count("FirewallBlockTraffic")) {
+                 newFirewallBlockTraffic = j["FirewallBlockTraffic"].get<bool>();
+            }
+            if (j.count("PidFile")) {
 				newPidFile = j["PidFile"].get<std::string>();
 			}
 			if (j.count("UseNfConntrack")) {
@@ -210,6 +220,7 @@ public:
 		ClientApiCertFile = newClientApiCertFile;
 		ClientApiKeyFile = newClientApiKeyFile;
 		SignatureCertFile = newSignatureCertFile;
+		FirewallRulesFile = newFirewallRulesFile;
 		PidFile = newPidFile;
 		UseNfConntrack = newUseNfConntrack;
 		User = newUser;

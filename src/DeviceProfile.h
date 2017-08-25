@@ -25,17 +25,23 @@
 
 #include <string>
 #include <vector>
-#include <ctime>
+#include <set>
+#include <utility>
 #include <memory>
-#include <syslog.h>
-#include <json.hpp>
-using nlohmann::json;
 
-#include <string.h>
+#include <json.hpp>
+using json = nlohmann::json;
+
+#include "boost/asio.hpp"
+
+#include <syslog.h>
+#include <ctime>
+#include <cstring>
 
 #include "Identifier.h"
 #include "MatchCondition.h"
 #include "Ipset.h"
+
 
 
 class DeviceProfile {
@@ -45,11 +51,15 @@ private:
 	std::vector<std::shared_ptr<Identifier>> Identifiers;
 	bool UploadStats;
 	bool Valid;
+	bool withAllowedEndpoints;
 	bool Debug;
-	// Ipset srcIpset, dstIpset;
+	Ipset srcIpset, dstv4Ipset, dstv6Ipset;
+	std::set<std::string> Hosts;
+	std::set<std::string> AllowedFqdns;
+	std::set<boost::asio::ip::address> AllowedIps;
 
 public:
-	DeviceProfile(const json &j, const bool inDebug = false): Debug{inDebug} {
+	DeviceProfile(const json &j, const bool inDebug = false): Debug{inDebug}, withAllowedEndpoints{false} {
 		if (Debug == true) {
 		    syslog (LOG_DEBUG, "DeviceProfile: constructing instance");
 		}
@@ -66,84 +76,64 @@ public:
 				Valid = from_json(j);
 			}
 		}
-		/* try {
-		    srcIpset.Open(getIpsetName(DeviceProfileUuid, true), "hash:mac", Debug);
-		    dstIpset.Open(getIpsetName(DeviceProfileUuid, false), "hash:ip", Debug);
-		} catch (...) {
-		    syslog(LOG_DEBUG, "notyhing");
-		}
-		*/
 	}
 	~DeviceProfile() {
 		syslog (LOG_DEBUG, "DeviceProfile: Deleting instance");
 	}
-
-	std::string Uuid_get () const { return DeviceProfileUuid; }
-	time_t DeviceProfileVersion_get ()  const { return DeviceProfileVersion; }
+    bool from_json(const json &j);
+	std::string getUuid () const { return DeviceProfileUuid; }
+	time_t getDeviceProfileVersion ()  const { return DeviceProfileVersion; }
 	bool isValid() const { return Valid; }
-	bool UploadStats_get() const { return UploadStats; }
+	bool getUploadStats() const { return UploadStats; }
 
-	bool addHost (MacAddress inMac);
-	bool removeHost (MacAddress inMac);
+	void createorupdateIpsets (bool inForce = false);
 
-	const std::vector<std::shared_ptr<Identifier>> & Identifiers_get() const { return Identifiers; }
-	bool from_json(const json &j) {
-		if (j.find("DeviceProfileUuid") == j.end()) {
-			syslog(LOG_ERR, "No DeviceProfileUuid set, ignoring this Object");
-			return false;
-		}
-		if (! j["DeviceProfileUuid"].is_string()) {
-			syslog(LOG_ERR, "DeviceProfileUuid is not a string, ignoring this Object");
-			return false;
-		}
-		if (DeviceProfileUuid != j["DeviceProfileUuid"].get<std::string>())
-			return false;
+	bool hasHosts() { return Hosts.size() > 0; }
+	bool hasAllowedEndpoints() { return withAllowedEndpoints; }
 
-        if (Debug == true) {
-            syslog(LOG_DEBUG, "Read Device Profile for UUID %s", DeviceProfileUuid.c_str());
-        }
-
-		if (j.find("DeviceProfileVersion") == j.end()) {
-			syslog(LOG_ERR, "No DeviceProfileVersion value set, ignoring this Object");
-			return false;
-		}
-		if (! j["DeviceProfileVersion"].is_number()) {
-			syslog(LOG_ERR, "DeviceProfileVersion is not a number, ignoring this Object");
-			return false;
-		}
-		DeviceProfileVersion = j["DeviceProfileVersion"].get<uint32_t>();
-
-		if (j.find("UploadStats") == j.end()) {
-			syslog(LOG_DEBUG, "No UploadStats value set, defaulting to false");
-			UploadStats = false;
-		} else if (! j["UploadStats"].is_boolean()) {
-			syslog(LOG_DEBUG, "UploadStats is not a bool, defaulting to false");
-			UploadStats = false;
-		} else {
-			UploadStats = j["UploadStats"].get<bool>();
-		}
-
-		Identifiers.clear();
-
-		if (j.find("Identifiers") == j.end()) {
-			syslog(LOG_WARNING, "No Identifiers for profile %s so all devices would match this profile, ignoring this Profile", DeviceProfileUuid.c_str());
-			return false;
-		}
-		json ijson = j["Identifiers"];
-		if (! ijson.is_array()) {
-			syslog(LOG_ERR, "Identifiers is not an array so ignoring this profile %s", DeviceProfileUuid.c_str());
-			return false;
-		}
-		for (json::iterator it = ijson.begin(); it != ijson.end(); ++it ) {
-			syslog(LOG_ERR, "Adding Identifier");
-			auto i = std::make_shared<Identifier>(*it);
-			Identifiers.push_back(i);
-		}
-		return true;
+	// We only add/remove hosts to the std::set as adding removing hosts only happen
+	// when we import DeviceProfileMatches at noddos startup time or when
+	// we run the matching algorithm. In both cases we run 'createorupdateIpsets'
+	void addHost (const MacAddress &inMac) {
+	    Hosts.insert(inMac.str());
+	    // return srcIpset.Add(inMac);
 	}
+    void removeHost (const MacAddress inMac) {
+        Hosts.erase(inMac.str());
+        // return srcIpset.Remove(inMac.str());
+    }
+    void removeHost (const std::string inMac) {
+        Hosts.erase(inMac);
+        // return srcIpset.Remove(inMac);
+    }
+
+    // Adding destinations we do immediately as it is based on DNS lookups.
+    // We also add the IP to the list of AllowedEndpoints in case we don't have any
+    // matched hosts yet but need the data if later on we match a host to the device profile
+    void addDestination (const boost::asio::ip::address &inIpAddress, const time_t inTtl = 604800) {
+	    AllowedIps.insert(inIpAddress);
+	    if (withAllowedEndpoints == true && Hosts.size() > 0) {
+	        if(inIpAddress.is_v4()) {
+	            dstv4Ipset.Add(inIpAddress, inTtl);
+	        } else {
+	            dstv6Ipset.Add(inIpAddress, inTtl);
+	        }
+	    }
+	}
+	void addDestination (const std::string inFqdn) {
+	    AllowedFqdns.insert(inFqdn);
+	}
+    std::set<std::string> getDestinations() {
+        return AllowedFqdns;
+    }
+
+	const std::vector<std::shared_ptr<Identifier>> & getIdentifiers() const { return Identifiers; }
+
 };
 
-typedef std::map<std::string, std::shared_ptr<DeviceProfile>> DeviceProfileMap;
 
+
+typedef std::map<std::string, std::shared_ptr<DeviceProfile>> DeviceProfileMap;
+typedef std::map<std::string,std::set<std::shared_ptr<DeviceProfile>>> FqdnDeviceProfileMap;
 
 #endif /* DEVICEPROFILE_H_ */

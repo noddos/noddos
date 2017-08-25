@@ -37,9 +37,9 @@ public:
 	bool Debug;
 
 	FlowEntry(bool inDebug = false): Debug{inDebug}, SrcPort{0}, DstPort{0}, Protocol{0}
-		{ Expiration_set(); iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);};
+		{ setExpiration(); iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);};
 	FlowEntry(uint16_t inSrcPort, uint16_t inDstPort, uint8_t inProtocol): SrcPort{inSrcPort}, DstPort{inDstPort}, Protocol{inProtocol}
-		{ Expiration_set(); iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);};
+		{ setExpiration(); iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);};
 	bool operator == (const FlowEntry &rhs) const {
 		return DstPort == rhs.DstPort &&
 				SrcPort == rhs.SrcPort &&
@@ -56,13 +56,13 @@ public:
 		return 1;
 	}
     // iCache interface methods.
-    time_t Expiration_set( time_t inExpiration = FLOWDEFAULTEXPIRATION) {
+    time_t setExpiration( time_t inExpiration = FLOWDEFAULTEXPIRATION) {
     	if (Debug == true) {
     		syslog (LOG_DEBUG, "Setting flow expiration to %ld", inExpiration);
     	}
     	return iCache::Expires = (time(nullptr) + inExpiration);
     }
-    time_t Expiration_get () { return iCache::Expires; }
+    time_t getExpiration () { return iCache::Expires; }
     bool isExpired() {
     	auto n = time(nullptr);
     	if (Debug == true) {

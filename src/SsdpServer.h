@@ -69,8 +69,8 @@ public:
 	bool ParseSsdpMessage (std::shared_ptr<SsdpHost> host, const char * msgbuf, const int nbytes);
 	int Open(std::string input, uint32_t inExpiration = 0);
 	bool Close();
-	bool ProcessEvent(struct epoll_event &event);
-	int GetFileHandle();
+	bool processEvent(struct epoll_event &event);
+	int getFileHandle();
 
 };
 

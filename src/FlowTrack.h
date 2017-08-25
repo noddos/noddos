@@ -113,14 +113,6 @@ public:
 
         setsockopt(nfct_fd(h), SOL_NETLINK, NETLINK_NO_ENOBUFS, &on, sizeof(int));
 
-/* This should have made conntrack more stable but it may be causing core dumps
-		int on = 1;
-        setsockopt(nfct_fd(h), SOL_NETLINK,
-                   NETLINK_BROADCAST_SEND_ERROR, &on, sizeof(int));
-
-        setsockopt(nfct_fd(h), SOL_NETLINK,
-                   NETLINK_NO_ENOBUFS, &on, sizeof(int));
-*/
         filter = nfct_filter_create();
         if (!filter) {
             syslog(LOG_ERR, "nfct_create_filter");
@@ -223,14 +215,14 @@ public:
 		return true;
 	}
 
-	virtual int GetFileHandle() {
+	virtual int getFileHandle() {
 		if (useNfct == false) {
 			return fileno(ctFilePointer);
 		}
 		return nfct_fd(h);
 	}
 
-	virtual bool ProcessEvent(struct epoll_event &event) {
+	virtual bool processEvent(struct epoll_event &event) {
 		char buf [24];
 		auto rawtime = time (nullptr);
 		struct tm * timeinfo = localtime (&rawtime);

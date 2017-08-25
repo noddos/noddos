@@ -6,6 +6,8 @@
     "ClientApiCertFile": "/etc/noddos/noddosapiclient.pem",
     "ClientApiKeyFile": "/etc/noddos/noddosapiclient.key",
     "SignatureCertFile": "/etc/noddos/noddossignature.pem",
+    "FirewallRulesFile": "/var/lib/noddos/iptables.rules",
+    "FirewallBlockTraffic": false,
     "PidFile": "/var/lib/noddos/noddos.pid",
     "MatchInterval": 300,
     "PruneInterval": 3600,

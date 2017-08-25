@@ -21,6 +21,7 @@ The 'getnoddosdeviceprofiles' script is used to securely download the list of De
 Here are instructions for installing Noddos on Home Gateways running Lede firmware. Pre-built packages for all LEDE releases and most of the supported platforms are available from the [Noddos package feed](https://noddos.io/lede/releases/<lede-release>/arch/<router-architecture>/packages/).
 
 In the near future, a package will be made available for the Noddos Luci interface. Until that time, you can either manage the configuration of Noddos using UCI under /etc/config/noddos or you can clone the Noddos repository from Github and copy the following files for the LUCI user interface:
+
 * files/clientdetails -> /www/cgi-bin
 * files/clients.htm -> /usr/lib/lua/luci/view/admin_status
 * files/dkjson.lua -> /usr/lib/lua
@@ -178,7 +179,7 @@ Install firewall rules. This example puts the NODDOS user-defined chain at the s
 	ip6tables -N NODDOS
 	ip6tables -t filter -I FORWARD -j NODDOS
 
-Install a cronjob for user noddos to do this frequently (please pick a random time of day instead of 3:23am), ie:
+Install a cronjob for user noddos to do this frequently (please pick a randon time of day instead of 3:23am), ie:
 
     23 */3 * * * bash /usr/bin/getnoddosdeviceprofiles; if [ $? -gt 0 ]; then kill -SIGHUP $(cat /var/lib/noddos/noddos.pid); fi
 

@@ -179,7 +179,7 @@ bool PacketSnoop::Close () {
     return false;
 }
 
-bool PacketSnoop::ProcessEvent(struct epoll_event &event) {
+bool PacketSnoop::processEvent(struct epoll_event &event) {
     int ret;
     if (Debug) {
         syslog (LOG_DEBUG, "PacketSnoop: Received AF_PACKET event");
@@ -536,8 +536,18 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
                 q->questions_count(), q->answers_count(),
                 q->additional_count());
     }
-    // From the LAN, only accept packets with no answers
-    // From the WAN, only accept packets with answers
+    /*
+     * From the LAN, only accept packets with no answers
+     * From the WAN, only accept packets with answers with Query ID matching earlier outbound packet
+     *
+     * Two use cases:
+     *   1: client uses DNS recursive server on equipment which Noddos is running
+     *     -> DNS Query ID on LAN interface is different from DNS Query ID on WAN interface
+     *     -> DNS Query ID can't be associated with a Noddos Host instance
+     *   2: client uses DNS server on remote location
+     *     -> DNS Query ID on LAN interface matches DNS Query ID on WAN interface
+     *
+     */
     if (ifMap->isLanInterface(ifIndex) == true && q->answers_count() == 0
             && q->additional_count() == 0) {
         for (auto it : q->queries()) {
@@ -589,17 +599,17 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
                         syslog(LOG_DEBUG, "PacketSnoop: A record: %s",
                                 it.data().c_str());
                     }
-                    boost::asio::ip::address ipv4 = boost::asio::ip::address::from_string(it.data());
-                    hC->addorupdateDnsIpCache(it.dname(), ipv4);
+                    boost::asio::ip::address ip = boost::asio::ip::address::from_string(it.data());
+                    hC->addorupdateDnsIpCache(it.dname(), ip);
                     break;
                 }
                 case Tins::DNS::QueryType::AAAA: {
-                    boost::asio::ip::address ipv6 = boost::asio::ip::address::from_string(it.data());
+                    boost::asio::ip::address ip = boost::asio::ip::address::from_string(it.data());
 
-                    hC->addorupdateDnsIpCache(it.dname(), ipv6);
+                    hC->addorupdateDnsIpCache(it.dname(), ip);
                     if (Debug == true) {
                         syslog(LOG_DEBUG, "PacketSnoop: AAAA record: %s",
-                                ipv6.to_string().c_str());
+                                ip.to_string().c_str());
                     }
                     break;
                 }
@@ -610,6 +620,9 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
                     }
                     break;
                 default:
+                    if (Debug == true) {
+                        syslog(LOG_DEBUG, "PacketSnoop: unhandled resource record: %s", dnsdata.c_str());
+                    }
                     break;
                 }
             } else {

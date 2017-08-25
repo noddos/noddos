@@ -128,11 +128,11 @@ public:
 	bool inPrivateAddressRange(const std::string ip );
 
 	// iCache interface methods.
-	time_t Expiration_set (time_t inExpiration = HOSTDEFAULTEXPIRATION) {
+	time_t setExpiration (time_t inExpiration = HOSTDEFAULTEXPIRATION) {
 	  	iCache::Expires = time(nullptr) + inExpiration;
 	   	return iCache::LastSeen + HOSTDEFAULTEXPIRATION;
 	}
-	time_t Expiration_get () { return iCache::LastSeen + HOSTDEFAULTEXPIRATION; }
+	time_t getExpiration () { return iCache::LastSeen + HOSTDEFAULTEXPIRATION; }
 	bool isExpired() { return time(nullptr) >= iCache::LastSeen + HOSTDEFAULTEXPIRATION; }
 	uint32_t Prune (bool Force = false);
 };

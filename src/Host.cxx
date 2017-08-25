@@ -49,7 +49,7 @@ bool Host::Match(const DeviceProfileMap& dpMap) {
 	if (isMatched()) {
 		auto it = dpMap.find(Uuid);
 		if (it != dpMap.end()) {
-			if (matchversion > it->second->DeviceProfileVersion_get()) {
+			if (matchversion > it->second->getDeviceProfileVersion()) {
 				return true;
 			}
 		}
@@ -63,7 +63,7 @@ bool Host::Match(const DeviceProfileMap& dpMap) {
 		auto &dp = *(kv.second);
 		auto match = Match(dp);
 		if (match > bestmatch) {
-			UploadStats = kv.second->UploadStats_get();
+			UploadStats = kv.second->getUploadStats();
 			bestmatch = match;
 			matcheduuid = kv.first;
 			matchversion = time(nullptr);
@@ -80,7 +80,7 @@ bool Host::Match(const DeviceProfileMap& dpMap) {
 
 ConfidenceLevel Host::Match(const DeviceProfile& dp) {
 	ConfidenceLevel bestmatch = ConfidenceLevel::None;
-	auto v = dp.Identifiers_get();
+	auto v = dp.getIdentifiers();
 	for (auto& i : v) {
 		if(Debug) {
 			syslog (LOG_DEBUG, "Testing identifier");
@@ -277,7 +277,7 @@ bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportPriva
 			}
 			std::vector<std::string> fqdns = dCip.getAllFqdns(ip);
 			for (auto &itf : fqdns) {
-				std::string fqdn = dCcname.lookupCname(itf);
+				std::string fqdn = dCcname.resolveCname(itf);
                 if (Debug) {
                     syslog (LOG_DEBUG, "Reverse resolved %s to %s, might have CNAME %s", ip.to_string().c_str(), itf.c_str(), fqdn.c_str());
                 }
@@ -360,7 +360,7 @@ bool Host::FlowEntry_set(const uint16_t inSrcPort, const std::string inDstIp,
 	f->SrcPort = inSrcPort;
 	f->DstPort = inDstPort;
 	f->Protocol = inProtocol;
-	f->Expiration_set(inExpiration);
+	f->setExpiration(inExpiration);
 
 	boost::asio::ip::address dstIpAddress = boost::asio::ip::address::from_string(inDstIp);
 
@@ -386,7 +386,7 @@ bool Host::FlowEntry_set(const uint16_t inSrcPort, const std::string inDstIp,
 					syslog(LOG_DEBUG, "Updating expiration of existing FlowEntry in IPv4 FlowCache for destination %s",
 						inDstIp.c_str());
 				}
-				(*existingflow)->Expiration_set(inExpiration);
+				(*existingflow)->setExpiration(inExpiration);
 				return false;
 			}
 		}
@@ -417,7 +417,7 @@ bool Host::FlowEntry_set(const uint16_t inSrcPort, const std::string inDstIp,
 					syslog(LOG_DEBUG, "Updating expiration of existing FlowEntry in IPv6 FlowCache for destination %s",
 						inDstIp.c_str());
 				}
-				(*existingflow)->Expiration_set(inExpiration);
+				(*existingflow)->setExpiration(inExpiration);
 				return false;
 			}
 		}
@@ -448,10 +448,10 @@ bool Host::Dhcp_set (const std::string inIpAddress, const MacAddress inMac, cons
 	}
 
 	iCache::FirstSeen = iCache::LastModified = iCache::LastSeen = time(nullptr);
-	Dhcp.Expiration_set();
+	Dhcp.setExpiration();
 	if(Debug) {
 		syslog(LOG_DEBUG, "Creating DHCP data for %s with expiration %lu with ipaddress %s, hostname %s, vendor %s ",
-		        Dhcp.Mac.c_str(), Dhcp.Expiration_get(), Dhcp.IpAddress.c_str(), Dhcp.Hostname.c_str(), Dhcp.DhcpVendor.c_str());
+		        Dhcp.Mac.c_str(), Dhcp.getExpiration(), Dhcp.IpAddress.c_str(), Dhcp.Hostname.c_str(), Dhcp.DhcpVendor.c_str());
 	}
 	return true;
 }
@@ -502,7 +502,7 @@ uint32_t Host::Prune (bool Force) {
 					if (Debug) {
 						std::string dstIp = (fc->first).to_string();
 						syslog(LOG_DEBUG, "Pruning IPv4 FlowEntry to %s for DstPort %u with expiration %ld while now is %ld",
-								dstIp.c_str(), (*it)->DstPort, (*it)->Expiration_get (), time(nullptr));
+								dstIp.c_str(), (*it)->DstPort, (*it)->getExpiration (), time(nullptr));
 					}
 					// Remove element from list
 					it = fel.erase(it);
@@ -539,7 +539,7 @@ uint32_t Host::Prune (bool Force) {
 				if (Force || (*it)->isExpired()) {
 					if (Debug) {
 						syslog(LOG_DEBUG, "Pruning IPv6 FlowEntry to %s for DstPort %u with expiration %ld while now is %ld",
-								fc->first.to_string().c_str(), (*it)->DstPort, (*it)->Expiration_get (), time(nullptr));
+								fc->first.to_string().c_str(), (*it)->DstPort, (*it)->getExpiration (), time(nullptr));
 					}
 					// Remove element from list
 					it = fel.erase(it);
