@@ -24,6 +24,7 @@ GUNZIP=$(which gunzip)
 BROTLI=$(which brotli)
 OPENSSL=$(which openssl)
 RM=$(which rm)
+DIFF=$(which diff)
 CWD=$(pwd)
 
 CERTFILE=/etc/noddos/noddosconfig.pem
@@ -164,8 +165,17 @@ then
     exit
 fi
 
-rm noddossigningpubkey.pem
+$RM noddossigningpubkey.pem
+
+$DIFF DeviceProfiles.json ${OUTDIR}/DeviceProfiles.json >/dev/null 2>/dev/null
+
+if [ $? -eq 0 ]
+then
+	cd $CWD
+	exit 0
+fi
 
 cp DeviceProfiles.json $OUTDIR
 cd $CWD
+exit 1
 

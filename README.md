@@ -11,7 +11,7 @@ The Noddos client monitors network traffic in the home- or enterprise network, i
 Noddos runs as a daemon to listen to DHCP, DNS and UPnP/SSDP traffic and monitor traffic flows on the home or enterprise network. It reads DHCP and DNS data by sniffing those packets using AF_PACKET_RING. If incoming SSDP data has a 'Location' header then Noddos will call the URL contained in the header to collect additional device information. Using the Linux Netfilter functionality, Noddos tracks network flows in real time using either /proc/net/nf_conntrack if available or otherwise using the Linux NFCT API.
 Noddos reads a file with Device Profiles that specifies the matching conditions and traffic filtering rules. Periodically, Noddos matches discovered devices with the [device profile database](https://github.com/noddos/noddosprofiles/) to identify known devices. Noddos can be configured to upload traffic statistics for identified devices and device attributes for devices it has not yet been able to identify. The Noddos configuration file specifies a.o. whether traffic and device statistics should be uploaded.
 
-The Noddos process should be started at boot time. The noddos package for routers running firmware of the [Lede project](https://lede-project.org/) includes an init.d/procd script that launches noddos. The process runs as a daemon and needs to run as root so it can update firewall rules. Depending on traffic patterns and the processor architecture, typically the client consumes about 10MB of DRAM. The CPU usage for the process is all but negligible at 1-2%. 
+The Noddos process should be started at boot time. The Noddos package for routers running firmware of the [Lede project](https://lede-project.org/) includes an init.d/procd script that launches Noddos. The process runs as a daemon and needs to run as root so it can update firewall rules. Depending on traffic patterns and the processor architecture, typically the client consumes about 10MB of DRAM. The CPU usage for the process is all but negligible at 1-2%. 
 
 The 'getnoddosdeviceprofiles' script is used to securely download the list of Device Profiles over HTTPS from the Noddos web site, check the digital signature of the file using a Noddos certificate and makes the downloaded file available to the Noddos client. It needs access to the public cert for the key that was used to sign the file. That public key is included in the software distribution of Noddos. Th getnoddosdeviceprofiles script should be called at least once per day from cron. 
 
@@ -20,7 +20,7 @@ The 'getnoddosdeviceprofiles' script is used to securely download the list of De
 ### Installation on Home Gateways running Lede firmware
 Here are instructions for installing Noddos on Home Gateways running Lede firmware. Pre-built packages for all LEDE releases and most of the supported platforms are available from the [Noddos package feed](https://noddos.io/lede/releases/<lede-release>/arch/<router-architecture>/packages/).
 
-In the near future a package will be made available for the Noddos Luci interface. Until that time, you can either manage the configuration of noddos using UCI under /etc/config/noddos or you can clone the Noddos repository from Github and copy the following files for the LUCI user interface:
+In the near future, a package will be made available for the Noddos Luci interface. Until that time, you can either manage the configuration of Noddos using UCI under /etc/config/noddos or you can clone the Noddos repository from Github and copy the following files for the LUCI user interface:
 * files/clientdetails -> /www/cgi-bin
 * files/clients.htm -> /usr/lib/lua/luci/view/admin_status
 * files/dkjson.lua -> /usr/lib/lua
@@ -59,17 +59,17 @@ Go to the Luci -> Network -> Client Firewall page to configure Noddos. Make sure
 
 	service noddos restart
 
-Install a cronjob to download the Device Profiles database frequently (please pick a randon minute instead of 23 minutes after the hour, ie
+Install a cronjob to download the Device Profiles database frequently (please pick a randon minute instead of 23 minutes after the hour, ie:
 
 	crontab -e 
-    	23 */3 * * * /usr/bin/getnoddosdeviceprofiles
+    	23 */3 * * * /usr/bin/getnoddosdeviceprofiles; if [ $? -gt 0 ]; then service noddos reload; fi
 
 If you want maximum privacy for uploads, create a new client cert every 12 hours or so. That does mean that going forward you may not be able to use some newly developed Noddos portal functions. Create a cronjob for root:
 
     crontab -e 
         41 */12 * * * cd /etc/noddos; /usr/bin/makenoddoscert.sh
 
-The installation script for Noddos automatically creates a 'NODDOS' chain in the filter table of ip(6)tables and adds as first entry in the FORWARD chain of the filter table a rule to process all traffic with the NODDOS chain. Depending on your requirments, you may customize this rule or put it different location of the FORWARD chain.
+The installation script for Noddos automatically creates a 'NODDOS' chain in the filter table of ip(6)tables and adds as first entry in the FORWARD chain of the filter table a rule to process all traffic with the NODDOS chain. Depending on your requirements, you may customize this rule or put it different location of the FORWARD chain.
 
 ### Installation for Linux DIY routers
 Sorry, there are no packages yet for Ubuntu / Fedora / CentOS / Gentoo. For now, just compile it from source using the instructions provided below.
@@ -77,8 +77,8 @@ Sorry, there are no packages yet for Ubuntu / Fedora / CentOS / Gentoo. For now,
 ## Compilation
 Compilation instructions are available for Home Gateways and regular Linux systems.
 
-### Compilation for a Home Gateway running firmware of the [Lede project](https://lede-project.org/) for Noddos v0.4.0
-Noddos can be compilaed and installed on most if not all of the platforms supported by Lede 17.01.x releases. Use these instructions to generate your own package. These instructions are based on the Lede 17.01.2 release.
+### Compilation for a Home Gateway running firmware of the [Lede project](https://lede-project.org/) for Noddos
+Noddos can be compiled and installed on most if not all of the platforms supported by Lede 17.01.x releases. Use these instructions to generate your own package. These instructions are based on the Lede 17.01.2 release.
 
 	mkdir -p noddosbuild/package/{noddos,libtins}
 	cd noddosbuild
@@ -108,7 +108,7 @@ Then execute the following commands:
     make menuconfig
 
 In the firmware build menu:
-- Enable building of the noddos package, go to "Network" menu, have noddos build as module ('M')
+- Enable building of the Noddos package, go to "Network" menu, have Noddos build as module ('M')
 - Select the Save menu option, save to '.config' and then select 'Exit' and again 'Exit'
 
 Now we just have to build the packages:
@@ -126,7 +126,7 @@ Follow the installation instructions from this point onwards.
 ### Compilation for a Linux DIY router
 Your Linux DIY router should be running a Linux kernel 2.6.13 or newer. These instructions assume you have the development tools such as C++, ld, make, cmake installed.
 
-### Compile noddos yourself
+### Compile Noddos yourself
 Install development packages for libcurl, libopenssl and libnetfilter_conntrack
 
     sudo apt install libssl-dev
@@ -141,7 +141,7 @@ Install development packages for libcurl, libopenssl and libnetfilter_conntrack
     sudo apt install openssl ssl libcurl3 libtins3.4 brotli wget libnetfilter-conntrack3 ca-certificates ipset iptables-persistent
     make test
 
-### Install noddos
+### Install Noddos
 Install needed apps
 
     sudo adduser --system --home /var/lib/noddos --shell /bin/false \
@@ -178,9 +178,9 @@ Install firewall rules. This example puts the NODDOS user-defined chain at the s
 	ip6tables -N NODDOS
 	ip6tables -t filter -I FORWARD -j NODDOS
 
-Install a cronjob for user noddos to do this frequently (please pick a randon time of day instead of 3:23am), ie:
+Install a cronjob for user noddos to do this frequently (please pick a random time of day instead of 3:23am), ie:
 
-    23 */3 * * * bash /usr/bin/getnoddosdeviceprofiles
+    23 */3 * * * bash /usr/bin/getnoddosdeviceprofiles; if [ $? -gt 0 ]; then kill -SIGHUP $(cat /var/lib/noddos/noddos.pid); fi
 
 If you want maximum privacy, create a new client cert every 6 hours or so. That does mean that going forward you may not be able to use some newly developed Noddos portal functions. Create a cronjob for root:
 
@@ -198,9 +198,9 @@ The following command line options are supported by the Noddos client:
 * __-h, --help__: Print command line options
 
 ## Configuration file
-The noddos client configuration file (Default: /etc/noddos/noddos.conf) is a JSON file with the configuration settings.
+The Noddos client configuration file (Default: /etc/noddos/noddos.conf) is a JSON file with the configuration settings.
 
-__DeviceProfilesFile__: The list of deviceprofiles for matching hosts against. This file is saved to this location by the shell script that downloads the file from the cloud and checks its signature. Default: /var/lib/noddos/DeviceProfiles.json
+__DeviceProfilesFile__: The file with the list of device profiles for matching hosts against. This file is saved to this location by the shell script that downloads the file from the cloud and checks its signature. Default: /var/lib/noddos/DeviceProfiles.json
 
 __MatchFile__: Noddos will write all current matched devices to this file after receiving a SIGTERM signal. At startup, Noddos will read this file to have an initial list of matched devices. Default: /var/lib/noddos/DeviceMatches.json on Linux systems and /etc/noddos/DeviceMatches.json on routers with Lede firmware
 
@@ -218,7 +218,7 @@ __FirewallRulesFile__: location of file where Noddos will save the firewall rule
 
 __FirewallBlockTraffic__: Boolean that specifies whether firewall rules should block (true) certain traffic or whether it should just log (false) violations. As Noddos is still pre-release software, blocking traffic may impact the functioning of your devices and is thus not adviced. Default: false
 
-__PidFile__: Location for pidfile of nodlisten daemon.  Default: /var/lib/noddos/noddos.pid
+__PidFile__: Location for file with the pid of the noddos client.  Default: /var/lib/noddos/noddos.pid
 
 __UploadMode__: If and how Noddos show upload data: Possible values: None or Anonymous.
 
@@ -230,9 +230,9 @@ __WhitelistedIpv6Addresses__: list of IPv6 addresses that that should not have a
 
 __ReportTrafficToRfc1918__: should traffic to RFC1918 IP addresses be uploaded to the traffic stats API or not. There is currently no equivalent for IPv6 addresses. Default: false
 
-__WanInterfaces__: Interfaces on which noddos should accept DNS answers. Default: empty list causes Noddos to discard all DNS answers, so one or more values should be provided for DNS snooping to work.
+__WanInterfaces__: Interfaces on which Noddos should accept DNS answers. Default: empty list causes Noddos to discard all DNS answers, so one or more values should be provided for DNS snooping to work.
 
-__LanInterfaces__: Interfaces on which noddos should listen for DNS messages without answers. Currently unimplemented but planned: Noddos will only listen to SSDP multicast on these interfaces and Noddos will only perform ARP lookups on these interfaces. Default: empty list, which means Noddos will discard DNS queries so one or more values should be provided for DNS snooping to work.
+__LanInterfaces__: Interfaces on which Noddos should listen for DNS messages without answers. Currently unimplemented but planned: Noddos will only listen to SSDP multicast on these interfaces and Noddos will only perform ARP lookups on these interfaces. Default: empty list, which means Noddos will discard DNS queries so one or more values should be provided for DNS snooping to work.
 
 __TrafficReportInterval__: Interval between uploads of traffic stats for matched devices. To disable upload of traffic uploads, set this value to 0. Default: 3600 seconds
 
