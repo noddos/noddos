@@ -26,6 +26,7 @@
 #include <regex>
 #include <memory>
 #include <unordered_set>
+#include <set>
 
 #include "Host.h"
 #include "DeviceProfile.h"
@@ -37,6 +38,7 @@
 #include "DnsCache.h"
 #include "noddos.h"
 
+
 class HostCache {
 private:
 	std::map<unsigned long long, std::shared_ptr<Host>> hC; 	// map from Mac to Host
@@ -47,19 +49,29 @@ private:
 	// These maps cache IPv4 & IPv6 addresses and CNAMEs for at least the TrafficReport interval
 	DnsIpCache <boost::asio::ip::address> dCip;
 	DnsCnameCache dCcname;
+	FqdnDeviceProfileMap fdpMap;
 
 	DeviceProfileMap dpMap;
 	InterfaceMap *ifMap;
 	std::regex arp_rx, dev_rx;
 	std::unordered_set<std::string> WhitelistedNodes;
 	bool Debug;
+	// FIXME: We don't actually use the data in below sets anymore
 	std::unordered_set<std::string> LocalInterfaces;
 	std::unordered_set<std::string> LocalIpAddresses;
 	uint32_t FlowExpiration;
+	bool FirewallBlockTraffic;
+	std::string FirewallRulesFile;
+
+    void writeIptables();
 
 public:
-	HostCache(InterfaceMap &inifMap, const std::string inDnsCacheFilename = "", const uint32_t inFlowExpiration = FLOWDEFAULTEXPIRATION, const bool inDebug = false):
-			ifMap{&inifMap}, FlowExpiration{inFlowExpiration}, Debug{inDebug} {
+	HostCache(InterfaceMap &inifMap, const std::string inDnsCacheFilename,
+	        const uint32_t inFlowExpiration, std::string inFirewallRulesFile,
+	        const bool inFirewallBlockTraffic, const bool inDebug = false):
+			ifMap{&inifMap}, FlowExpiration{inFlowExpiration}, Debug{inDebug},
+			FirewallRulesFile{inFirewallRulesFile},
+			FirewallBlockTraffic{inFirewallBlockTraffic} {
 		if (Debug) {
 			syslog (LOG_DEBUG, "HostCache: constructing instance");
 		}
@@ -68,9 +80,10 @@ public:
 
 		arp_rx = std::regex(R"delim(^(\d\S+)\s+?\S+?\s+?\S+?\s+?\s+?(\S+)\s+?\S+?\W+?(\S+?)$)delim",
         	std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
+		// FIXME: We don't really need the below anymore so should remove this call
 		getInterfaceIpAddresses();
-		dCip.debug_set(Debug);
-		dCcname.debug_set(Debug);
+		dCip.setDebug(Debug);
+		dCcname.setDebug(Debug);
 		if (inDnsCacheFilename != "") {
 		    importDnsCache(inDnsCacheFilename);
 		}
@@ -81,17 +94,21 @@ public:
 		}
 	}
 
-	uint32_t DeviceProfiles_load(const std::string filename);
-	const DeviceProfileMap & DeviceProfiles_getmap() { return dpMap; };
+	uint32_t loadDeviceProfiles(const std::string filename);
+	bool removeDeviceProfile(const std::string inUuid);
+	const DeviceProfileMap & getDeviceProfilesMap() { return dpMap; };
+
 
 	uint32_t Whitelists_set (const std::unordered_set<std::string>& inIpv4Addresses, const std::unordered_set<std::string>& inIpv6Addresses, const std::unordered_set<std::string>& inMacAddresses);
 	bool isWhitelisted(const std::string inAddress) { return (WhitelistedNodes.find(inAddress) != WhitelistedNodes.end()); }
 	bool isWhitelisted(Host &inHost) { return isWhitelisted(inHost.MacAddress_get()) || isWhitelisted(inHost.Ipv4Address_get()) || isWhitelisted(inHost.Ipv6Address_get()); }
 
+	// Matching hosts with device profiles
 	uint32_t Match();
 	bool MatchByMac(const MacAddress &inMacAddress);
 	bool MatchByIpAddress(const std::string inIpAddress);
 
+    // Adding collected information to a Host instance
 	bool AddByMac (const MacAddress inMacAddress, const std::string inIpAddress = "");
 	bool AddFlow (const std::string srcip, const uint16_t srcport, const std::string dstip, const uint16_t dstport, const uint8_t protocol, const uint32_t expiration);
 	bool AddDnsQueryIp (const std::string clientip, const std::string fqdn, const std::string ip, const uint32_t expire = 86400);
@@ -103,28 +120,37 @@ public:
 	std::shared_ptr<Host> FindHostByMac (const MacAddress &inMac);
 	std::shared_ptr<Host> FindOrCreateHostByMac (const MacAddress inMac, const std::string Uuid = "", const std::string inIp = "");
 
+	// Prune Hosts, DnsCache etc
 	uint32_t Prune (bool Force = false);
 
+	// Manage short-lived cache entries needed for matching DNS answers to DNS queries
 	void addorupdateDnsQueryCache (uint16_t id);
 	bool inDnsQueryCache (uint16_t id);
 	uint32_t pruneDnsQueryCache (bool Force = false);
 
 	// These functions are for the new DnsCache filled by the PacketSnoop class
-	void addorupdateDnsIpCache(std::string inFqdn, boost::asio::ip::address inIp, time_t inTtl = 604800) { dCip.addorupdateResourceRecord(inFqdn, inIp, inTtl); }
-	void addorupdateDnsCnameCache(std::string inFqdn, std::string inCname, time_t inTtl = 604800) { dCcname.addorupdateCname(inFqdn, inCname, inTtl);	}
+	void addorupdateDnsIpCache(const std::string inFqdn, const boost::asio::ip::address inIp, time_t inTtl = 604800);
+	void addorupdateDnsCnameCache(const std::string inFqdn, const std::string inCname, time_t inTtl = 604800);
+	void updateDeviceProfileMatchesDnsData ();
 
+	// DnsCache persistence
 	bool exportDnsCache (const std::string filename);
     bool importDnsCache (const std::string filename);
 	uint32_t pruneDnsIpCache(bool Force = false) {
-		uint32_t deletecount = 0;
-		deletecount = dCip.pruneResourceRecords(Force);
-		return deletecount;
+		std::set<std::string> PrunedFqdns = dCip.pruneResourceRecords(Force);
+		for(auto Fqdn: PrunedFqdns) {
+		    fdpMap.erase(Fqdn);
+		}
+		return PrunedFqdns.size();
 	}
     uint32_t pruneDnsCnameCache(bool Force = false) {
-        uint32_t deletecount = 0;
-        deletecount = dCcname.pruneCnames(Force);
-        return deletecount;
+        std::set<std::string> PrunedCnames = dCcname.pruneCnames(Force);
+        for(auto Cname: PrunedCnames) {
+            fdpMap.erase(Cname);
+        }
+        return PrunedCnames.size();
     }
+
 	InterfaceMap * getInterfaceMap() { return ifMap; }
 	MacAddress MacLookup (const std::string inIpAddress, const int retries = 1);
 	MacAddress MacLookup (const std::string inIpAddress, const std::string inInterface, const int retries = 1);
@@ -138,7 +164,7 @@ public:
 	bool ExportDeviceProfileMatches(const std::string filename, const bool detailed = false);
 	bool ImportDeviceInfo (json &j);
 
-	uint32_t HostCount() { return hC.size(); }
+	// uint32_t HostCount() { return hC.size(); }
 	bool Debug_get() { return Debug; }
 };
 

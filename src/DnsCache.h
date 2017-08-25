@@ -26,11 +26,14 @@
 #include <map>
 #include <vector>
 #include <unordered_set>
+#include <set>
 #include "syslog.h"
 #include "boost/asio.hpp"
 
 #include <json.hpp>
 using nlohmann::json;
+
+#include "DeviceProfile.h"
 
 class DnsCnameCache {
 private:
@@ -45,15 +48,37 @@ public:
     };
     ~DnsCnameCache() {
         if (Debug == true) {
-            syslog (LOG_DEBUG, "DnsCnameCache: deletinginstance");
+            syslog (LOG_DEBUG, "DnsCnameCache: deleting instance");
         }
     };
 
-    void debug_set (bool inDebug) {
+    void setDebug (bool inDebug) {
         Debug = inDebug;
     }
+
+    void addorupdateCname (const std::string inFqdn, const std::string inCname, FqdnDeviceProfileMap &fdpMap, const time_t inTtl=604800) {
+        std::string fqdn = inFqdn;
+        std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
+
+        std::string cname = inCname;
+        std::transform(cname.begin(), cname.end(), cname.begin(), ::tolower);
+
+        auto it = fdpMap.find(fqdn);
+        if (it != fdpMap.end()) {
+            if (Debug == true) {
+                syslog (LOG_DEBUG, "DnsIpCache: Found FqdnDeviceProfileMap entry for %s with CNAME %s",
+                        inFqdn.c_str(), inCname.c_str());
+            } else {
+                syslog (LOG_DEBUG, "DnsCache: Didn't find FqdnDeviceProfileMap entry for %s with CNAME %s", inFqdn.c_str(), inCname.c_str() );
+            }
+            fdpMap[cname].insert(it->second.begin(), it->second.end());
+        }
+        addorupdateCname(fqdn, cname, inTtl);
+    }
+
     void addorupdateCname (const std::string inFqdn, const std::string inCname, const time_t inTtl=604800) {
         time_t Ttl = inTtl;
+        // We need to keep DNS records at least 4 hours as that is our maximum matching interval
         if (Ttl < 4 * 3600) {
             Ttl = 4 * 3600;
         }
@@ -70,12 +95,12 @@ public:
         DnsCache[cname] = std::make_pair(fqdn, now + Ttl);
     }
 
-    std::string lookupCname (const std::string inCname, const uint8_t recdepth = 0) const {
+    std::string resolveCname (const std::string inCname, const uint8_t recdepth = 0) const {
         if (recdepth > 5) {
             return inCname;
         }
         if (Debug == true) {
-            syslog (LOG_DEBUG, "DnsCnameCache: Seeing if %s is a CNAME", inCname.c_str());
+            syslog (LOG_DEBUG, "DnsCnameCache: Resolving CNAME %s ", inCname.c_str());
         }
         std::string cname = inCname;
         std::transform(cname.begin(), cname.end(), cname.begin(), ::tolower);
@@ -85,13 +110,27 @@ public:
             if (Debug == true) {
                 syslog (LOG_DEBUG, "DnsCnameCache: Found reverse CNAME from %s to %s", cname.c_str(), it->second.first.c_str());
             }
-            return lookupCname(it->second.first, recdepth + 1);
+            return resolveCname(it->second.first, recdepth + 1);
         } else {
             return inCname;
         }
     }
 
-    size_t importJson (json &j) {
+    std::string lookupCname (const std::string inCname) {
+        std::string cname = inCname;
+        std::transform(cname.begin(), cname.end(), cname.begin(), ::tolower);
+
+        auto it = DnsCache.find(cname);
+        if (it == DnsCache.end()) {
+            if (Debug == true) {
+                syslog (LOG_DEBUG, "DnsCnameCache: %s does not have a CNAME", cname.c_str());
+            }
+            throw std::runtime_error("No CNAME found for " + inCname);
+        }
+        return it->second.first;
+    }
+
+    size_t importJson (json &j, FqdnDeviceProfileMap &fdpMap) {
         if (Debug == true) {
             syslog (LOG_DEBUG, "DnsCnameCache: importing json with cnames");
         }
@@ -107,7 +146,12 @@ public:
             dnsRecords++;
             std::string cname = it.key();
             std::string fqdn = it.value();
-            addorupdateCname (fqdn, cname, 86400);
+            auto fdp_it = fdpMap.find(fqdn);
+            if (fdp_it != fdpMap.end()) {
+                addorupdateCname (fqdn, cname, fdpMap, 86400);
+            } else {
+                addorupdateCname (fqdn, cname, 86400);
+            }
         }
         return dnsRecords;
     }
@@ -123,11 +167,11 @@ public:
         }
         return dnsRecords;
     }
-    size_t pruneCnames (const bool Force = false) {
+    std::set<std::string> pruneCnames (const bool Force = false) {
         if (Debug == true) {
             syslog (LOG_DEBUG, "DnsCnameCache: pruning cnames");
         }
-        size_t deleted = 0;
+        std::set<std::string> PrunedFqdns;
         auto now = time(nullptr);
         auto it = DnsCache.begin();
         while (it != DnsCache.end()) {
@@ -135,13 +179,13 @@ public:
                 if (Debug == true) {
                     syslog (LOG_DEBUG, "Deleting CNAME for %s pointing to %s with TTL %lu", it->first.c_str(), it->second.first.c_str(), it->second.second);
                 }
+                PrunedFqdns.insert(it->first);
                 it = DnsCache.erase(it);
-                deleted++;
             } else {
                 it++;
             }
         }
-        return deleted;
+        return PrunedFqdns;
     }
 };
 
@@ -164,8 +208,49 @@ public:
         }
 	};
 
+	std::map<T, time_t> lookupResourceRecord (const std::string inFqdn) {
+        std::string fqdn = inFqdn;
+        std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
+
+        auto it = DnsFwdCache.find(fqdn);
+        if (it == DnsFwdCache.end()) {
+            throw std::runtime_error("No resource record found for " + inFqdn);
+        }
+        return it->second;
+	}
+
+    void addorupdateResourceRecord (const std::string inFqdn, const T inIpAddress, FqdnDeviceProfileMap &fdpMap, const time_t inTtl = 604800) {
+        std::string fqdn = inFqdn;
+        std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
+
+        auto fdp_it = fdpMap.find(fqdn);
+        if (fdp_it != fdpMap.end()) {
+            addorupdateResourceRecord (fqdn, inIpAddress, fdp_it, inTtl);
+        } else {
+            if (Debug == true) {
+                syslog (LOG_DEBUG, "DnsIpCache: Didn't find FqdnDeviceProfileMap entry for %s", inFqdn.c_str());
+            }
+            addorupdateResourceRecord (fqdn, inIpAddress, inTtl);
+        }
+    }
+
+    void addorupdateResourceRecord (const std::string inFqdn, const T inIpAddress, FqdnDeviceProfileMap::iterator &fdp_it, const time_t inTtl = 604800) {
+        std::string fqdn = inFqdn;
+        std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
+
+        for (auto DeviceProfile_sharedpointer_it: fdp_it->second) {
+            if (Debug == true) {
+                syslog (LOG_DEBUG, "DnsIpCache: Found FqdnDeviceProfileMap entry with UUID %s for %s with IP %s",
+                        DeviceProfile_sharedpointer_it->getUuid().c_str(), inFqdn.c_str(), inIpAddress.to_string().c_str());
+            }
+            DeviceProfile_sharedpointer_it->addDestination(inIpAddress, inTtl);
+        }
+        addorupdateResourceRecord (fqdn, inIpAddress, inTtl);
+    }
+
 	void addorupdateResourceRecord (const std::string inFqdn, const T inIpAddress, const time_t inTtl = 604800) {
 		time_t Ttl = inTtl;
+        // We need to keep DNS records at least 4 hours as that is our maximum matching interval
 		if (Ttl < 4 * 3600) {
 			Ttl = 4 * 3600;
 		}
@@ -182,11 +267,11 @@ public:
 		DnsRevCache[inIpAddress].insert(std::make_pair(inFqdn, now + Ttl));
 	}
 
-	void debug_set (bool inDebug) {
+	void setDebug (bool inDebug) {
 		Debug = inDebug;
 	}
 
-    size_t importJson (json &j) {
+    size_t importJson (json &j, FqdnDeviceProfileMap &fdpMap) {
         if (Debug == true) {
             syslog (LOG_DEBUG, "DnsIpCache: importing json");
         }
@@ -202,9 +287,14 @@ public:
             dnsRecords++;
             std::string fqdn = it.key();
             std::unordered_set<std::string> records = (*cj)[fqdn].get<std::unordered_set<std::string>>();
+            auto fdp_it = fdpMap.find(fqdn);
             for (auto record: records) {
                 T IpAddress = T::from_string(record);
-                addorupdateResourceRecord (fqdn, IpAddress, 86400);
+                if (fdp_it != fdpMap.end()) {
+                    addorupdateResourceRecord (fqdn, IpAddress, fdp_it, 86400);
+                } else {
+                    addorupdateResourceRecord (fqdn, IpAddress, 86400);
+                }
             }
         }
         return dnsRecords;
@@ -246,8 +336,8 @@ public:
 		}
 		return fqdns;
 	}
-	uint32_t pruneResourceRecords (const bool Force = false) {
-		uint32_t deletecount = 0;
+	std::set<std::string> pruneResourceRecords (const bool Force = false) {
+		std::set<std::string> PrunedFqdns;
 		auto now = time(nullptr);
 		{
 			auto it_resource = DnsFwdCache.begin();
@@ -260,7 +350,6 @@ public:
 									it_resource->first.c_str(), it_record->first.to_string().c_str(), it_record->second, now);
 						}
 						it_record = it_resource->second.erase(it_record);
-						deletecount++;
 					} else {
 						it_record++;
 					}
@@ -269,6 +358,7 @@ public:
 					if (Debug == true) {
 						syslog(LOG_DEBUG, "DnsIpCache: Removing record for %s as there is no data left", it_resource->first.c_str());
 					}
+					PrunedFqdns.insert(it_resource->first);
 					it_resource = DnsFwdCache.erase(it_resource);
 					if (Debug == true) {
 						syslog(LOG_DEBUG, "DnsIpCache: Deleted record");
@@ -289,7 +379,6 @@ public:
 									it_resource->first.to_string().c_str(), it_record->first.c_str(), it_record->second, now);
 						}
                         it_record = it_resource->second.erase(it_record);
-						deletecount++;
 					} else {
 						it_record++;
 					}
@@ -307,7 +396,7 @@ public:
 				}
 			}
 		}
-		return deletecount;
+		return PrunedFqdns;
 	}
 
 };

@@ -46,9 +46,10 @@
 #include <linux/if_link.h>
 
 #include <syslog.h>
-#include <stdio.h>
+#include <cstdio>
 #include <iomanip>
-#include <string.h>
+#include <cstring>
+#include <cstdlib>
 
 #include <json.hpp>
 using nlohmann::json;
@@ -63,8 +64,16 @@ uint32_t HostCache::Prune (bool Force) {
 	}
 	uint32_t prunedhosts = 0;
 	for (auto it : hC) {
+        std::string mac = it.second->MacAddress_get();
+        std::string uuid = it.second->Uuid_get();
 		if (it.second->Prune(Force)) {
-			prunedhosts++;
+			if(uuid != "") {
+			    auto it = dpMap.find(uuid);
+			    if (it != dpMap.end()) {
+			        it->second->removeHost(mac);
+			    }
+			}
+		    prunedhosts++;
 		}
 	}
 	if (Debug == true) {
@@ -92,6 +101,8 @@ uint32_t HostCache::Match() {
 			matched++;
 		}
 	}
+	updateDeviceProfileMatchesDnsData();
+	writeIptables();
 	return matched;
 }
 
@@ -392,9 +403,9 @@ uint32_t HostCache::getInterfaceIpAddresses() {
     // Walk through linked list, maintaining head pointer so we
     // can free list later
 
-    for (ifa = ifaddr, n = 0; ifa != NULL; ifa = ifa->ifa_next, n++) {
+    for (ifa = ifaddr, n = 0; ifa != nullptr; ifa = ifa->ifa_next, n++) {
         if (ifa->ifa_addr == nullptr || ifa->ifa_name == nullptr || ifa->ifa_name == "") {
-             continue;
+            continue;
         }
         family = ifa->ifa_addr->sa_family;
 
@@ -724,9 +735,46 @@ uint32_t HostCache::ImportDeviceProfileMatches(const std::string filename) {
 	   }
 	}
 	syslog(LOG_INFO, "HostCache: DeviceMatches read: %u", matches);
+	updateDeviceProfileMatchesDnsData();
+	writeIptables();
 	return matches;
 }
 
+void HostCache::updateDeviceProfileMatchesDnsData () {
+    for (auto dp_it: dpMap) {
+        // Now we need to update the ipset rules for Device Profiles with
+        // hasAllowedEndpoints and one or more hosts matched to it
+        dp_it.second->createorupdateIpsets();
+        std::set<std::string> fqdns = dp_it.second->getDestinations();
+        for (auto fqdn: fqdns) {
+            fdpMap[fqdn].insert(dp_it.second);
+            try {
+                std::map<boost::asio::ip::address, time_t> p = dCip.lookupResourceRecord(fqdn);
+                for (auto ip_it: p) {
+                    dp_it.second->addDestination(ip_it.first, ip_it.second);
+                }
+            } catch (std::runtime_error &e) {
+            }
+            std::string cname = fqdn;
+            try {
+                while (1) {
+                    cname = dCcname.lookupCname(cname);
+                    try {
+                        std::map<boost::asio::ip::address, time_t> p = dCip.lookupResourceRecord(cname);
+                        for (auto ip_it: p) {
+                            dp_it.second->addDestination(ip_it.first, ip_it.second);
+                        }
+                    } catch (std::runtime_error &e) {
+                    }
+                    // All traffic allowed to a FQDN is also allowed to its CNAME
+                    // so if subsequently an A record is received for the CNAME,
+                    // the ipsets for the device profiles must be updated
+                    fdpMap[cname].insert(dp_it.second);
+                }
+            } catch (std::runtime_error &error) {}
+        }
+    }
+}
 bool HostCache::exportDnsCache (const std::string filename) {
     std::ofstream ofs(filename);
     if (not ofs.is_open()) {
@@ -759,11 +807,11 @@ bool HostCache::importDnsCache (const std::string filename) {
     }
 
     try {
-        size_t dnsRecords = dCip.importJson(j);
+        size_t dnsRecords = dCip.importJson(j, fdpMap);
         if (Debug == true) {
             syslog(LOG_DEBUG, "HostCache: Read %zu cached DNS IP address records", dnsRecords);
         }
-        dnsRecords = dCcname.importJson(j);
+        dnsRecords = dCcname.importJson(j, fdpMap);
         if (Debug == true) {
             syslog(LOG_DEBUG, "HostCache: Read %zu cached DNS CNAME records", dnsRecords);
         }
@@ -771,6 +819,35 @@ bool HostCache::importDnsCache (const std::string filename) {
         syslog (LOG_ERR, "HostCache: Failure parsing DnsCache json data");
     }
     ifs.close();
+    return false;
+}
+
+void HostCache::addorupdateDnsIpCache(const std::string inFqdn, const boost::asio::ip::address inIp, time_t inTtl) {
+    dCip.addorupdateResourceRecord(inFqdn, inIp, fdpMap, inTtl);
+}
+
+void HostCache::addorupdateDnsCnameCache(const std::string inFqdn, const std::string inCname, time_t inTtl) {
+    dCcname.addorupdateCname(inFqdn, inCname, fdpMap, inTtl);
+}
+
+bool HostCache::removeDeviceProfile(const std::string inUuid) {
+    auto dp_it = dpMap.find(inUuid);
+    if (dp_it == dpMap.end()) {
+        throw std::runtime_error ("Device Profile " + inUuid + " not found");
+    }
+    std::set<std::string> dpFqdns = dp_it->second->getDestinations();
+    for (auto Fqdn: dpFqdns) {
+        std::string cname = Fqdn;
+        try {
+            while (1) {
+                auto fdpmap_it = fdpMap.find(cname);
+                if (fdpmap_it != fdpMap.end()) {
+                    fdpmap_it->second.erase(dp_it->second);
+                }
+                cname = dCcname.lookupCname(cname);
+            }
+        } catch (std::runtime_error &error) {}
+    }
     return false;
 }
 
@@ -812,10 +889,10 @@ bool HostCache::ImportDeviceInfo (json &j) {
 	if (Debug == true) {
 		syslog(LOG_DEBUG, "HostCache: Importing Device Profile for UUID %s with MacAddress %s", DeviceProfileUuid.c_str(), MacAddressString.c_str());
 	}
-	std::string IpAddress = "";
+	std::string Ipv4Address = "";
 	if (j.find("Ipv4Address") != j.end()) {
 		if (j["Ipv4Address"].is_string()) {
-			IpAddress = j["Ipv4Address"].get<std::string>();
+			Ipv4Address = j["Ipv4Address"].get<std::string>();
 		}
 	}
 
@@ -828,23 +905,28 @@ bool HostCache::ImportDeviceInfo (json &j) {
 			return false;
 		}
 	}
-	if (not FindOrCreateHostByMac(Mac, DeviceProfileUuid, IpAddress)) {
+	if (not FindOrCreateHostByMac(Mac, DeviceProfileUuid, Ipv4Address)) {
 		syslog(LOG_WARNING, "HostCache: Failed to create Host with MacAddress %s and uuid %s", MacAddressString.c_str(), DeviceProfileUuid.c_str());
 		return false;
 	}
-	/*
-	try {
-	    std::string IpsetName = getIpsetName(DeviceProfileUuid, true);
 
+	try {
+	    auto it = dpMap.find(DeviceProfileUuid);
+	    if (it == dpMap.end()) {
+	        syslog (LOG_NOTICE, "Importing device with non-existing Device Profile UUID");
+	        return false;
+	    }
+	    it->second->addHost(Mac);
 	} catch (...) {
-	    syslog (LOG_ERR, "HostCache: Ipset %s does not existing during import of DeviceMatches", IpsetName.c_str());
+	    syslog (LOG_ERR, "HostCache: Ipset host:mac does not exist for device profile %s during import of DeviceMatches", DeviceProfileUuid.c_str());
 	}
-	*/
 	return true;
 }
 
+// FIXME: need to remove IPsets for DeviceProfiles that no longer are specified in the DeviceProfiles file but only after iptables have been updated
+// FIXME: need to recreate AllowedEndpoint IPsets for DeviceProfiles that have a new / higher version number
 
-uint32_t HostCache::DeviceProfiles_load(const std::string filename) {
+uint32_t HostCache::loadDeviceProfiles(const std::string filename) {
 	if (Debug == true) {
 		syslog(LOG_DEBUG, "HostCache: Opening & reading %s", filename.c_str());
 	}
@@ -864,7 +946,6 @@ uint32_t HostCache::DeviceProfiles_load(const std::string filename) {
 	// Track which DeviceProfileUuids were read from the file
 	std::unordered_set<std::string> uuids;
 
-	// for (json::iterator it = j.begin(); it != j.end(); ++it) {
 	for (auto it = j.begin(); it != j.end(); ++it) {
 	  std::string uuid = (*it)["DeviceProfileUuid"].get<std::string>();
 	  dpMap[uuid] = std::make_shared<DeviceProfile>(*it, Debug);
@@ -872,12 +953,16 @@ uint32_t HostCache::DeviceProfiles_load(const std::string filename) {
 	}
 	ifs.close();
 
-	for (auto &kv : dpMap) {
-		if (uuids.find(kv.first) == uuids.end()) {
+	// Delete any Device Profile already in memory that was not
+	// in the file we just read and parsed
+	for (auto it = dpMap.begin(); it != dpMap.end();) {
+		if (uuids.find(it->first) == uuids.end()) {
 			if (Debug == true) {
-				syslog(LOG_DEBUG, "HostCache: Profile no longer in DeviceProfiles file: %s", kv.first.c_str());
+				syslog(LOG_DEBUG, "HostCache: Profile no longer in DeviceProfiles file: %s", it->first.c_str());
 			}
-			dpMap.erase(kv.first);
+			it = dpMap.erase(it);
+		} else {
+		    it++;
 		}
 	}
 	auto s = uuids.size();
@@ -900,4 +985,78 @@ uint32_t HostCache::Whitelists_set (const std::unordered_set<std::string>& inIpv
 	return WhitelistedNodes.size();
 }
 
+void HostCache::writeIptables()  {
+    if (Debug == true) {
+        syslog(LOG_DEBUG, "Iptables: Writing firewall rules to %s", FirewallRulesFile.c_str());
+    }
+    std::ofstream outputfs(FirewallRulesFile);
+    std::vector<std::string> ifaces = ifMap->getLanInterfaces();
+    std::string action = "LOG";
+    if (FirewallBlockTraffic == true) {
+        action = "DROP";
+    }
+
+    outputfs << "*filter" << std::endl;
+
+    for (auto dp_it: dpMap) {
+        if (dp_it.second->hasAllowedEndpoints() && dp_it.second->hasHosts()) {
+            std::string srcipset = getIpsetName(dp_it.second->getUuid(),true,false);
+            std::string ipv46flag;
+            std::string dstipset;
+            for ( auto iface: ifaces) {
+                // IPv4 permit rule
+                dstipset = getIpsetName(dp_it.second->getUuid(), false, true);
+                ipv46flag = "--ipv4";
+                outputfs << "-A NODDOS -i " + iface + " " + ipv46flag +
+                        " -m set --match-set " + srcipset + " src " +
+                        "-m set --match-set " +  dstipset + " dst -j ACCEPT" << std::endl;
+
+                // IPv6 permit rule
+                dstipset = getIpsetName(dp_it.second->getUuid(), false, false);
+                ipv46flag = "--ipv6";
+                outputfs << "-A NODDOS -i " + iface + " " + ipv46flag +
+                        " -m set --match-set " + srcipset + " src " +
+                        "-m set --match-set " +  dstipset + " dst -j ACCEPT" << std::endl;
+
+                // Block all other traffic from the MAC addresses mapped to the Device Profile
+                outputfs << "-A NODDOS -i " + iface +
+                        " -m set --match-set " + srcipset + " src -j " + action << std::endl;
+            }
+        }
+
+    }
+    for (auto iface: ifaces) {
+        outputfs << "-A NODDOS -j RETURN" << std::endl;
+    }
+    outputfs << "COMMIT" << std::endl;
+    outputfs.close();
+
+    std::string command4 = "iptables-restore -T filter -n " + FirewallRulesFile;
+    std::string command6 = "ip6tables-restore -T filter -n " + FirewallRulesFile;
+    if (Debug == true) {
+        syslog (LOG_DEBUG, "HostCache: updating ip(6)tables");
+    }
+    int rc1 = system("iptables --flush NODDOS");
+    int rc2 = system(command4.c_str());
+    int rc3 = system("ip6tables --flush NODDOS");
+    int rc4 = system(command6.c_str());
+    if (rc1 == -1 || rc2 == -1 || rc3 == -1 || rc4 == 1) {
+        syslog(LOG_ERR, "HostCache: Could not create child process for 'system' call");
+    }
+    if (rc1 == 127|| rc2 == 127 || rc3 == 127 || rc4 == 127) {
+        syslog(LOG_ERR, "HostCache: Shell could not be executed in child process for 'system' call");
+    }
+    if (rc1 != 0) {
+        syslog(LOG_ERR, "HostCache: iptables existing with code %d", rc1);
+    }
+    if (rc2 != 0) {
+        syslog(LOG_ERR, "HostCache: iptables-restore existing with code %d", rc2);
+    }
+    if (rc3 != 0) {
+        syslog(LOG_ERR, "HostCache: ip6tables existing with code %d", rc3);
+    }
+    if (rc4 != 0) {
+        syslog(LOG_ERR, "HostCache: ip6tables-restore existing with code %d", rc4);
+    }
+}
 

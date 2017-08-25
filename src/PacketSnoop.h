@@ -121,9 +121,9 @@ public:
         }
 	};
 	int Open(std::string input, uint32_t inExpiration);
-	int GetFileHandle() { return sock; }
+	int getFileHandle() { return sock; }
 	bool Close();
-	bool ProcessEvent(struct epoll_event &event);
+	bool processEvent(struct epoll_event &event);
 	bool Parse (unsigned char *frame);
 	bool parseDnsTcpPacket(unsigned char *payload, size_t size);
 	bool parseDnsPacket(const unsigned char *payload, const size_t size, const MacAddress &inMac, const std::string sourceIp, const int ifindex);

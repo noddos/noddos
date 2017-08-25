@@ -10,6 +10,7 @@
 
 #include <unordered_set>
 #include <unordered_map>
+#include <vector>
 #include <fstream>
 
 #include <net/if.h>
@@ -22,7 +23,7 @@ private:
 	bool Debug;
 
 	bool LoadInterfaces (std::unordered_set<std::string> &set, std::unordered_map<uint32_t, std::string> &map) {
-	    set.clear();
+	    map.clear();
         uint32_t index;
         bool failure = false;
         for (auto i : set) {
@@ -76,6 +77,14 @@ public:
 			return false;
 		}
 		return true;
+	}
+	std::vector<std::string> getLanInterfaces() {
+	    std::vector<std::string> ifaces;
+	    for (auto iface: lanInterfaceMap) {
+	        ifaces.push_back(iface.second);
+	    }
+	    return ifaces;
+
 	}
 };
 

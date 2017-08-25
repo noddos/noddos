@@ -21,17 +21,19 @@
  */
 
 #include <iostream>
+#include <fstream>
+#include <set>
 
 #include "boost/asio.hpp"
 
 #include "DnsCache.h"
-
-#include <fstream>
+#include "DeviceProfile.h"
 
 int main () {
     bool testfailed = false;
     openlog("DnsCache_test", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
 
+    FqdnDeviceProfileMap fdpMap;
     DnsCnameCache c(true);
     DnsIpCache <boost::asio::ip::address> i(true);
 
@@ -43,14 +45,14 @@ int main () {
     }
     json k;
     ifs >> k;
-    size_t importedRecords = i.importJson(k);
+    size_t importedRecords = i.importJson(k, fdpMap);
     if (importedRecords != 288) {
         testfailed = true;
         syslog(LOG_WARNING, "Imported A/AAAA records %lu", importedRecords);
 
     }
 
-    importedRecords = c.importJson(k);
+    importedRecords = c.importJson(k,fdpMap);
     if (importedRecords != 284) {
         testfailed = true;
         syslog(LOG_WARNING, "Imported CNAME records %lu", importedRecords);
@@ -64,7 +66,7 @@ int main () {
         testfailed = true;
     }
 
-    std::string rootfqdn = c.lookupCname(fqdns[0]);
+    std::string rootfqdn = c.resolveCname(fqdns[0]);
     if (rootfqdn != "clients3.google.com") {
         syslog(LOG_DEBUG, "Cname lookup failed %s", rootfqdn.c_str());
         testfailed = true;
@@ -90,14 +92,16 @@ int main () {
     ofs.close();
     unlink("/tmp/DnsCache.json");
 
-    uint32_t prunecount = c.pruneCnames(true);
-    if (prunecount != 284) {
-        syslog (LOG_DEBUG, "Pruned %u DNS cnames", prunecount);
+    std::set<std::string> PrunedCnames = c.pruneCnames(true);
+    size_t pruned = PrunedCnames.size();
+    if (pruned != 284) {
+        syslog (LOG_DEBUG, "Pruned %lu DNS cnames", pruned);
         testfailed = 1;
     }
-    prunecount=i.pruneResourceRecords(true);
-    if (prunecount != 2416) {
-        syslog (LOG_DEBUG, "Pruned %u DNS IP records", prunecount);
+    std::set<std::string> PrunedFqdns =i.pruneResourceRecords(true);
+    pruned = PrunedFqdns.size();
+    if (pruned != 288) {
+        syslog (LOG_DEBUG, "Pruned %lu DNS IP records", pruned);
         testfailed = 1;
     }
     return testfailed;

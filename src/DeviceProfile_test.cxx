@@ -56,7 +56,7 @@ int main()
 	  }
 	}
 	InterfaceMap ifMap;
-	HostCache hc(ifMap, "", 0, true);
+	HostCache hc(ifMap, "", 0, "", false, true);
 	hc.AddByMac (MacAddress("00:00:00:00:00:01"), "192.168.1.232");
 	hc.AddByMac (MacAddress("00:00:00:00:00:02"), "192.168.1.98");
 	hc.AddByMac (MacAddress("00:00:00:00:00:03"), "192.168.1.99");
@@ -82,7 +82,7 @@ int main()
 	hc.AddByMac (MacAddress("00:00:00:00:00:23"), "192.168.1.248");
 	hc.AddByMac (MacAddress("00:00:00:00:00:24"), "192.168.1.243");
 	hc.AddByMac (MacAddress("00:00:00:00:00:25"), "192.168.1.229");
-	hc.DeviceProfiles_load(deviceprofilesfile);
+	hc.loadDeviceProfiles(deviceprofilesfile);
 
 
 	// pending good test data for dnsmasq.log that allows the matching of most of these.
@@ -108,7 +108,7 @@ bool test_match (std::string inIp, std::string inDpUuid, HostCache &hc) {
 		std::cout << "IP address " << inIp << " not found in HostCache" << std::endl;
 		return false;
 	}
-	h_ptr->Match(hc.DeviceProfiles_getmap());
+	h_ptr->Match(hc.getDeviceProfilesMap());
 	std::string uuid = h_ptr->Uuid_get ();
 	if (uuid != inDpUuid) {
 		if (uuid == "") {
