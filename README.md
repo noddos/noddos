@@ -48,15 +48,15 @@ To make sure Luci picks up the menu and module changes, execute:
     rm /tmp/luci-modulecache 
     rm /tmp/luci-indexcache
 
-Now we can install the actual Noddos package (and the libtins package that is also needed) that you can download from the releases menu on Github
+Now we can install the actual Noddos package (and the libtins package that is also needed) that you can download from Noddos website. You'll need to know the version of Lede you are running and the architecture of your platform to be able to select the right build for your router.
 
-    wget https://github.com/noddos/noddos/releases/download/v0.4.0/noddos_v0.4.0-1_<arch>.ipk
-    wget https://github.com/noddos/noddos/releases/download/v0.4.0/libtins_v3.5-1_<arch>.ipk
+    wget https://noddos.io/dist/lede/releases/<lede-release>/arch/<arch>/packages/devel/noddos_v0.4.0-1_<soc>.ipk
+    wget https://noddos.io/dist/lede/releases/<lede-release>/arch/<arch>/packages/devel/libtins_v3.5-1_<soc>.ipk
     opkg update
-    opkg install libtins_v3.5-1_<arch>.ipk
-    opkg install noddos_0.4.0-1_<arch>.ipk
+    opkg install libtins_v3.5-1_<soc>.ipk
+    opkg install noddos_0.4.0-1_<soc>.ipk
 
-Go to the Luci -> Network -> Client Firewall page to configure Noddos. Make sure to include the Loopback, WAN and LAN IP- or MAC-addresses of your router in the whitelists. Populate the lists of LanInterfaces and WanInterfaces with your interface names as DNS and DHCP snooping use that to select the interfaces they accept traffic from. You may also want to whitelist addresses of your PCs that you use daily as collecting traffic statistics for them is of not much use with the traffic they generate to so many destinations. You may also want to add the MAC addresses of phones or tablets. 
+If you installed the Luci Noddos UI, go to the Luci -> Network -> Client Firewall page to configure Noddos. Make sure to include the Loopback, WAN and LAN IP- or MAC-addresses of your router in the whitelists. Populate the lists of LanInterfaces and WanInterfaces with your interface names as DNS and DHCP snooping use that to select the interfaces they accept traffic from. You may also want to whitelist addresses of your PCs that you use daily as collecting traffic statistics for them is of not much use with the traffic they generate to so many destinations. You may also want to add the MAC addresses of phones or tablets. If you didn't install the Noddos Luci UI then you can make your changes directly in /etc/config/noddos. Don't forget to execute 'uci commit' after you're done edting the file.
 
     service noddos restart
 
