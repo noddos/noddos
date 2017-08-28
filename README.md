@@ -18,7 +18,7 @@ The 'getnoddosdeviceprofiles' script is used to securely download the list of De
 ## Installation 
 
 ### Installation on Home Gateways running Lede firmware
-Here are instructions for installing Noddos on Home Gateways running Lede firmware. Pre-built packages for all LEDE releases and most of the supported platforms are available from the [Noddos package feed](https://noddos.io/lede/releases/<lede-release>/arch/<router-architecture>/packages/).
+Here are instructions for installing Noddos on Home Gateways running Lede firmware. Pre-built packages for all LEDE releases and most of the supported platforms are available from the [Noddos package feed](https://noddos.io/dist/lede/releases/<lede-release>/arch/<router-architecture>/packages/).
 
 In the near future, a package will be made available for the Noddos Luci interface. Until that time, you can either manage the configuration of Noddos using UCI under /etc/config/noddos or you can clone the Noddos repository from Github and copy the following files for the LUCI user interface:
 
@@ -29,8 +29,8 @@ In the near future, a package will be made available for the Noddos Luci interfa
 
 We need to modify the menu structure of the Luci web interface to point to the Noddos Client and Configuration pages. First edit the file /usr/lib/lua/luci/controller/admin/status.lua. Insert on line 15:
 
-	if nixio.fs.access("/usr/lib/lua/luci/view/admin_status/clients.htm") then
-    	entry({"admin", "status", "clients"}, template("admin_status/clients"), _("Clients"), 3)
+    if nixio.fs.access("/usr/lib/lua/luci/view/admin_status/clients.htm") then
+        entry({"admin", "status", "clients"}, template("admin_status/clients"), _("Clients"), 3)
     end
 
 Then edit /usr/lib/lua/luci/controller/admin/network.lua, insert on line 116:
@@ -45,25 +45,25 @@ Then edit /usr/lib/lua/luci/controller/admin/network.lua, insert on line 116:
 
 To make sure Luci picks up the menu and module changes, execute:
 
-	rm /tmp/luci-modulecache 
+    rm /tmp/luci-modulecache 
     rm /tmp/luci-indexcache
 
 Now we can install the actual Noddos package (and the libtins package that is also needed) that you can download from the releases menu on Github
 
     wget https://github.com/noddos/noddos/releases/download/v0.4.0/noddos_v0.4.0-1_<arch>.ipk
     wget https://github.com/noddos/noddos/releases/download/v0.4.0/libtins_v3.5-1_<arch>.ipk
-	opkg update
-	opkg install libtins_v3.5-1_<arch>.ipk
-	opkg install noddos_0.4.0-1_<arch>.ipk
+    opkg update
+    opkg install libtins_v3.5-1_<arch>.ipk
+    opkg install noddos_0.4.0-1_<arch>.ipk
 
 Go to the Luci -> Network -> Client Firewall page to configure Noddos. Make sure to include the Loopback, WAN and LAN IP- or MAC-addresses of your router in the whitelists. Populate the lists of LanInterfaces and WanInterfaces with your interface names as DNS and DHCP snooping use that to select the interfaces they accept traffic from. You may also want to whitelist addresses of your PCs that you use daily as collecting traffic statistics for them is of not much use with the traffic they generate to so many destinations. You may also want to add the MAC addresses of phones or tablets. 
 
-	service noddos restart
+    service noddos restart
 
 Install a cronjob to download the Device Profiles database frequently (please pick a randon minute instead of 23 minutes after the hour, ie:
 
-	crontab -e 
-    	23 */3 * * * /usr/bin/getnoddosdeviceprofiles; if [ $? -gt 0 ]; then service noddos reload; fi
+    crontab -e 
+        23 */3 * * * /usr/bin/getnoddosdeviceprofiles; if [ $? -gt 0 ]; then service noddos reload; fi
 
 If you want maximum privacy for uploads, create a new client cert every 12 hours or so. That does mean that going forward you may not be able to use some newly developed Noddos portal functions. Create a cronjob for root:
 
@@ -81,15 +81,15 @@ Compilation instructions are available for Home Gateways and regular Linux syste
 ### Compilation for a Home Gateway running firmware of the [Lede project](https://lede-project.org/) for Noddos
 Noddos can be compiled and installed on most if not all of the platforms supported by Lede 17.01.x releases. Use these instructions to generate your own package. These instructions are based on the Lede 17.01.2 release.
 
-	mkdir -p noddosbuild/package/{noddos,libtins}
-	cd noddosbuild
-	wget https://raw.githubusercontent.com/noddos/noddos/master/lede/packages/noddos/Makefile -O package/noddos/Makefile
-	ROOTDIR=$PWD
+    mkdir -p noddosbuild/package/{noddos,libtins}
+    cd noddosbuild
+    wget https://raw.githubusercontent.com/noddos/noddos/master/lede/packages/noddos/Makefile -O package/noddos/Makefile
+    ROOTDIR=$PWD
 
 Download the Lede project SDK v17.01.2 for your platform from [Lede Table of Hardware](https://lede-project.org/toh/start)
 
-	tar xf <SDK-for-your-platform-tarbar>
-	cd <SDK-directory-for-your-platform>
+    tar xf <SDK-for-your-platform-tarbar>
+    cd <SDK-directory-for-your-platform>
     echo "src-link custom $ROOTDIR/package" >>feeds.conf.default
 
     make menuconfig
@@ -130,16 +130,13 @@ Your Linux DIY router should be running a Linux kernel 2.6.13 or newer. These in
 ### Compile Noddos yourself
 Install development packages for libcurl, libopenssl and libnetfilter_conntrack
 
-    sudo apt install libssl-dev
-    sudo apt install libnetfilter-conntrack-dev
-    sudo apt install libcurl4-openssl-dev
-	sudo apt install libtins-dev
+    sudo apt install libssl-dev libnetfilter-conntrack-dev libcurl4-openssl-dev libtins-dev libipset-dev
 
     git clone https://github.com/noddos/noddos
     cd noddos
     cmake .
     make
-    sudo apt install openssl ssl libcurl3 libtins3.4 brotli wget libnetfilter-conntrack3 ca-certificates ipset iptables-persistent
+    sudo apt install openssl libcurl3 libtins3.4 brotli wget libnetfilter-conntrack3 ca-certificates ipset iptables-persistent
     make test
 
 ### Install Noddos
@@ -165,19 +162,19 @@ Directory where DeviceProfiles.json will be downloaded to
     sudo install -o 0 -g 0 tools/getnoddosdeviceprofiles /usr/bin 
     sudo install -o 0 -g 0 tools/makenoddoscert.sh /usr/bin 
  
-	sudo -u noddos bash /usr/bin/getnoddosdeviceprofiles
+    sudo -u noddos bash /usr/bin/getnoddosdeviceprofiles
 
-	cd /etc/noddos
-	/usr/bin/makenoddoscert.sh
+    cd /etc/noddos
+    /usr/bin/makenoddoscert.sh
     sudo chgrp noddos /etc/noddos/noddosapiclient.key
     sudo chmod 640 /etc/noddos/noddosapiclient.key
-	
+    
 Install firewall rules. This example puts the NODDOS user-defined chain at the start of the FORWARD chain of the ilter table. You may want to put it in a different location and you may want to specify the interfaces for which you want traffic to be processed by the NODDOS chain
 
-	iptables -N NODDOS
-	iptables -t filter -I FORWARD -j NODDOS
-	ip6tables -N NODDOS
-	ip6tables -t filter -I FORWARD -j NODDOS
+    iptables -N NODDOS
+    iptables -t filter -I FORWARD -j NODDOS
+    ip6tables -N NODDOS
+    ip6tables -t filter -I FORWARD -j NODDOS
 
 Install a cronjob for user noddos to do this frequently (please pick a randon time of day instead of 3:23am), ie:
 
