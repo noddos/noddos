@@ -61,6 +61,7 @@ define Package/noddos/prerm
 	#!/bin/sh
 	# check if we are on real system
 	if [ -z "$${IPKG_INSTROOT}" ]; then
+		/etc/init.d/noddos stop
 		echo "Removing rc.d symlink for noddos"
 		/etc/init.d/noddos disable
 	fi
@@ -71,15 +72,9 @@ define Package/noddos/postrm
 	#!/bin/sh
 	# check if we are on real system
 	if [ -z "$${IPKG_INSTROOT}" ]; then
-		echo "Removing noddos directories"
-		rm -rf /etc/noddos /var/lib/noddos
+		echo "Removing noddos data directory"
+		rm -rf /var/lib/noddos
 	fi
-    echo "Deleting iptables chain 'NODDOS'"
-    iptables -t filter --delete FORWARD -j NODDOS
-    iptables --flush NODDOS
-    iptables --delete-chain NODDOS
-    ip6tables -t filter --delete FORWARD -j NODDOS
-    ip6tables --flush NODDOS
 	exit 0
 endef
 

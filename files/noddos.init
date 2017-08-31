@@ -113,11 +113,22 @@ start_service() {
     # service is stopped
     procd_set_param respawn ${respawn_threshold:-3600} ${respawn_timeout:-5} ${respawn_retry:-5}
 
-    procd_set_param file /etc/noddos/noddos.conf
+    procd_set_param file /etc/config/noddos
     procd_set_param stdout 0 # forward stdout of the command to logd
     procd_set_param stderr 0 # same for stderr
     procd_set_param user root # run service as user nobody
     procd_close_instance
+}
+
+stop_service() {
+    echo "Deleting iptables chain 'NODDOS'"
+    iptables -t filter --delete FORWARD -j NODDOS
+    iptables --flush NODDOS
+    iptables --delete-chain NODDOS
+    echo "Deleting ip6tables chain 'NODDOS'"
+    ip6tables -t filter --delete FORWARD -j NODDOS
+    ip6tables --flush NODDOS
+    ip6tables --delete-chain NODDOS
 }
 
 savedata_service() {
