@@ -19,6 +19,33 @@ start_service() {
         route add -net 224.0.0.0 netmask 224.0.0.0 dev br-lan
     fi
 
+    if [ ! -f /var/lib/noddos/DeviceProfiles.json ]; then
+        echo 
+        /usr/bin/getnoddosdeviceprofiles
+    fi
+
+    lines=$(/usr/sbin/iptables -S | grep -c NODDOS)
+    if [ "$lines" -lt "2" ]; then
+        echo "Creating iptables chain 'NODDOS'"
+        /usr/sbin/iptables --new-chain NODDOS
+        /usr/sbin/iptables -t filter --insert FORWARD -j NODDOS
+    fi
+
+    lines=$(/usr/sbin/ip6tables -S | grep -c NODDOS)
+    if [ "$lines" -lt "2" ]; then
+        echo "Creating ip6tables chain 'NODDOS'"
+        /usr/sbin/ip6tables --new-chain NODDOS
+        /usr/sbin/ip6tables -t filter --insert FORWARD -j NODDOS
+    fi
+
+    if [ ! -f "/etc/noddos/noddosapiclient.key" ]; then
+        /usr/bin/makenoddoscert.sh
+    fi 
+    
+    if [ ! -f /var/lib/noddos/DeviceDump.json ]; then
+        echo "[]" >/var/lib/noddos/DeviceDump.json
+    fi
+
     CONFFILE=/var/etc/noddos.conf
     cp /etc/noddos/noddos.conf-base $CONFFILE
     if [ "$(uci get noddos.@noddos[0].rfc1918)" -eq "1" ]; then
@@ -44,7 +71,7 @@ start_service() {
         fi
         echo -n '        "'$ipv4'"' >>$CONFFILE
     done
-	echo '' >>$CONFFILE
+    echo '' >>$CONFFILE
     echo '    ],' >>$CONFFILE
 
     echo '    "WhitelistedIpv6Addresses": [' >> $CONFFILE
@@ -59,7 +86,7 @@ start_service() {
 
        echo -n '        "'$ipv6'"' >>$CONFFILE
     done
-	echo '' >>$CONFFILE
+    echo '' >>$CONFFILE
     echo '    ],' >>$CONFFILE
 
     echo '    "WhitelistedMacAddresses": [' >> $CONFFILE
@@ -73,7 +100,7 @@ start_service() {
         fi
         echo -n '        "'$mac'"' >>$CONFFILE
     done
-	echo '' >>$CONFFILE
+    echo '' >>$CONFFILE
     echo '    ]' >>$CONFFILE
     echo '}' >>$CONFFILE
 
