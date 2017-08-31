@@ -51,7 +51,7 @@ define Package/noddos/install
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/tools/getnoddosdeviceprofiles $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/tools/makenoddoscert.sh $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/noddos.init $(1)/etc/init.d/noddos
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/noddos.config $(1)/etc/config/noddos
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/noddos.uciconfig $(1)/etc/config/noddos
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/noddos.conf-base $(1)/etc/noddos
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/noddosconfig.pem $(1)/etc/noddos
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/noddos.conf-base $(1)/etc/noddos
