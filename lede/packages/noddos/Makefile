@@ -74,6 +74,9 @@ define Package/noddos/postrm
 	if [ -z "$${IPKG_INSTROOT}" ]; then
 		echo "Removing noddos data directory"
 		rm -rf /var/lib/noddos
+		if [ -f /var/etc/noddos.conf ]; then
+			rm /var/etc/noddos.conf
+		fi
 	fi
 	exit 0
 endef
