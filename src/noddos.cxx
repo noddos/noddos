@@ -22,13 +22,15 @@
 #include <map>
 #include <string>
 #include <system_error>
-
-#include <ctime>
-#include <cstring>
+#include <future>
 #include <fstream>
 #include <iostream>
 #include <memory>
 #include <unordered_set>
+#include <vector>
+#include <chrono>
+#include <ctime>
+#include <cstring>
 #include <csignal>
 #include <sys/epoll.h>
 #include <stdlib.h>
@@ -98,7 +100,7 @@ int main(int argc, char** argv) {
 	    syslog (LOG_CRIT, "Noddos: Curl init failure: %d", cc);
 	}
 
-
+	std::vector<std::future<uint32_t>> futures;
 	//
 	// Set up HostCache instance
 	//
@@ -231,8 +233,8 @@ int main(int argc, char** argv) {
 					} else if (si.ssi_signo == SIGUSR2) {
 						syslog(LOG_INFO, "Noddos: Processing signal event SIGUSR2");
 						hC.Match();
-						hC.UploadDeviceStats(config.ClientApiCertFile, config.ClientApiKeyFile, config.DeviceReportInterval != 0);
-						hC.UploadTrafficStats(config.TrafficReportInterval, config.ReportTrafficToRfc1918,
+						hC.UploadDeviceStats(futures, config.ClientApiCertFile, config.ClientApiKeyFile, config.DeviceReportInterval != 0);
+						hC.UploadTrafficStats(futures, config.TrafficReportInterval, config.ReportTrafficToRfc1918,
 								config.ClientApiCertFile, config.ClientApiKeyFile, config.TrafficReportInterval != 0);
 						NextDeviceUpload = time(nullptr) + config.DeviceReportInterval;
 						NextTrafficUpload = time(nullptr) + config.TrafficReportInterval;
@@ -252,14 +254,14 @@ int main(int argc, char** argv) {
 					hC.ExportDeviceProfileMatches(config.DumpFile, true);
 				}
 				if (t > NextDeviceUpload && config.DeviceReportInterval > 0) {
-					hC.UploadDeviceStats(config.ClientApiCertFile, config.ClientApiKeyFile, config.DeviceReportInterval != 0);
+					hC.UploadDeviceStats(futures, config.ClientApiCertFile, config.ClientApiKeyFile, config.DeviceReportInterval != 0);
 					NextDeviceUpload = t + config.DeviceReportInterval;
 				}
 				if (t > NextTrafficUpload && config.TrafficReportInterval > 0) {
-					if (config.Debug) {
+				    if (config.Debug) {
 						syslog(LOG_DEBUG, "Noddos: Starting traffic upload");
 					}
-					hC.UploadTrafficStats(config.TrafficReportInterval, config.ReportTrafficToRfc1918, config.ClientApiCertFile,
+					hC.UploadTrafficStats(futures, config.TrafficReportInterval, config.ReportTrafficToRfc1918, config.ClientApiCertFile,
 							config.ClientApiKeyFile, config.TrafficReportInterval != 0);
 					NextTrafficUpload = t + config.TrafficReportInterval;
 				}
@@ -274,6 +276,20 @@ int main(int argc, char** argv) {
 					NextPrune = t + config.PruneInterval;
 				}
     		}
+			if (futures.size() > 0) {
+			    for (auto future_it = futures.begin(); future_it != futures.end();) {
+			        if (future_it->valid()) {
+			            if (future_it->wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+		                    if (config.Debug == true) {
+		                        syslog(LOG_DEBUG, "Noddos: Upload of data returned HTTP status %u", future_it->get());
+		                    }
+			                future_it = futures.erase(future_it);
+			            } else {
+			                future_it++;
+			            }
+			        }
+			    }
+			}
     	}
 
     }

@@ -36,66 +36,31 @@ Noddos discovers what devices you have in your network and tailors the firewall 
 endef
 
 define Package/noddos/conffiles
-	noddos.conf-base
-	noddosconfig.pem
+	/etc/config/noddos	
 endef
 
 define Package/noddos/install
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_DIR) $(1)/usr/sbin
+	$(INSTALL_DIR) $(1)/etc/config
+	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_DIR) $(1)/etc/noddos
 	$(INSTALL_DIR) $(1)/var/lib/noddos
-	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/src/noddos $(1)/usr/sbin/
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/tools/getnoddosdeviceprofiles $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/tools/makenoddoscert.sh $(1)/usr/bin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/noddos $(1)/etc/init.d
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/noddos.init $(1)/etc/init.d/noddos
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/noddos.uciconfig $(1)/etc/config/noddos
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/noddos.conf-base $(1)/etc/noddos
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/noddosconfig.pem $(1)/etc/noddos
-endef
-
-define Package/noddos/postinst
-	#!/bin/sh
-
-	echo -n "Downloading Device Profiles and checking digital signature ... "
-	/usr/bin/getnoddosdeviceprofiles
-
-	echo "Creating iptables chain 'NODDOS'"
-	/usr/sbin/iptables --new-chain NODDOS
-	/usr/sbin/iptables -t filter --insert FORWARD -j NODDOS
-	/usr/sbin/ip6tables --new-chain NODDOS
-	/usr/sbin/ip6tables -t filter --insert FORWARD -j NODDOS
-
-	cd $(1)/etc/noddos
-	# Creating a client certificate
-	$(1)/usr/bin/makenoddoscert.sh
-
-	if [ -z "$${IPKG_INSTROOT}" ]; then
-		echo "Enabling rc.d symlink for noddos"
-		cd /etc/rc.d
-		/etc/init.d/noddos enable
-	fi
-
-	if [ ! -f /var/lib/noddos/DeviceDump.json ]; then
-		echo "[]" >/var/lib/noddos/DeviceDump.json
-	fi
-
-	if [ ! -f /etc/config/noddos ]; then
-		echo 'config noddos' >/etc/config/noddos
-		echo "        option upload '0'" >>/etc/config/noddos
-		echo "        option rfc1918 '0'" >>/etc/config/noddos
-		echo "        list whitelistipv4 '127.0.0.1'" >>/etc/config/noddos
-		echo "        list whitelistipv6 ''" >>/etc/config/noddos
-		echo "        list whitelistmac ''" >>/etc/config/noddos
-		uci commit noddos
-	fi
-	exit 0
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/noddos.conf-base $(1)/etc/noddos
 endef
 
 define Package/noddos/prerm
 	#!/bin/sh
 	# check if we are on real system
 	if [ -z "$${IPKG_INSTROOT}" ]; then
+		/etc/init.d/noddos stop
 		echo "Removing rc.d symlink for noddos"
 		/etc/init.d/noddos disable
 	fi
@@ -106,16 +71,12 @@ define Package/noddos/postrm
 	#!/bin/sh
 	# check if we are on real system
 	if [ -z "$${IPKG_INSTROOT}" ]; then
-		echo "Removing noddos directories"
-		rm -rf /etc/noddos /var/lib/noddos
+		echo "Removing noddos data directory"
+		rm -rf /var/lib/noddos
+		if [ -f /var/etc/noddos.conf ]; then
+			rm /var/etc/noddos.conf
+		fi
 	fi
-	echo "Deleting iptables chain 'NODDOS'"
-    iptables -t filter --delete FORWARD -j NODDOS
-    iptables --flush NODDOS
-    iptables --delete-chain NODDOS
-    ip6tables -t filter --delete FORWARD -j NODDOS
-    ip6tables --flush NODDOS
-    ip6tables --delete-chain NODDOS
 	exit 0
 endef
 

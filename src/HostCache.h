@@ -27,7 +27,8 @@
 #include <memory>
 #include <unordered_set>
 #include <set>
-
+#include <future>
+#include <vector>
 #include "Host.h"
 #include "DeviceProfile.h"
 #include "MacAddress.h"
@@ -38,6 +39,7 @@
 #include "DnsCache.h"
 #include "noddos.h"
 
+uint32_t RestApiCall (const std::string api, const json &j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload, bool Debug = false);
 
 class HostCache {
 private:
@@ -157,10 +159,12 @@ public:
 	bool SendUdpPing (const std::string DstIpAddress, const uint16_t DstPort);
 	uint32_t getInterfaceIpAddresses();
 
-	uint32_t RestApiCall (const std::string api, const json &j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
-	uint32_t UploadDeviceStats(const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
-	bool UploadTrafficStats(const time_t interval, const bool ReportRfc1918, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
-	uint32_t ImportDeviceProfileMatches(const std::string filename);
+	void UploadDeviceStats(std::vector<std::future<uint32_t>> &futures, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
+	void UploadTrafficStats(std::vector<std::future<uint32_t>> &futures, const time_t interval, const bool ReportRfc1918, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
+    void RestApiCall_async (std::vector<std::future<uint32_t>> &futures, const std::string api, const json j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
+    // uint32_t RestApiCall (const std::string api, const json &j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
+
+    uint32_t ImportDeviceProfileMatches(const std::string filename);
 	bool ExportDeviceProfileMatches(const std::string filename, const bool detailed = false);
 	bool ImportDeviceInfo (json &j);
 
