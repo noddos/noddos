@@ -530,6 +530,14 @@ bool HostCache::ExportDeviceProfileMatches(const std::string filename, bool deta
 	return true;
 }
 
+/* TODO: Can't seem to get this to work
+std::unique_ptr<std::future<uint32_t>> HostCache::test_RestApiCall_async(const std::string api, const json j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload) {
+    std::future<uint32_t> f = std::async(RestApiCall, api, j, ClientApiCertFile, ClientApiKeyFile, doUpload, Debug);
+    std::unique_ptr<std::future<uint32_t>> fptr = std::make_unique<std::future<uint32_t>>(f);
+
+    return fptr;
+}
+*/
 
 void HostCache::RestApiCall_async (std::vector<std::future<uint32_t>> &futures, const std::string api, const json j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload) {
      futures.emplace_back(std::async(RestApiCall, api, j, ClientApiCertFile, ClientApiKeyFile, doUpload, Debug));
@@ -991,6 +999,12 @@ uint32_t HostCache::Whitelists_set (const std::unordered_set<std::string>& inIpv
 }
 
 void HostCache::writeIptables()  {
+    if (FirewallRulesFile == "") {
+        if (Debug == true) {
+            syslog(LOG_DEBUG, "Iptables: Not writing firewall rules as feature is disabled");
+        }
+        return;
+    }
     if (Debug == true) {
         syslog(LOG_DEBUG, "Iptables: Writing firewall rules to %s", FirewallRulesFile.c_str());
     }

@@ -100,7 +100,9 @@ int main(int argc, char** argv) {
 	    syslog (LOG_CRIT, "Noddos: Curl init failure: %d", cc);
 	}
 
+	// Vector containing threads
 	std::vector<std::future<uint32_t>> futures;
+
 	//
 	// Set up HostCache instance
 	//
