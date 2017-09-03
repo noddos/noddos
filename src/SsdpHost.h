@@ -17,7 +17,7 @@
  * SsdpHost.h
  *
  *  Created on: Mar 25, 2017
- *      Author: steven
+ *      Author: Steven Hessing (steven.hessing@gmail.com)
  */
 
 #ifndef SSDPHOST_H_

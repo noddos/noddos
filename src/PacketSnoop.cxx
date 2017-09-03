@@ -17,7 +17,7 @@
  * PacketSnoop.cxx
  *
  *  Created on: May 28, 2017
- *      Author: steven
+ *      Author: Steven Hessing (steven.hessing@gmail.com)
  */
 
 #include "boost/asio.hpp"

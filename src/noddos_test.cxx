@@ -15,7 +15,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
  *  Created on: Mar 30, 2017
- *      Author: steven
+ *      Author: Steven Hessing (steven.hessing@gmail.com)
  */
 
 #include <iostream>

@@ -2,7 +2,7 @@
  * Iptables.h
  *
  *  Created on: Aug 20, 2017
- *      Author: steven
+ *      Author: Steven Hessing (steven.hessing@gmail.com)
  */
 
 #ifndef IPTABLES_H_

@@ -17,7 +17,7 @@
  * DnsCache_test.cxx
  *
  *  Created on: Jul 1, 2017
- *      Author: steven
+ *      Author: Steven Hessing (steven.hessing@gmail.com)
  */
 
 #include <iostream>

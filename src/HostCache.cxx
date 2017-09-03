@@ -17,7 +17,7 @@
  * HostCache.cxx
  *
  *  Created on: Mar 11, 2017
- *      Author: steven
+ *      Author: Steven Hessing (steven.hessing@gmail.com)
  */
 
 #include <iostream>

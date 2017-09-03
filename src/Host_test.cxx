@@ -18,7 +18,7 @@
  * Host_test.cxx
  *
  *  Created on: Mar 27, 2017
- *      Author: steven
+ *      Author: Steven Hessing (steven.hessing@gmail.com)
  */
 
 #include <iostream>

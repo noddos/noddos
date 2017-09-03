@@ -17,7 +17,7 @@
  * DhcpRequest.h
  *
  *  Created on: Mar 22, 2017
- *      Author: steven
+ *      Author: Steven Hessing (steven.hessing@gmail.com)
  */
 
 #ifndef DHCPREQUEST_H_

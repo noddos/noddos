@@ -17,7 +17,7 @@
  * iCache.h
  *
  *  Created on: Mar 22, 2017
- *      Author: steven
+ *      Author: Steven Hessing (steven.hessing@gmail.com)
  */
 
 #ifndef ICACHE_H_

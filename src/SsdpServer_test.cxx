@@ -17,7 +17,7 @@
  * SsdpServer_test.cxx
  *
  *  Created on: Apr 2, 2017
- *      Author: steven
+ *      Author: Steven Hessing (steven.hessing@gmail.com)
  */
 
 #include <iostream>

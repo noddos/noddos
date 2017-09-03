@@ -17,7 +17,7 @@
  * Config.cxx
  *
  *  Created on: Apr 3, 2017
- *      Author: steven
+ *      Author: Steven Hessing (steven.hessing@gmail.com)
  */
 
 #include "Config.h"

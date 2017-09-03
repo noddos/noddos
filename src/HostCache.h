@@ -17,7 +17,7 @@
  * HostCache.h
  *
  *  Created on: Mar 11, 2017
- *      Author: steven
+ *      Author: Steven Hessing (steven.hessing@gmail.com)
  */
 
 #ifndef HOSTCACHE_H_

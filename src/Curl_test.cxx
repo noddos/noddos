@@ -2,7 +2,7 @@
  * Curl_test.cxx
  *
  *  Created on: May 17, 2017
- *      Author: steven
+ *      Author: Steven Hessing (steven.hessing@gmail.com)
  */
 
 #include <iostream>
