@@ -18,18 +18,17 @@ PKG_SOURCE_URL:=https://github.com/noddos/noddos.git
 
 PKG_BUILD_DIR := $(BUILD_DIR)/$(PKG_NAME)-$(PKG_SOURCE_VERSION)
 
-PKG_BUILD_DIR := $(BUILD_DIR)/$(PKG_NAME)-$(PKG_SOURCE_VERSION)
-
 CMAKE_INSTALL:=1
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
+CMAKE_OPTIONS += -DCMAKE_BUILD_TYPE=Debug
 
 define Package/noddos
 	SECTION:=net
 	CATEGORY:=Network
 	TITLE:=noddos -- device-aware cloud-powered firewall
 	URL:=https://www.noddos.io/
-	DEPENDS:=+libstdcpp +libnetfilter-conntrack +libcurl +libopenssl +openssl-util +ca-bundle +ca-certificates +wget +bzip2 +libtins +ipset
+	DEPENDS:=+libstdcpp +libnetfilter-conntrack +libcurl +libopenssl +openssl-util +ca-bundle +ca-certificates +wget +bzip2 +libtins +ipset +libpthread
 endef
 
 define Package/noddos/description
