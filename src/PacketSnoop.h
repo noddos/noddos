@@ -17,7 +17,7 @@
  * PacketSnoop.h
  *
  *  Created on: May 28, 2017
- *      Author: steven
+ *      Author: Steven Hessing (steven.hessing@gmail.com)
  */
 
 #ifndef PACKETSNOOP_H_

@@ -16,7 +16,7 @@
  * Host.cpp
  *
  *  Created on: Mar 6, 2017
- *      Author: steven
+ *      Author: Steven Hessing (steven.hessing@gmail.com)
  */
 
 #include <cstring>

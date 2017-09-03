@@ -17,7 +17,7 @@
  * HostCache.cxx
  *
  *  Created on: Mar 11, 2017
- *      Author: steven
+ *      Author: Steven Hessing (steven.hessing@gmail.com)
  */
 
 #include <iostream>
@@ -26,9 +26,10 @@
 #include <sstream>
 #include <fstream>
 #include <iterator>
-
+#include <vector>
 #include <cstring>
 #include <memory>
+#include <thread>
 
 #include <sys/types.h>
 #include <unistd.h>
@@ -529,7 +530,20 @@ bool HostCache::ExportDeviceProfileMatches(const std::string filename, bool deta
 	return true;
 }
 
-uint32_t HostCache::RestApiCall (const std::string api, const json &j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload) {
+/* TODO: Can't seem to get this to work
+std::unique_ptr<std::future<uint32_t>> HostCache::test_RestApiCall_async(const std::string api, const json j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload) {
+    std::future<uint32_t> f = std::async(RestApiCall, api, j, ClientApiCertFile, ClientApiKeyFile, doUpload, Debug);
+    std::unique_ptr<std::future<uint32_t>> fptr = std::make_unique<std::future<uint32_t>>(f);
+
+    return fptr;
+}
+*/
+
+void HostCache::RestApiCall_async (std::vector<std::future<uint32_t>> &futures, const std::string api, const json j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload) {
+     futures.emplace_back(std::async(RestApiCall, api, j, ClientApiCertFile, ClientApiKeyFile, doUpload, Debug));
+    // async(launch::async, (RestApiCall(api, j, ClientApiCertFile, ClientApiKeyFile, doUpload)).detach();
+}
+uint32_t RestApiCall (const std::string api, const json &j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload, bool Debug) {
 	std::string url = "https://api.noddos.io/" + api;
 
 	std::string body = j.dump();
@@ -668,7 +682,7 @@ uint32_t HostCache::RestApiCall (const std::string api, const json &j, const std
     return (uint32_t) response_code;
 }
 
-uint32_t HostCache::UploadDeviceStats(const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload) {
+void HostCache::UploadDeviceStats(std::vector<std::future<uint32_t>> &futures, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload) {
 	uint32_t uploads = 0;
 	json j;
 	for (auto it : hC) {
@@ -681,15 +695,15 @@ uint32_t HostCache::UploadDeviceStats(const std::string ClientApiCertFile, const
 		}
 	}
 	if (uploads > 0) {
-		auto r = RestApiCall ("v1/uploaddevices", j, ClientApiCertFile, ClientApiKeyFile, doUpload);
-		syslog(LOG_INFO, "HostCache: Called v1/uploaddevices API with status_code %u", r);
+	    RestApiCall_async(futures, "v1/uploaddevices", j, ClientApiCertFile, ClientApiKeyFile, doUpload);
+		syslog(LOG_INFO, "HostCache: Called v1/uploaddevices API with for %u devices", uploads);
 	} else {
 		syslog(LOG_INFO, "HostCache: Not calling v1/uploaddevices API as there is no data to report");
 	}
-	return uploads;
+
 }
 
-bool HostCache::UploadTrafficStats(const time_t interval, const bool ReportRfc1918, const std::string ClientCertFile, const std::string ClientApiKeyFile, bool doUpload) {
+void HostCache::UploadTrafficStats(std::vector<std::future<uint32_t>> &futures, const time_t interval, const bool ReportRfc1918, const std::string ClientCertFile, const std::string ClientApiKeyFile, bool doUpload) {
 	uint32_t uploads = 0;
 	json j;
 	for (auto it : hC) {
@@ -702,12 +716,11 @@ bool HostCache::UploadTrafficStats(const time_t interval, const bool ReportRfc19
 		}
 	}
 	if (uploads > 0) {
-		auto r = RestApiCall ("v1/uploadstats", j, ClientCertFile, ClientApiKeyFile, doUpload);
-		syslog(LOG_INFO, "HostCache: Called v1/uploadstats API with status_code %u", r);
+	    RestApiCall_async(futures, "v1/uploadstats", j, ClientCertFile, ClientApiKeyFile, doUpload);
+		syslog(LOG_INFO, "HostCache: Called v1/uploadstats API with for %u hosts", uploads);
 	} else {
 		syslog(LOG_INFO, "HostCache: Not calling v1/uploadstats API as there is no data to report");
 	}
-	return uploads;
 }
 
 uint32_t HostCache::ImportDeviceProfileMatches(const std::string filename) {
@@ -986,6 +999,12 @@ uint32_t HostCache::Whitelists_set (const std::unordered_set<std::string>& inIpv
 }
 
 void HostCache::writeIptables()  {
+    if (FirewallRulesFile == "") {
+        if (Debug == true) {
+            syslog(LOG_DEBUG, "Iptables: Not writing firewall rules as feature is disabled");
+        }
+        return;
+    }
     if (Debug == true) {
         syslog(LOG_DEBUG, "Iptables: Writing firewall rules to %s", FirewallRulesFile.c_str());
     }

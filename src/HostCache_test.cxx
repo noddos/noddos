@@ -16,7 +16,7 @@
  * HostCache_test.cxx
  *
  *  Created on: Apr 3, 2017
- *      Author: steven
+ *      Author: Steven Hessing (steven.hessing@gmail.com)
  */
 
 
@@ -51,7 +51,8 @@ int main () {
 	InterfaceMap ifMap(true);
 	HostCache hC(ifMap, "", 0, "", false, true);
 	// hC.DeviceProfiles_load(deviceprofilesfile);
-	hC.AddByMac (MacAddress("00:00:00:00:00:03"), "192.168.1.99");
+	MacAddress Mactest ("00:00:00:00:00:03");
+	hC.AddByMac (Mactest, "192.168.1.99");
 
 	std::string s;
 	auto h = hC.FindOrCreateHostByIp("192.168.1.99");
@@ -88,6 +89,7 @@ int main () {
 bool do_dpimport_test() {
 	InterfaceMap ifMap;
 	HostCache hC(ifMap, "", 0, "", false, true);
+	hC.loadDeviceProfiles("tests/DeviceProfiles.json");
 	auto  matches = hC.ImportDeviceProfileMatches("tests/DeviceMatches.json");
 	if (matches != 9) {
 		std::cout << "Test failure: Expected 9 imported device profiles but got " << matches << std::endl;

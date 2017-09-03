@@ -17,7 +17,7 @@
  * FlowTrack.h
  *
  *  Created on: Mar 19, 2017
- *      Author: steven
+ *      Author: Steven Hessing (steven.hessing@gmail.com)
  */
 
 #ifndef FLOWTRACK_H_

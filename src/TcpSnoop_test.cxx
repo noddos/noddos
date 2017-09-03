@@ -2,7 +2,7 @@
  * TcpSnoop_test.cxx
  *
  *  Created on: Jun 6, 2017
- *      Author: steven
+ *      Author: Steven Hessing (steven.hessing@gmail.com)
  */
 
 #include "TcpSnoop.h"

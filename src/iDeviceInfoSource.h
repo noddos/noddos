@@ -17,7 +17,7 @@
  * DeviceInfoSource.h
  *
  *  Created on: Mar 12, 2017
- *      Author: steven
+ *      Author: Steven Hessing (steven.hessing@gmail.com)
  */
 
 #ifndef IDEVICEINFOSOURCE_H_

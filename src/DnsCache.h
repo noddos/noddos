@@ -17,7 +17,7 @@
  * DnsCache.h
  *
  *  Created on: Jun 3, 2017
- *      Author: steven
+ *      Author: Steven Hessing (steven.hessing@gmail.com)
  */
 
 #ifndef DNSCACHE_H_

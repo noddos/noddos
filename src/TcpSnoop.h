@@ -17,7 +17,7 @@
  * TcpSnoop.h
  *
  *  Created on: Jun 6, 2017
- *      Author: steven
+ *      Author: Steven Hessing (steven.hessing@gmail.com)
  */
 
 #ifndef TCPSNOOP_H_

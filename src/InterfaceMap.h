@@ -2,7 +2,7 @@
  * InterfaceMap.h
  *
  *  Created on: Jun 4, 2017
- *      Author: steven
+ *      Author: Steven Hessing (steven.hessing@gmail.com)
  */
 
 #ifndef INTERFACEMAP_H_

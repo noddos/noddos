@@ -17,7 +17,7 @@
  * Identifier.cxx
  *
  *  Created on: Mar 25, 2017
- *      Author: steven
+ *      Author: Steven Hessing (steven.hessing@gmail.com)
  */
 
 #include "Identifier.h"

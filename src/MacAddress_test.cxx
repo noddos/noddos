@@ -2,7 +2,7 @@
  * MacAddress_test.cxx
  *
  *  Created on: May 24, 2017
- *      Author: steven
+ *      Author: Steven Hessing (steven.hessing@gmail.com)
  */
 
 #include <iostream>
