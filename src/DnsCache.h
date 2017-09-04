@@ -38,7 +38,8 @@ using nlohmann::json;
 class DnsCnameCache {
 private:
     // FIXME: there may be multiple CNAMEs for an FQDN
-    std::map<std::string,std::pair<std::string,time_t>> DnsCache;
+    std::map<std::string,std::pair<std::string,time_t>> DnsFwdCache;
+    std::map<std::string,std::pair<std::string,time_t>> DnsRevCache;
     bool Debug;
 public:
     DnsCnameCache(const bool inDebug=false): Debug{inDebug} {
@@ -92,10 +93,11 @@ public:
         if (Debug == true) {
             syslog (LOG_DEBUG, "DnsCnameCache: Setting %s to CNAME %s with TTL %lu", fqdn.c_str(), cname.c_str(), Ttl);
         }
-        DnsCache[cname] = std::make_pair(fqdn, now + Ttl);
+        DnsRevCache[cname] = std::make_pair(fqdn, now + Ttl);
+        DnsFwdCache[fqdn] = std::make_pair(cname, now + Ttl);
     }
 
-    std::string resolveCname (const std::string inCname, const uint8_t recdepth = 0) const {
+    std::string getFqdn (const std::string inCname, const uint8_t recdepth = 0) const {
         if (recdepth > 5) {
             return inCname;
         }
@@ -105,27 +107,27 @@ public:
         std::string cname = inCname;
         std::transform(cname.begin(), cname.end(), cname.begin(), ::tolower);
 
-        auto it = DnsCache.find(cname);
-        if (it != DnsCache.end()) {
+        auto it = DnsRevCache.find(cname);
+        if (it != DnsRevCache.end()) {
             if (Debug == true) {
                 syslog (LOG_DEBUG, "DnsCnameCache: Found reverse CNAME from %s to %s", cname.c_str(), it->second.first.c_str());
             }
-            return resolveCname(it->second.first, recdepth + 1);
+            return getFqdn(it->second.first, recdepth + 1);
         } else {
             return inCname;
         }
     }
 
-    std::string lookupCname (const std::string inCname) {
-        std::string cname = inCname;
-        std::transform(cname.begin(), cname.end(), cname.begin(), ::tolower);
+    std::string getCname (const std::string inFqdn) {
+        std::string fqdn = inFqdn;
+        std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
 
-        auto it = DnsCache.find(cname);
-        if (it == DnsCache.end()) {
+        auto it = DnsFwdCache.find(fqdn);
+        if (it == DnsFwdCache.end()) {
             if (Debug == true) {
-                syslog (LOG_DEBUG, "DnsCnameCache: %s does not have a CNAME", cname.c_str());
+                syslog (LOG_DEBUG, "DnsCnameCache: %s does not have a CNAME", inFqdn.c_str());
             }
-            throw std::runtime_error("No CNAME found for " + inCname);
+            throw std::runtime_error("No CNAME found for " + inFqdn);
         }
         return it->second.first;
     }
@@ -161,7 +163,7 @@ public:
         }
         size_t dnsRecords = 0;
         j["CnameRecords"] = json::object();
-        for (auto it_resource: DnsCache) {
+        for (auto it_resource: DnsFwdCache) {
             dnsRecords++;
             j["CnameRecords"][it_resource.first]= it_resource.second.first;
         }
@@ -173,16 +175,32 @@ public:
         }
         std::set<std::string> PrunedFqdns;
         auto now = time(nullptr);
-        auto it = DnsCache.begin();
-        while (it != DnsCache.end()) {
-            if (Force || now > it->second.second) {
-                if (Debug == true) {
-                    syslog (LOG_DEBUG, "Deleting CNAME for %s pointing to %s with TTL %lu", it->first.c_str(), it->second.first.c_str(), it->second.second);
+        {
+            auto it = DnsFwdCache.begin();
+            while (it != DnsFwdCache.end()) {
+                if (Force || now > it->second.second) {
+                    if (Debug == true) {
+                        syslog (LOG_DEBUG, "Deleting CNAME for %s pointing to %s with TTL %lu", it->first.c_str(), it->second.first.c_str(), it->second.second);
+                    }
+                    PrunedFqdns.insert(it->first);
+                    it = DnsFwdCache.erase(it);
+                } else {
+                    it++;
                 }
-                PrunedFqdns.insert(it->first);
-                it = DnsCache.erase(it);
-            } else {
-                it++;
+            }
+        }
+        {
+            auto it_rev = DnsRevCache.begin();
+            while (it_rev != DnsRevCache.end()) {
+                if (Force || now > it_rev->second.second) {
+                    if (Debug == true) {
+                        syslog (LOG_DEBUG, "Deleting reverse CNAME for %s pointing to %s with TTL %lu", it_rev->first.c_str(), it_rev->second.first.c_str(), it_rev->second.second);
+                    }
+                    PrunedFqdns.insert(it_rev->first);
+                    it_rev = DnsRevCache.erase(it_rev);
+                } else {
+                    it_rev++;
+                }
             }
         }
         return PrunedFqdns;

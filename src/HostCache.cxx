@@ -771,7 +771,7 @@ void HostCache::updateDeviceProfileMatchesDnsData () {
             std::string cname = fqdn;
             try {
                 while (1) {
-                    cname = dCcname.lookupCname(cname);
+                    cname = dCcname.getCname(cname);
                     try {
                         std::map<boost::asio::ip::address, time_t> p = dCip.lookupResourceRecord(cname);
                         for (auto ip_it: p) {
@@ -857,7 +857,7 @@ bool HostCache::removeDeviceProfile(const std::string inUuid) {
                 if (fdpmap_it != fdpMap.end()) {
                     fdpmap_it->second.erase(dp_it->second);
                 }
-                cname = dCcname.lookupCname(cname);
+                cname = dCcname.getCname(cname);
             }
         } catch (std::runtime_error &error) {}
     }

@@ -277,7 +277,7 @@ bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportPriva
 			}
 			std::vector<std::string> fqdns = dCip.getAllFqdns(ip);
 			for (auto &itf : fqdns) {
-				std::string fqdn = dCcname.resolveCname(itf);
+				std::string fqdn = dCcname.getFqdn(itf);
                 if (Debug) {
                     syslog (LOG_DEBUG, "Reverse resolved %s to %s, might have CNAME %s", ip.to_string().c_str(), itf.c_str(), fqdn.c_str());
                 }

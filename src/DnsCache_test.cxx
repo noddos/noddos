@@ -66,7 +66,7 @@ int main () {
         testfailed = true;
     }
 
-    std::string rootfqdn = c.resolveCname(fqdns[0]);
+    std::string rootfqdn = c.getFqdn(fqdns[0]);
     if (rootfqdn != "clients3.google.com") {
         syslog(LOG_DEBUG, "Cname lookup failed %s", rootfqdn.c_str());
         testfailed = true;
@@ -83,7 +83,7 @@ int main () {
         syslog(LOG_WARNING, "Exported A/AAAA records %lu", exportRecords);
     }
     exportRecords = c.exportJson(j);
-    if (exportRecords != 284) {
+    if (exportRecords != 280) {
         testfailed = true;
         syslog(LOG_WARNING, "Exported CNAME records %lu", exportRecords);
     }
@@ -94,7 +94,7 @@ int main () {
 
     std::set<std::string> PrunedCnames = c.pruneCnames(true);
     size_t pruned = PrunedCnames.size();
-    if (pruned != 284) {
+    if (pruned != 497) {
         syslog (LOG_DEBUG, "Pruned %lu DNS cnames", pruned);
         testfailed = 1;
     }
