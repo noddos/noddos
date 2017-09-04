@@ -1,22 +1,26 @@
 language: cpp
- script:
- compiler: gcc
- dist: trusty
+script:
+compiler: gcc
+dist: trusty
  
- before_install:
-   # C++11
-   - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-   - sudo apt-get update -qq
+before_install:
+  # C++11
+  - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+  - sudo apt-get update -qq
  
- install: 
-   - sudo apt-get install libnetfilter-conntrack-dev
-   - sudo apt-get install libcurl4-openssl-dev
-   # C++11
-   - sudo apt-get install -qq g++-5
-   - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-5 90
+install: 
+  - sudo apt-get install libnetfilter-conntrack-dev
+  - sudo apt-get install libcurl4-openssl-dev
+  - sudo apt-get install libssl-dev libtins-dev libipset-dev
+  - sudo apt-get install openssl libcurl3 libtins3.4
+  - sudo apt-get install ca-certificates 
+  # Not needed for tests: ipset iptales-persistent brotli wget
+  # C++11
+  - sudo apt-get install -qq g++-5
+  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-5 90
  
- script: 
-   - cd src
-   - cmake .
-   - make 
-   - make test
+script: 
+  - cd src
+  - cmake .
+  - make 
+  - make test
