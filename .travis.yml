@@ -12,7 +12,7 @@ install:
   - sudo apt-get install libnetfilter-conntrack-dev
   - sudo apt-get install libcurl4-openssl-dev
   - sudo apt-get install libssl-dev libtins-dev libipset-dev
-  - sudo apt-get install openssl libcurl3 libtins3.4
+  - sudo apt-get install openssl libcurl libtins
   - sudo apt-get install ca-certificates 
   # Not needed for tests: ipset iptales-persistent brotli wget
   # C++11
