@@ -1028,18 +1028,20 @@ void HostCache::writeIptables()  {
                 ipv46flag = "--ipv4";
                 outputfs << "-A NODDOS -i " + iface + " " + ipv46flag +
                         " -m set --match-set " + srcipset + " src " +
-                        "-m set --match-set " +  dstipset + " dst -j ACCEPT" << std::endl;
-
+                        "-m set --match-set " +  dstipset + " dst -j ACCEPT"
+                        " -m comment --comment \"" + dp_it.second->getDeviceDescription() + "\"" << std::endl;
                 // IPv6 permit rule
                 dstipset = getIpsetName(dp_it.second->getUuid(), false, false);
                 ipv46flag = "--ipv6";
                 outputfs << "-A NODDOS -i " + iface + " " + ipv46flag +
                         " -m set --match-set " + srcipset + " src " +
-                        "-m set --match-set " +  dstipset + " dst -j ACCEPT" << std::endl;
+                        "-m set --match-set " +  dstipset + " dst -j ACCEPT"
+                        " -m comment --comment \"" + dp_it.second->getDeviceDescription() + "\"" << std::endl;
 
                 // Block all other traffic from the MAC addresses mapped to the Device Profile
                 outputfs << "-A NODDOS -i " + iface +
-                        " -m set --match-set " + srcipset + " src -j " + action << std::endl;
+                        " -m set --match-set " + srcipset + " src -j " + action <<
+                        " -m comment --comment \"" + dp_it.second->getDeviceDescription() + "\"" << std::endl;
             }
         }
 

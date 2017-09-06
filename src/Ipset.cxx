@@ -144,6 +144,7 @@ bool Ipset::ipset_exec(enum ipset_cmd cmd) {
     */
 
     r = ipset_cmd(session, cmd, 0);
+// The below is from sample Ipset code but does not seem needed.
 //    r = ipset_commit(session);
 //    ipset_data_reset(session->data);
     return r == 0;
@@ -158,7 +159,11 @@ bool Ipset::ipset_exec(enum ipset_cmd cmd, const boost::asio::ip::address &inIpA
     }
     const struct ipset_type *type = ipset_type_get(session, cmd);
     if (type == NULL) {
-         return false;
+        std::string e = "Can't get ipset type for command, error: ";
+        e.append(ipset_session_error(session));
+        ipset_session_fini(session);
+        throw std::runtime_error(e);
+        return false;
     }
 
     if (inIpAddress.is_v4()) {
@@ -166,22 +171,35 @@ bool Ipset::ipset_exec(enum ipset_cmd cmd, const boost::asio::ip::address &inIpA
         ipset_session_data_set(session, IPSET_OPT_FAMILY, &family);
         struct in_addr sin;
         inet_aton (inIpAddress.to_string().c_str(), &sin);
-        ipset_session_data_set(session, IPSET_OPT_IP, &sin);
+        r = ipset_session_data_set(session, IPSET_OPT_IP, &sin);
     } else {
         uint8_t family = NFPROTO_IPV6;
         ipset_session_data_set(session, IPSET_OPT_FAMILY, &family);
         unsigned char buf[sizeof(struct in6_addr)];
         int s = inet_pton(AF_INET6, inIpAddress.to_string().c_str(), buf);
-        ipset_session_data_set(session, IPSET_OPT_IP, &buf);
+        r = ipset_session_data_set(session, IPSET_OPT_IP, &buf);
     }
     if (timeout) {
-        ipset_session_data_set(session, IPSET_OPT_TIMEOUT, &timeout);
+        r = ipset_session_data_set(session, IPSET_OPT_TIMEOUT, &timeout);
+        if (r != 0) {
+            std::string e = "Can't set timeout for " + ipsetName + ", error: " + ipset_session_error(session);
+            ipset_session_fini(session);
+            throw std::runtime_error(e);
+            return false;
+        }
     }
     r = ipset_cmd(session, cmd, 0);
-
+    if (r != 0) {
+        std::string e = "Can't call ipset_cmd, error: ";
+        e.append(ipset_session_error(session));
+        ipset_session_fini(session);
+        throw std::runtime_error(e);
+        return false;
+    }
+// The below is from sample Ipset code but does not seem needed.
 //    r = ipset_commit(session);
 //    ipset_data_reset(session->data);
-    return r == 0;
+    return true;
 }
 
 bool Ipset::ipset_exec(enum ipset_cmd cmd, const std::string Mac, uint32_t timeout) {
@@ -193,7 +211,10 @@ bool Ipset::ipset_exec(enum ipset_cmd cmd, const std::string Mac, uint32_t timeo
 
     const struct ipset_type *type = ipset_type_get(session, cmd);
     if (type == NULL) {
-         return false;
+        std::string e = "Can't get ipset type for command, error: ";
+        e.append(ipset_session_error(session));
+        ipset_session_fini(session);
+        throw std::runtime_error(e);
     }
     // ipset_parse_ether(session, IPSET_OPT_ETHER, Mac.c_str());
     // ipset_session_data_set(session, IPSET_OPT_ETHER, Mac.c_str());
@@ -202,30 +223,31 @@ bool Ipset::ipset_exec(enum ipset_cmd cmd, const std::string Mac, uint32_t timeo
         std::string e = "Can't call ipset_parse_elem, error: ";
         e.append(ipset_session_error(session));
         ipset_session_fini(session);
-        throw std::runtime_error(e.c_str());
+        throw std::runtime_error(e);
         return false;
-    } else {
-        if (timeout) {
-            r = ipset_session_data_set(session, IPSET_OPT_TIMEOUT, &timeout);
-            if (r != 0) {
-                std::string e = "Can't set timeout for " + ipsetName + ", error: " + ipset_session_error(session);
-                ipset_session_fini(session);
-                throw std::runtime_error(e.c_str());
-            }
-        }
-        r = ipset_cmd(session, cmd, 0);
+    }
+    if (timeout) {
+        r = ipset_session_data_set(session, IPSET_OPT_TIMEOUT, &timeout);
         if (r != 0) {
-            std::string e = "Can't call ipset_cmd, error: ";
-            e.append(ipset_session_error(session));
+            std::string e = "Can't set timeout for " + ipsetName + ", error: " + ipset_session_error(session);
             ipset_session_fini(session);
-            throw std::runtime_error(e.c_str());
+            throw std::runtime_error(e);
             return false;
         }
     }
+    r = ipset_cmd(session, cmd, 0);
+    if (r != 0) {
+        std::string e = "Can't call ipset_cmd, error: ";
+        e.append(ipset_session_error(session));
+        ipset_session_fini(session);
+        throw std::runtime_error(e);
+        return false;
+    }
+// The below is from sample Ipset code but does not seem needed.
 //    r = ipset_commit(session);
 //    ipset_data_reset(session->data);
 
-    return r == 0;
+    return true;
 }
 
 

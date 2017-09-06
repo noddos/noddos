@@ -52,6 +52,7 @@ private:
 	bool UploadStats;
 	bool Valid;
 	bool withAllowedEndpoints;
+	std::string DeviceDescription;
 	bool Debug;
 	Ipset srcIpset, dstv4Ipset, dstv6Ipset;
 	std::set<std::string> Hosts;
@@ -85,6 +86,7 @@ public:
 	time_t getDeviceProfileVersion ()  const { return DeviceProfileVersion; }
 	bool isValid() const { return Valid; }
 	bool getUploadStats() const { return UploadStats; }
+	std::string getDeviceDescription () const { return DeviceDescription; }
 
 	void createorupdateIpsets (bool inForce = false);
 

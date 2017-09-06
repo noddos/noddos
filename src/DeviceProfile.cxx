@@ -80,6 +80,14 @@
             UploadStats = j["UploadStats"].get<bool>();
         }
 
+        DeviceDescription = "";
+        if (j.find("Manufacturer") != j.end() && j["Manufacturer"].is_string()) {
+            DeviceDescription = j["Manufacturer"].get<std::string>();
+        }
+        if (j.find("Model") != j.end() && j["Model"].is_string()) {
+            DeviceDescription += j["Model"].get<std::string>();
+        }
+
         Identifiers.clear();
 
         if (j.find("Identifiers") == j.end()) {

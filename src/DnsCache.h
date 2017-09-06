@@ -118,7 +118,13 @@ public:
         }
     }
 
-    std::string getCname (const std::string inFqdn) {
+    std::string getCname (const std::string inFqdn, const uint8_t recdepth = 0) {
+        if (recdepth > 5) {
+            return inFqdn;
+        }
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "DnsCnameCache: Looking up CNAME for %s", inFqdn.c_str());
+        }
         std::string fqdn = inFqdn;
         std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
 
