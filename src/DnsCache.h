@@ -151,14 +151,20 @@ public:
             return true;
         }
         for (json::iterator it = cj->begin(); it != cj->end(); ++it) {
-            dnsRecords++;
-            std::string cname = it.key();
-            std::string fqdn = it.value();
-            auto fdp_it = fdpMap.find(fqdn);
-            if (fdp_it != fdpMap.end()) {
-                addorupdateCname (fqdn, cname, fdpMap, 86400);
-            } else {
-                addorupdateCname (fqdn, cname, 86400);
+            std::string fqdn = it.key();
+            json v = it.value();
+            if (v.is_object() == true) {
+                for (json::iterator c_it = it->begin(); c_it != it->end(); ++c_it) {
+                    dnsRecords++;
+                    std::string cname = c_it.key();
+                    time_t ttl = c_it.value();
+                    auto fdp_it = fdpMap.find(fqdn);
+                    if (fdp_it != fdpMap.end()) {
+                        addorupdateCname (fqdn, cname, fdpMap, ttl);
+                    } else {
+                        addorupdateCname (fqdn, cname, ttl);
+                    }
+                }
             }
         }
         return dnsRecords;
@@ -171,7 +177,8 @@ public:
         j["CnameRecords"] = json::object();
         for (auto it_resource: DnsFwdCache) {
             dnsRecords++;
-            j["CnameRecords"][it_resource.first]= it_resource.second.first;
+            j["CnameRecords"][it_resource.first]= json::object();
+            j["CnameRecords"][it_resource.first][it_resource.second.first] = it_resource.second.second;
         }
         return dnsRecords;
     }
