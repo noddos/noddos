@@ -66,7 +66,7 @@ int main () {
 	//	std::cout << "Mac lookup failure for 192.168.1.1 resulting in: " << s << std::endl;
 	// }
 	MacAddress Mac = hC.MacLookup("99.99.99.99",1);
-	if (Mac.isValid() == false) {
+	if (Mac.isValid() == true) {
 		testfailure = true;
 		std::cout << "Test failure: Mac lookup failure for 99.99.99.99 resulting in: " << Mac.str() << std::endl;
 	}

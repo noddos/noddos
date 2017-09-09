@@ -46,30 +46,32 @@ int main () {
     json k;
     ifs >> k;
     size_t importedRecords = i.importJson(k, fdpMap);
-    if (importedRecords != 288) {
+    if (importedRecords != 571) {
         testfailed = true;
         syslog(LOG_WARNING, "Imported A/AAAA records %lu", importedRecords);
 
     }
 
     importedRecords = c.importJson(k,fdpMap);
-    if (importedRecords != 284) {
+    if (importedRecords != 85) {
         testfailed = true;
         syslog(LOG_WARNING, "Imported CNAME records %lu", importedRecords);
 
     }
     ifs.close();
-    boost::asio::ip::address ip4 = boost::asio::ip::address::from_string("216.58.216.46");
+    boost::asio::ip::address ip4 = boost::asio::ip::address::from_string("23.41.176.89");
     std::vector<std::string> fqdns = i.getAllFqdns(ip4);
-    if (fqdns.size() != 5) {
-        syslog (LOG_DEBUG,"Simple reverse lookup for 216.58.216.46 returned %lu fqdns", fqdns.size());
+    if (fqdns.size() != 1) {
+        syslog (LOG_DEBUG,"Simple reverse lookup for 23.41.176.89 returned %lu fqdns", fqdns.size());
         testfailed = true;
     }
 
-    std::string rootfqdn = c.getFqdn(fqdns[0]);
-    if (rootfqdn != "clients3.google.com") {
-        syslog(LOG_DEBUG, "Cname lookup failed %s", rootfqdn.c_str());
-        testfailed = true;
+    if (fqdns.size() > 0) {
+        std::string rootfqdn = c.getFqdn(fqdns[0]);
+        if (rootfqdn != "www.cisco.com") {
+            syslog(LOG_DEBUG, "Cname lookup failed %s", rootfqdn.c_str());
+            testfailed = true;
+        }
     }
     std::ofstream ofs("/tmp/DnsCache.json");
     if (not ofs.is_open()) {
@@ -78,12 +80,12 @@ int main () {
     }
     json j;
     auto exportRecords = i.exportJson(j);
-    if (exportRecords != 288) {
+    if (exportRecords != 74) {
         testfailed = true;
         syslog(LOG_WARNING, "Exported A/AAAA records %lu", exportRecords);
     }
     exportRecords = c.exportJson(j);
-    if (exportRecords != 280) {
+    if (exportRecords != 85) {
         testfailed = true;
         syslog(LOG_WARNING, "Exported CNAME records %lu", exportRecords);
     }
@@ -94,13 +96,13 @@ int main () {
 
     std::set<std::string> PrunedCnames = c.pruneCnames(true);
     size_t pruned = PrunedCnames.size();
-    if (pruned != 497) {
+    if (pruned != 130) {
         syslog (LOG_DEBUG, "Pruned %lu DNS cnames", pruned);
         testfailed = 1;
     }
     std::set<std::string> PrunedFqdns =i.pruneResourceRecords(true);
     pruned = PrunedFqdns.size();
-    if (pruned != 288) {
+    if (pruned != 74) {
         syslog (LOG_DEBUG, "Pruned %lu DNS IP records", pruned);
         testfailed = 1;
     }

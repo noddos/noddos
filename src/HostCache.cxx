@@ -336,7 +336,7 @@ MacAddress HostCache::MacLookup (const std::string inIpAddress, const int retrie
     if (Debug == true) {
         syslog (LOG_DEBUG, "HostCache: MacLookup of %s", inIpAddress.c_str());
     }
-    MacAddress Mac;
+    MacAddress Mac("00:00:00:00:00:00");
     for (auto lanInterface: ifMap->getLanInterfaces()) {
         Mac = MacLookup(inIpAddress, lanInterface, retries);
         if (Mac.isValid() == true) {
