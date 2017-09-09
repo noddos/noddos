@@ -332,8 +332,32 @@ uint32_t HostCache::pruneDnsQueryCache (bool Force) {
 	return deletecount;
 }
 
-// TODO: Lookup MAC addresses in ARP table using IOCTL now works but you need to specify the Ethernet interface and we don't have code for that yet
-// so for now we'll continue doing lookups in /proc/net/arp even though that is slower
+MacAddress HostCache::MacLookup (const std::string inIpAddress, const int retries) {
+    if (Debug == true) {
+        syslog (LOG_DEBUG, "HostCache: MacLookup of %s", inIpAddress.c_str());
+    }
+    MacAddress Mac;
+    for (auto lanInterface: ifMap->getLanInterfaces()) {
+        Mac = MacLookup(inIpAddress, lanInterface, retries);
+        if (Mac.isValid() == true) {
+            if (Debug == true) {
+                syslog (LOG_DEBUG, "HostCache: Found MAC entry %s on interface %s", Mac.c_str(), lanInterface.c_str());
+            }
+            return Mac;
+        }
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "HostCache: MAC entry not found on interface %s", lanInterface.c_str());
+        }
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "HostCache: MAC entry not found on lan interfaces");
+        }
+    }
+    if (Debug == true) {
+        syslog (LOG_DEBUG, "HostCache: MAC entry not found on lan interfaces");
+    }
+    return Mac;
+}
+
 MacAddress HostCache::MacLookup (const std::string inIpAddress, const std::string inInterface, const int retries) {
 	int domain;
 	struct arpreq areq;
@@ -373,7 +397,7 @@ MacAddress HostCache::MacLookup (const std::string inIpAddress, const std::strin
 				syslog(LOG_DEBUG, "HostCache: Additional ARP lookup for %s", inIpAddress.c_str());
 			}
 			if (SendUdpPing (inIpAddress, 1900)) {
-				usleep(5000);
+				usleep(1000);
 				return MacLookup (inIpAddress, inInterface, retries - 1);
 			}
 		}
@@ -388,6 +412,7 @@ MacAddress HostCache::MacLookup (const std::string inIpAddress, const std::strin
 	return Mac;
 }
 
+// TODO: We should consolidate this in the IfMap data structure
 uint32_t HostCache::getInterfaceIpAddresses() {
     if (Debug == true) {
         syslog (LOG_DEBUG, "HostCache: discovering IP addresses of network interfaces");
@@ -442,38 +467,6 @@ uint32_t HostCache::getInterfaceIpAddresses() {
 	return 0;
 }
 
-MacAddress HostCache::MacLookup (const std::string inIpAddress, const int retries) {
-	// TODO: we should cache ARP table and only refresh it if a MAC lookup fails
-	if (Debug == true) {
-	    syslog (LOG_DEBUG, "HostCache: deprecated MacLookup of %s", inIpAddress.c_str());
-	}
-	std::ifstream ifs("/proc/net/arp");
-	std::string line;
-	MacAddress Mac;
-	while (std::getline(ifs, line)) {
-		std::smatch m;
-		if(std::regex_match(line, m, arp_rx)) {
-			std::string ip = m.str(1);
-			Mac.set(m.str(2));
-			if (ip == inIpAddress && Mac.isValid() != 0) {
-				ifs.close();
-				return Mac;
-			}
-		}
-
-	}
-	ifs.close();
-	if (retries > 0) {
-		if (Debug == true) {
-			syslog(LOG_DEBUG, "HostCache: Additional ARP lookup for %s", inIpAddress.c_str());
-		}
-		if (SendUdpPing (inIpAddress, 1900)) {
-			usleep(5000);
-			return MacLookup (inIpAddress, retries - 1);
-		}
-	}
-	return Mac;
-}
 
 bool HostCache::SendUdpPing (const std::string DstIpAddress, const uint16_t DstPort) {
 	//Structure for address of server
