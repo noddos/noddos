@@ -58,9 +58,8 @@ private:
 	std::regex arp_rx, dev_rx;
 	std::unordered_set<std::string> WhitelistedNodes;
 	bool Debug;
-	// FIXME: We don't actually use the data in below sets anymore
-	std::unordered_set<std::string> LocalInterfaces;
-	std::unordered_set<std::string> LocalIpAddresses;
+	std::set<std::string> LocalInterfaces;
+	std::set<std::string> LocalIpAddresses;
 	uint32_t FlowExpiration;
 	bool FirewallBlockTraffic;
 	std::string FirewallRulesFile;

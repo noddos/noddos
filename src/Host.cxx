@@ -251,7 +251,7 @@ bool Host::DeviceStats(json& j, const uint32_t time_interval, bool force, bool d
 	return true;
 }
 
-bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportPrivateAddresses, const std::unordered_set<std::string> &LocalIps,
+bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportPrivateAddresses, const std::set<std::string> &LocalIps,
 		const DnsIpCache <boost::asio::ip::address> &dCip, const DnsCnameCache &dCcname, bool force) {
 	if (not isMatched()) {
 		return false;

@@ -333,10 +333,16 @@ uint32_t HostCache::pruneDnsQueryCache (bool Force) {
 }
 
 MacAddress HostCache::MacLookup (const std::string inIpAddress, const int retries) {
+    MacAddress Mac("00:00:00:00:00:00");
+    if (LocalIpAddresses.find(inIpAddress) != LocalIpAddresses.end()) {
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "HostCache: Skipping MacLookup of local IP address %s", inIpAddress.c_str());
+        }
+        return Mac;
+    }
     if (Debug == true) {
         syslog (LOG_DEBUG, "HostCache: MacLookup of %s", inIpAddress.c_str());
     }
-    MacAddress Mac("00:00:00:00:00:00");
     for (auto lanInterface: ifMap->getLanInterfaces()) {
         Mac = MacLookup(inIpAddress, lanInterface, retries);
         if (Mac.isValid() == true) {
@@ -347,9 +353,6 @@ MacAddress HostCache::MacLookup (const std::string inIpAddress, const int retrie
         }
         if (Debug == true) {
             syslog (LOG_DEBUG, "HostCache: MAC entry not found on interface %s", lanInterface.c_str());
-        }
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "HostCache: MAC entry not found on lan interfaces");
         }
     }
     if (Debug == true) {

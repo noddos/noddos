@@ -123,7 +123,7 @@ public:
 	std::string Ipv6Address_get () { return Ipv6Address; }
 	void ExportDeviceInfo (json &j, bool detailed = false);
 	bool DeviceStats(json& j, const uint32_t interval, bool force = false, bool detailed = false);
-	bool TrafficStats(json& j, const uint32_t interval, const bool ReportRfc1918, const std::unordered_set<std::string> & LocalIps,
+	bool TrafficStats(json& j, const uint32_t interval, const bool ReportRfc1918, const std::set<std::string> & LocalIps,
 	        const DnsIpCache <boost::asio::ip::address> &dCip, const DnsCnameCache &dCcname, bool force = false);
 	bool inPrivateAddressRange(const std::string ip );
 
