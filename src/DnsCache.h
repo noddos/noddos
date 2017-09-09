@@ -315,16 +315,17 @@ public:
             return true;
         }
         for (json::iterator it = cj->begin(); it != cj->end(); ++it) {
-            dnsRecords++;
             std::string fqdn = it.key();
-            std::unordered_set<std::string> records = (*cj)[fqdn].get<std::unordered_set<std::string>>();
             auto fdp_it = fdpMap.find(fqdn);
-            for (auto record: records) {
-                T IpAddress = T::from_string(record);
+            json ipj = it.value();
+            for (json::iterator ip_it = ipj.begin(); ip_it != ipj.end(); ++ip_it) {
+                dnsRecords++;
+                T IpAddress = T::from_string(ip_it.key());
+                time_t ttl = ip_it.value();
                 if (fdp_it != fdpMap.end()) {
-                    addorupdateResourceRecord (fqdn, IpAddress, fdp_it, 86400);
+                    addorupdateResourceRecord (fqdn, IpAddress, fdp_it, ttl);
                 } else {
-                    addorupdateResourceRecord (fqdn, IpAddress, 86400);
+                    addorupdateResourceRecord (fqdn, IpAddress, ttl);
                 }
             }
         }
@@ -336,16 +337,20 @@ public:
             syslog (LOG_DEBUG, "DnsIpCache: export to json");
         }
 	    size_t dnsRecords = 0;
-	    j["AddressRecords"] = json::object();;
+	    j["AddressRecords"] = json::object();
 	    for (auto it_resource: DnsFwdCache) {
             dnsRecords++;
-	        j["AddressRecords"][it_resource.first] = json::array();
+	        j["AddressRecords"][it_resource.first] = json::object();
 	        for (auto it_record: it_resource.second) {
-	            j["AddressRecords"][it_resource.first].push_back(it_record.first.to_string());
+	            std::string ip = it_record.first.to_string();
+	            time_t ttl = it_record.second;
+	            j["AddressRecords"][it_resource.first][ip] = ttl;
 	        }
 
 	    }
-	    return dnsRecords;
+
+        //     j["CnameRecords"][it_resource.first][it_resource.second.first] = it_resource.second.second;
+        return dnsRecords;
 	}
 
 	std::vector<std::string>  getAllFqdns  (T const inIpAddress) const {
