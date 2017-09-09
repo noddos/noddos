@@ -67,10 +67,10 @@ public:
         auto it = fdpMap.find(fqdn);
         if (it != fdpMap.end()) {
             if (Debug == true) {
-                syslog (LOG_DEBUG, "DnsIpCache: Found FqdnDeviceProfileMap entry for %s with CNAME %s",
+                syslog (LOG_DEBUG, "DnsCnameCache: Found FqdnDeviceProfileMap entry for %s with CNAME %s",
                         inFqdn.c_str(), inCname.c_str());
             } else {
-                syslog (LOG_DEBUG, "DnsCache: Didn't find FqdnDeviceProfileMap entry for %s with CNAME %s", inFqdn.c_str(), inCname.c_str() );
+                syslog (LOG_DEBUG, "DnsCnameCache: Didn't find FqdnDeviceProfileMap entry for %s with CNAME %s", inFqdn.c_str(), inCname.c_str() );
             }
             fdpMap[cname].insert(it->second.begin(), it->second.end());
         }

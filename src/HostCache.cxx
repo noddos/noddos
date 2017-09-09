@@ -754,37 +754,58 @@ uint32_t HostCache::ImportDeviceProfileMatches(const std::string filename) {
 }
 
 void HostCache::updateDeviceProfileMatchesDnsData () {
+    if (Debug) {
+        syslog (LOG_DEBUG, "HostCache: starting updateDeviceProfileMatchesDnsData");
+    }
     for (auto dp_it: dpMap) {
         // Now we need to update the ipset rules for Device Profiles with
         // hasAllowedEndpoints and one or more hosts matched to it
+        if (Debug) {
+            syslog (LOG_DEBUG, "HostCache: updateDeviceProfileMatchesDnsData processing DP %s", dp_it.second->getDeviceDescription().c_str());
+        }
         dp_it.second->createorupdateIpsets();
         std::set<std::string> fqdns = dp_it.second->getDestinations();
         for (auto fqdn: fqdns) {
             fdpMap[fqdn].insert(dp_it.second);
+            if (Debug) {
+                syslog (LOG_DEBUG, "HostCache: updateDeviceProfileMatchesDnsData adding FQDN %s", fqdn.c_str());
+            }
             try {
                 std::map<boost::asio::ip::address, time_t> p = dCip.lookupResourceRecord(fqdn);
                 for (auto ip_it: p) {
                     dp_it.second->addDestination(ip_it.first, ip_it.second);
                 }
             } catch (std::runtime_error &e) {
+                // No A or AAAA records for FQDN, probably only CNAME(s)
             }
-            std::string cname = fqdn;
-            try {
-                while (1) {
-                    cname = dCcname.getCname(cname);
-                    try {
-                        std::map<boost::asio::ip::address, time_t> p = dCip.lookupResourceRecord(cname);
-                        for (auto ip_it: p) {
-                            dp_it.second->addDestination(ip_it.first, ip_it.second);
-                        }
-                    } catch (std::runtime_error &e) {
-                    }
-                    // All traffic allowed to a FQDN is also allowed to its CNAME
-                    // so if subsequently an A record is received for the CNAME,
-                    // the ipsets for the device profiles must be updated
-                    fdpMap[cname].insert(dp_it.second);
+            std::string cname = "";
+            while (fqdn != cname) {
+                try {
+                    cname = dCcname.getCname(fqdn);
+                } catch (std::runtime_error &e) {
+                    break;
                 }
-            } catch (std::runtime_error &error) {}
+                if (Debug) {
+                    syslog (LOG_DEBUG, "HostCache: updateDeviceProfileMatchesDnsData adding CNAME %s for FQDN %s", cname.c_str(), fqdn.c_str());
+                }
+                try {
+                    std::map<boost::asio::ip::address, time_t> p = dCip.lookupResourceRecord(cname.c_str());
+                    for (auto ip_it: p) {
+                        dp_it.second->addDestination(ip_it.first, ip_it.second);
+                    }
+                } catch (std::runtime_error &e) {
+                    // No A or AAAA records for FQDN, probably only CNAME(s)
+                }
+                // All traffic allowed to a FQDN is also allowed to its CNAME
+                // so if subsequently an A record is received for the CNAME,
+                // the ipsets for the device profiles must be updated
+                fdpMap[cname].insert(dp_it.second);
+                if (Debug) {
+                    syslog (LOG_DEBUG, "HostCache: updateDeviceProfileMatchesDnsData Finishing with FQDN %s and CNAME %s", fqdn.c_str(), cname.c_str());
+                }
+                // On nex iteration, do a CNAME lookup for the cname we found in this iteration
+                fqdn = cname;
+            }
         }
     }
 }
