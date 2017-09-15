@@ -23,6 +23,8 @@
 #ifndef IDEVICEINFOSOURCE_H_
 #define IDEVICEINFOSOURCE_H_
 
+#include <string>
+
 class iDeviceInfoSource {
 	public:
 		virtual int getFileHandle() = 0;

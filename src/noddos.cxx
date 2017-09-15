@@ -55,6 +55,7 @@
 #include "DeviceProfile.h"
 #include "Host.h"
 #include "PacketSnoop.h"
+#include "WsDiscovery.h"
 #include "InterfaceMap.h"
 #include "Config.h"
 #include "noddos.h"
@@ -162,7 +163,12 @@ int main(int argc, char** argv) {
     SsdpServer s(hC, 86400, "", config.Debug);
     add_epoll_filehandle(epfd, epollmap, s);
 
-    FlowTrack ft(hC, config) ;
+    WsDiscovery w(hC, 86400, "", config.Debug);
+    add_epoll_filehandle(epfd, epollmap, w);
+    w.Probe();
+
+    std::set<std::string> localIpAddresses = hC.getLocalIpAddresses();
+    FlowTrack ft(hC, config, localIpAddresses) ;
     ft.Open();
    	add_epoll_filehandle(epfd, epollmap, ft);
 
@@ -231,6 +237,7 @@ int main(int argc, char** argv) {
 						NextMatch = time(nullptr) + config.MatchInterval;
 						hC.ExportDeviceProfileMatches(config.MatchFile, false);
 						hC.ExportDeviceProfileMatches(config.DumpFile, true);
+						w.Probe();
 						hC.exportDnsCache(config.DnsCacheFile);
 					} else if (si.ssi_signo == SIGUSR2) {
 						syslog(LOG_INFO, "Noddos: Processing signal event SIGUSR2");
@@ -300,6 +307,7 @@ exitprog:
     hC.exportDnsCache(config.DnsCacheFile);
     hC.Prune();
 	s.Close();
+	w.Close();
 	for (auto p: pInstances) {
 	    p->Close();
 	}

@@ -61,10 +61,12 @@ private:
     bool useNfct = false;
     FILE * ctFilePointer = nullptr;
     bool Debug = false;
+    std::set<std::string> localIpAddresses;
 
 
 public:
-	FlowTrack(HostCache & inhC, Config &inConfig): hC{inhC}, config{inConfig}, Debug{inConfig.Debug} {
+	FlowTrack(HostCache & inhC, Config &inConfig,std::set<std::string> & inlocalIpAddresses):
+	        hC{inhC}, config{inConfig}, Debug{inConfig.Debug}, localIpAddresses{inlocalIpAddresses} {
         if (Debug) {
             syslog (LOG_DEBUG, "FlowTrack: constructing instance");
         }
@@ -137,7 +139,14 @@ public:
 */
         nfct_filter_add_attr(filter, NFCT_FILTER_L4PROTO_STATE, &filter_proto);
 
-        for (auto it: config.WhitelistedIpv4Addresses) {
+        std::unordered_set<std::string> ignoreIpAddresses = config.WhitelistedIpv4Addresses;
+        for (auto ipaddress: localIpAddresses) {
+            try {
+                boost::asio::ip::address_v4::from_string(ipaddress);
+                ignoreIpAddresses.insert(ipaddress);
+            } catch (...) {}
+        }
+        for (auto it: ignoreIpAddresses) {
         	/* BSF always wants data in host-byte order */
         	struct nfct_filter_ipv4 filter_ipv4 = {
                 .addr = ntohl(inet_addr(it.c_str())),

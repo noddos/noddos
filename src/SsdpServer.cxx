@@ -43,15 +43,17 @@ bool SsdpServer::processEvent (struct epoll_event &event) {
 	char msgbuf[MSGBUFSIZE];
 	memset(&msgbuf, 0, MSGBUFSIZE);
 	struct sockaddr addr;
-	memset(&addr, 0, sizeof(addr));
+    socklen_t addrlen = sizeof(addr);
+	memset(&addr, 0, addrlen);
 
-	socklen_t addrlen = sizeof(addr);
 	int nbytes;
-	int packets = 0;
-	while (packets++ < 3 && (nbytes = recvfrom(socket_fd, msgbuf, MSGBUFSIZE, 0, &addr, &addrlen)) > 0) {
+	// int packets = 0;
+	// while (packets++ < 1 && (nbytes = recvfrom(socket_fd, msgbuf, MSGBUFSIZE, 0, &addr, &addrlen)) > 0) {
+	while ((nbytes = recvfrom(socket_fd, msgbuf, MSGBUFSIZE, 0, &addr, &addrlen)) > 0) {
 		if (addr.sa_family == AF_INET) {
 			auto sHost = std::make_shared<SsdpHost>();
 			struct sockaddr_in  *addr_in_ptr = (struct sockaddr_in *) &addr;
+	        addrlen = sizeof(addr);
 			sHost->IpAddress = inet_ntoa(addr_in_ptr->sin_addr);
 			if(Debug) {
 				syslog(LOG_DEBUG, "SsdpServer: Received multicast packet from %s with %d bytes", sHost->IpAddress.c_str(), nbytes);
@@ -68,7 +70,6 @@ bool SsdpServer::processEvent (struct epoll_event &event) {
 			syslog(LOG_WARNING, "SsdpServer: Unknown address family: %u", addr.sa_family);
 		}
 
-		addrlen = sizeof(addr);
 	}
 	if (nbytes < 0) {
 		syslog(LOG_ERR, "SsdpServer: recvfrom");
@@ -127,9 +128,9 @@ bool SsdpServer::ParseSsdpMessage (std::shared_ptr<SsdpHost> host, const char * 
 int SsdpServer::Open (std::string input, uint32_t inExpiration) {
 	IpAddress = input;
 	if(Debug) {
-		syslog(LOG_DEBUG, "SsdpServer: Opening SsdpServer socket");
+		syslog(LOG_DEBUG, "SsdpServer: Opening socket");
 	}
-	if ((socket_fd=socket(AF_INET,SOCK_DGRAM,0)) < 0) {
+	if ((socket_fd=socket(AF_INET,SOCK_DGRAM | SOCK_NONBLOCK,0)) < 0) {
 		syslog(LOG_CRIT, "SsdpServer: socket");
 		throw std::system_error(errno, std::system_category());
 	}
@@ -145,17 +146,20 @@ int SsdpServer::Open (std::string input, uint32_t inExpiration) {
 	addr.sin_addr.s_addr=htonl(INADDR_ANY);
 	addr.sin_port=htons(1900);
 	if (bind(socket_fd,(struct sockaddr *) &addr,sizeof(addr)) < 0) {
-		syslog(LOG_CRIT, "bind");
+		syslog(LOG_CRIT, "SsdpServer: bind");
 		throw std::system_error(errno, std::system_category());
 	}
-	int flags = fcntl(socket_fd, F_GETFD, 0);
+/*	int flags = fcntl(socket_fd, F_GETFL, 0);
 	if (flags == -1) {
 		flags = 0;
     }
-	if ((fcntl(socket_fd,F_SETFD,flags | O_NONBLOCK)) == -1) {
+	if ((fcntl(socket_fd, F_SETFL,flags | O_NONBLOCK)) == -1) {
 		syslog(LOG_ERR, "SsdpServer: Set socket O_NONBLOCK");
-	}
-
+	} */
+    int flags;
+	if(! ((flags = fcntl(socket_fd, F_GETFL, 0)) & O_NONBLOCK) ) {
+        syslog(LOG_ERR, "SsdpServer: socket O_NONBLOCK not set: %d", flags);
+    }
 	// TODO: add support for multiple IP addresses or interfaces to join multicast groups with
 	struct ip_mreqn mreqn;
 	mreqn.imr_multiaddr.s_addr=inet_addr("239.255.255.250");

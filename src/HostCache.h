@@ -157,6 +157,7 @@ public:
 	MacAddress MacLookup (const std::string inIpAddress, const std::string inInterface, const int retries = 1);
 	bool SendUdpPing (const std::string DstIpAddress, const uint16_t DstPort);
 	uint32_t getInterfaceIpAddresses();
+	std::set<std::string> getLocalIpAddresses() { return LocalIpAddresses; }
 
 	void UploadDeviceStats(std::vector<std::future<uint32_t>> &futures, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
 	void UploadTrafficStats(std::vector<std::future<uint32_t>> &futures, const time_t interval, const bool ReportRfc1918, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);

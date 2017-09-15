@@ -87,36 +87,81 @@ public:
     void Open (const std::string inIpsetName, std::string inIpsetType, bool inisIpsetv4, bool inDebug = false);
 
     bool Destroy() {
-        return ipset_exec(IPSET_CMD_DESTROY);
+        try {
+            return ipset_exec(IPSET_CMD_DESTROY);
+        } catch (...) {
+            syslog (LOG_ERR, "Ipset: Failed to destroy ipset %s", ipsetName.c_str());
+        }
+        return false;
     }
     bool Exists() {
-         ipset_session_data_set(session, IPSET_SETNAME, ipsetName.c_str());
-         return ipset_cmd(session, IPSET_CMD_HEADER, 0) == 0;
+        try {
+            ipset_session_data_set(session, IPSET_SETNAME, ipsetName.c_str());
+            return ipset_cmd(session, IPSET_CMD_HEADER, 0) == 0;
+        } catch (...) {
+            syslog (LOG_ERR, "Ipset: Failed to check existence of ipset %s", ipsetName.c_str());
+        }
+        return false;
      }
 
      bool Add(const boost::asio::ip::address &inIpAddress, time_t timeout = 604800) {
-         return ipset_exec(IPSET_CMD_ADD, inIpAddress, timeout);
+         try {
+             return ipset_exec(IPSET_CMD_ADD, inIpAddress, timeout);
+         } catch (...) {
+             syslog (LOG_ERR, "Ipset: Failed to add IP address %s to ipset %s", inIpAddress.to_string().c_str(), ipsetName.c_str());
+         }
+         return false;
      }
 
      bool Add(const MacAddress &inMac, time_t timeout = 7776000) {
-         return ipset_exec(IPSET_CMD_ADD, inMac.str(), timeout);
+         try {
+             return ipset_exec(IPSET_CMD_ADD, inMac.str(), timeout);
+         } catch (...) {
+             syslog (LOG_ERR, "Ipset: Failed to add MAC address %s to ipset %s", inMac.c_str(), ipsetName.c_str());
+         }
+         return false;
      }
 
      bool Remove(const boost::asio::ip::address &inIpAddress) {
-         return ipset_exec(IPSET_CMD_DEL, inIpAddress, 0);
+         try {
+             return ipset_exec(IPSET_CMD_DEL, inIpAddress, 0);
+         } catch (...) {
+             syslog (LOG_ERR, "Ipset: Failed to remove IP address %s from ipset %s ", inIpAddress.to_string().c_str(), ipsetName.c_str());
+         }
+         return false;
      }
      bool Remove(const MacAddress &Mac) {
+         try {
          return ipset_exec(IPSET_CMD_DEL, Mac.str(), 0);
+         } catch (...) {
+             syslog (LOG_ERR, "Ipset: Failed to remove MAC address %s from  ipset %s", Mac.c_str(), ipsetName.c_str());
+         }
+         return false;
      }
      bool Remove(const std::string &Mac) {
+         try {
           return ipset_exec(IPSET_CMD_DEL, Mac, 0);
+         } catch (...) {
+             syslog (LOG_ERR, "Ipset: Failed to remove Mac address %s from ipset %s", Mac.c_str(), ipsetName.c_str());
+         }
+         return false;
      }
 
      bool In(const boost::asio::ip::address &inIpAddress) {
+         try {
          return ipset_exec(IPSET_CMD_TEST, inIpAddress, 0);
+         } catch (...) {
+             syslog (LOG_ERR, "Ipset: Failed to check wheth IP address %s is in ipset %s", inIpAddress.to_string().c_str(), ipsetName.c_str());
+         }
+         return false;
      }
      bool In(const MacAddress &Mac) {
+         try {
          return ipset_exec(IPSET_CMD_TEST, Mac.str(), 0);
+         } catch (...) {
+             syslog (LOG_ERR, "Ipset: Failed to check whether MAC address %s is in ipset %s", Mac.c_str(), ipsetName.c_str());
+         }
+         return false;
      }
 
 };

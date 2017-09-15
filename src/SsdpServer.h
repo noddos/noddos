@@ -29,7 +29,6 @@
 #include <memory>
 #include <sys/epoll.h>
 
-// #include "log/Log.h"
 
 #include "iDeviceInfoSource.h"
 #include "HostCache.h"
