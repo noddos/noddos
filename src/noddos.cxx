@@ -177,8 +177,9 @@ int main(int argc, char** argv) {
     }
     uint32_t NextMatch = time(nullptr) + config.MatchInterval + rand() % 15;
     uint32_t NextPrune = time(nullptr) + config.PruneInterval + rand() % 15;
-	uint32_t NextDeviceUpload = time(nullptr) + config.DeviceReportInterval + rand() %5;
-	uint32_t NextTrafficUpload = time(nullptr) + config.TrafficReportInterval + rand() %5;
+	uint32_t NextDeviceUpload = time(nullptr) + config.DeviceReportInterval + rand() % 5;
+	uint32_t NextTrafficUpload = time(nullptr) + config.TrafficReportInterval + rand() % 5;
+	uint32_t NextWsDiscoveryProbe = time(nullptr) + config.WsDiscoveryProbeInterval + rand() % 15;
 
 	struct epoll_event* epoll_events = static_cast<epoll_event*>(calloc(MAXEPOLLEVENTS, sizeof (epoll_event)));
 	while (true) {
@@ -237,7 +238,6 @@ int main(int argc, char** argv) {
 						NextMatch = time(nullptr) + config.MatchInterval;
 						hC.ExportDeviceProfileMatches(config.MatchFile, false);
 						hC.ExportDeviceProfileMatches(config.DumpFile, true);
-						w.Probe();
 						hC.exportDnsCache(config.DnsCacheFile);
 					} else if (si.ssi_signo == SIGUSR2) {
 						syslog(LOG_INFO, "Noddos: Processing signal event SIGUSR2");
@@ -284,6 +284,14 @@ int main(int argc, char** argv) {
 					}
 					NextPrune = t + config.PruneInterval;
 				}
+				if (t > NextWsDiscoveryProbe) {
+				    if (config.Debug == true) {
+				        syslog(LOG_DEBUG, "Noddos: Starting WS-Discovery Probe");
+				    }
+				    w.Probe();
+				    NextWsDiscoveryProbe = t + config.WsDiscoveryProbeInterval;
+				}
+
     		}
 			if (futures.size() > 0) {
 			    for (auto future_it = futures.begin(); future_it != futures.end();) {

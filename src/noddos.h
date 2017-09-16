@@ -32,6 +32,30 @@
 
 enum struct ConfidenceLevel : int { None, none, NONE, Low, low, LOW, Medium, medium, MEDIUM, High, high, HIGH };
 
+struct WsDiscoveryHost {
+    std::string IpAddress;
+    std::string wsdTypes;
+    std::string wsdXAddrs;
+
+    bool operator == (const WsDiscoveryHost &rhs) const {
+        return IpAddress == rhs.IpAddress &&
+                wsdXAddrs == rhs.wsdXAddrs &&
+                wsdTypes == wsdTypes;
+    }
+};
+
+struct MdnsHost {
+    std::string IpAddress;
+    std::string wsdTypes;
+    std::string wsdXAddrs;
+
+    bool operator == (const WsDiscoveryHost &rhs) const {
+        return IpAddress == rhs.IpAddress &&
+                wsdXAddrs == rhs.wsdXAddrs &&
+                wsdTypes == wsdTypes;
+    }
+};
+
 size_t curlwriteFunction(void *ptr, size_t size, size_t nmemb, std::string* data);
 
 

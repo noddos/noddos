@@ -157,6 +157,10 @@ bool Host::Match(const MatchCondition& mc) {
 		value = Ssdp.Server;
 	} else if (mc.Key == "SsdpLocation") {
 		value = Ssdp.Location;
+	} else if (mc.Key == "WsDiscoveryXAddrs") {
+	    value = Wsd.wsdXAddrs;
+	} else if (mc.Key == "WsDiscoveryTypes") {
+	    value = Wsd.wsdTypes;
 	}
 	if (value == "") {
 		if(Debug) {
@@ -230,6 +234,8 @@ bool Host::DeviceStats(json& j, const uint32_t time_interval, bool force, bool d
 	j["SsdpUserAgent"] = Ssdp.UserAgent;
 	j["SsdpServer"] = Ssdp.Server;
 	j["SsdpLocation"] = Ssdp.Location;
+    j["WsDiscoveryXaddrs"] = Wsd.wsdXAddrs;
+    j["WsDiscoveryTypes"] = Wsd.wsdTypes;
 
 	std::string fqdns = "";
 	if (Debug == true) {
@@ -470,6 +476,16 @@ bool Host::SsdpInfo_set(const std::shared_ptr<SsdpHost> insHost) {
 		auto resp = SsdpLocation::Get(Ssdp);
 	}
 	return true;
+}
+
+bool Host::WsDiscoveryInfo_set(const std::shared_ptr<WsDiscoveryHost> inwsdHost) {
+    iCache::LastSeen = time(nullptr);
+    if (Wsd == *inwsdHost) {
+        return false;
+    }
+    iCache::LastModified = iCache::LastSeen;
+    Wsd = *inwsdHost;
+    return true;
 }
 
 bool Host::UploadsEnabled() {

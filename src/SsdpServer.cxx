@@ -47,8 +47,6 @@ bool SsdpServer::processEvent (struct epoll_event &event) {
 	memset(&addr, 0, addrlen);
 
 	int nbytes;
-	// int packets = 0;
-	// while (packets++ < 1 && (nbytes = recvfrom(socket_fd, msgbuf, MSGBUFSIZE, 0, &addr, &addrlen)) > 0) {
 	while ((nbytes = recvfrom(socket_fd, msgbuf, MSGBUFSIZE, 0, &addr, &addrlen)) > 0) {
 		if (addr.sa_family == AF_INET) {
 			auto sHost = std::make_shared<SsdpHost>();
@@ -71,7 +69,7 @@ bool SsdpServer::processEvent (struct epoll_event &event) {
 		}
 
 	}
-	if (nbytes < 0) {
+	if (nbytes < 0 && ! (errno == EWOULDBLOCK || errno == EAGAIN)) {
 		syslog(LOG_ERR, "SsdpServer: recvfrom");
 		return false;
 	}
@@ -149,17 +147,7 @@ int SsdpServer::Open (std::string input, uint32_t inExpiration) {
 		syslog(LOG_CRIT, "SsdpServer: bind");
 		throw std::system_error(errno, std::system_category());
 	}
-/*	int flags = fcntl(socket_fd, F_GETFL, 0);
-	if (flags == -1) {
-		flags = 0;
-    }
-	if ((fcntl(socket_fd, F_SETFL,flags | O_NONBLOCK)) == -1) {
-		syslog(LOG_ERR, "SsdpServer: Set socket O_NONBLOCK");
-	} */
-    int flags;
-	if(! ((flags = fcntl(socket_fd, F_GETFL, 0)) & O_NONBLOCK) ) {
-        syslog(LOG_ERR, "SsdpServer: socket O_NONBLOCK not set: %d", flags);
-    }
+
 	// TODO: add support for multiple IP addresses or interfaces to join multicast groups with
 	struct ip_mreqn mreqn;
 	mreqn.imr_multiaddr.s_addr=inet_addr("239.255.255.250");

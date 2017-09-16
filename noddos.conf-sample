@@ -21,6 +21,7 @@
     "ListenInterfaces": [],
     "LanInterfaces": ["eth0"],
     "WanInterfaces": ["eth1"],
+	"WsDiscoveryProbeInterval": 3600,
     "TrafficReportInterval": 3600,
     "DeviceReportInterval": 14400,
     "ExpireHost": 604800,

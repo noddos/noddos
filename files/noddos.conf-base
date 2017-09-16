@@ -9,6 +9,7 @@
     "FirewallRulesFile": "/var/lib/noddos/iptables.rules",
     "FirewallBlockTraffic": false,
     "PidFile": "/var/lib/noddos/noddos.pid",
+	"WsDiscoveryProbeInterval": 3600,
     "MatchInterval": 300,
     "PruneInterval": 3600,
     "ListenIpAddresses": [],

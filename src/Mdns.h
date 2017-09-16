@@ -14,14 +14,14 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
- * WsDiscovery.h
+ * Mdns.h
  *
- *  Created on: September 9, 2017
+ *  Created on: September 16, 2017
  *      Author: Steven Hessing (steven.hessing@gmail.com)
  */
 
-#ifndef WSDISCOVERY_H_
-#define WSDISCOVERY_H_
+#ifndef MDNS_H_
+#define MDNS_H_
 
 #include "iDeviceInfoSource.h"
 #include "HostCache.h"
@@ -34,7 +34,7 @@
 #include <sys/epoll.h>
 
 
-class WsDiscovery : public iDeviceInfoSource {
+class Mdns : public iDeviceInfoSource {
 private:
     int socket_fd;
     std::string IpAddress;
@@ -45,7 +45,7 @@ private:
     time_t nextProbe = 0;
 
 public:
-    WsDiscovery(HostCache &inhCache, const time_t inExpiration, const std::string inIpAddress = "", const bool inDebug = false):
+    Mdns(HostCache &inhCache, const time_t inExpiration, const std::string inIpAddress = "", const bool inDebug = false):
             hCache{inhCache}, Expiration{inExpiration}, IpAddress{inIpAddress}, Debug{inDebug} {
         socket_fd = -1;
         wsdtypes_rx = std::regex(R"delim(<wsd:Types>(.*?)</wsd:Types>)delim",
@@ -56,7 +56,7 @@ public:
         Open (IpAddress);
 
     }
-    ~WsDiscovery() {
+    ~Mdns() {
         // TODO Auto-generated destructor stub
     }
     int Open(std::string input, uint32_t inExpiration = 0);
@@ -65,8 +65,8 @@ public:
     int getFileHandle();
     bool Probe ();
 
-    bool ParseWsDiscoveryMessage (std::shared_ptr<WsDiscoveryHost> wsdHost, const char * msgbuf, const int nbytes);
+    bool ParseMdnsMessage (std::shared_ptr<MdnsHost> wsdHost, const char * msgbuf, const int nbytes);
 
 };
 
-#endif /* WSDISCOVERY_H_ */
+#endif /* MDNS_H_ */

@@ -232,6 +232,8 @@ __WanInterfaces__: Interfaces on which Noddos should accept DNS answers. Default
 
 __LanInterfaces__: Interfaces on which Noddos should listen for DNS messages without answers. Currently unimplemented but planned: Noddos will only listen to SSDP multicast on these interfaces and Noddos will only perform ARP lookups on these interfaces. Default: empty list, which means Noddos will discard DNS queries so one or more values should be provided for DNS snooping to work.
 
+__WsDiscoveryProbeInterval__: Interval between sending of WS-Discovery probes. Default: 3600 seconds
+
 __TrafficReportInterval__: Interval between uploads of traffic stats for matched devices. To disable upload of traffic uploads, set this value to 0. Default: 3600 seconds
 
 __DeviceReportInterval__: Interval between uploads of data on unmatched devices. To disable upload of device reports, set this value to 0. Default: 14400 seconds

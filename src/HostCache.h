@@ -35,6 +35,7 @@
 #include "Config.h"
 #include "InterfaceMap.h"
 
+
 #include "boost/asio.hpp"
 #include "DnsCache.h"
 #include "noddos.h"
@@ -115,7 +116,7 @@ public:
 	bool AddDnsQueryIp (const std::string clientip, const std::string fqdn, const std::string ip, const uint32_t expire = 86400);
     bool AddDhcpRequest (const std::string IpAddress, const MacAddress inMac, const std::string Hostname, const std::string DhcpVendor);
 	bool AddSsdpInfo (const std::shared_ptr<SsdpHost> insHost);
-
+	bool AddWsDiscoveryInfo (std::shared_ptr<WsDiscoveryHost> inwsdHost);
 	std::shared_ptr<Host> FindHostByIp (const std::string inIp);
 	std::shared_ptr<Host> FindOrCreateHostByIp (const std::string ip, const std::string Uuid = "");
 	std::shared_ptr<Host> FindHostByMac (const MacAddress &inMac);

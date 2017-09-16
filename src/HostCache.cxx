@@ -298,6 +298,27 @@ bool HostCache::AddSsdpInfo (const std::shared_ptr<SsdpHost> sHost) {
 	return false;
 }
 
+bool HostCache::AddWsDiscoveryInfo (const std::shared_ptr<WsDiscoveryHost> inwsdHost) {
+    if (Debug == true) {
+        syslog(LOG_DEBUG, "HostCache: Adding WsDiscovery info for host with IP %s", inwsdHost->IpAddress.c_str());
+    }
+    if (inwsdHost->IpAddress == "") {
+        syslog(LOG_WARNING, "HostCache: AddWsDiscoveryInfo: no IP address provided");
+        return false;
+    }
+    if (WhitelistedNodes.find(inwsdHost->IpAddress) != WhitelistedNodes.end()) {
+        return false;
+    }
+
+    std::shared_ptr<Host> h = FindOrCreateHostByIp(inwsdHost->IpAddress);
+    if (h) {
+        h->WsDiscoveryInfo_set(inwsdHost);
+        return true;
+    }
+    return false;
+
+}
+
 // These functions are for DnsQueryCache
 void HostCache::addorupdateDnsQueryCache (uint16_t id) {
 	DnsQueryCache[id] = time(nullptr) + 15;
@@ -1027,7 +1048,7 @@ void HostCache::writeIptables()  {
     }
     std::ofstream outputfs(FirewallRulesFile);
     std::vector<std::string> ifaces = ifMap->getLanInterfaces();
-    std::string action = "LOG";
+    std::string action = "LOG --log-prefix Noddos-IPtables-LOG";
     if (FirewallBlockTraffic == true) {
         action = "DROP";
     }

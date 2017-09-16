@@ -60,6 +60,7 @@ private:
    	MacAddress Mac;
    	DhcpRequest Dhcp;
    	SsdpHost Ssdp;
+   	WsDiscoveryHost Wsd;
    	std::string Uuid;
    	time_t matchversion;
    	ConfidenceLevel IdentifyConfidenceLevel;
@@ -98,6 +99,7 @@ public:
 	uint32_t FlowCacheCount () { return FlowCacheIpv4.size() + FlowCacheIpv6.size(); }
     bool Dhcp_set (const std::string IpAddress, const MacAddress Mac, const std::string Hostname, const std::string DhcpVendor);
 	bool SsdpInfo_set(const std::shared_ptr<SsdpHost> insHost);
+	bool WsDiscoveryInfo_set(const std::shared_ptr<WsDiscoveryHost> inwsdHost);
 
 	// This manipulates the DnsQueryCache
 	void addorupdateDnsQueryList (std::string inFqdn) {

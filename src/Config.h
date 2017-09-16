@@ -64,6 +64,7 @@ public:
 	std::time_t TrafficReportInterval = 3600; // Value in seconds, use 0 if no traffic stats should be uploaded
 	std::time_t DeviceReportInterval = 14400; // Value in seconds, use 0 if no device stats should be uploaded
 	bool ReportTrafficToRfc1918 = false;
+	std::time_t WsDiscoveryProbeInterval = 3600;
 	std::time_t MatchInterval = 300;
 	std::time_t PruneInterval = 3600;
 	std::time_t ExpireHost = 7776000;
@@ -111,6 +112,7 @@ public:
 		std::unordered_set<std::string> newWhitelistedMacAddresses = WhitelistedMacAddresses;
 		std::unordered_set<std::string> newLanInterfaces = LanInterfaces;
 		std::unordered_set<std::string> newWanInterfaces = WanInterfaces;
+        time_t newWsDiscoveryProbeInterval = WsDiscoveryProbeInterval;
 		time_t newTrafficReportInterval = TrafficReportInterval;
 		time_t newDeviceReportInterval = DeviceReportInterval;
 		bool newReportTrafficToRfc1918 = ReportTrafficToRfc1918;
@@ -181,23 +183,26 @@ public:
 			if (j.count("WanInterfaces")) {
 				newWanInterfaces = j["WanInterfaces"].get<std::unordered_set<std::string>>();
 			}
+            if (j.count("WsDiscoveryProbeInterval")) {
+                newWsDiscoveryProbeInterval = j["WsDiscoveryProbeInterval"].get<uint32_t>();
+            }
 			if (j.count("TrafficReportInterval")) {
-				newTrafficReportInterval= j["TrafficReportInterval"].get<uint32_t>();
+				newTrafficReportInterval = j["TrafficReportInterval"].get<uint32_t>();
 			}
 			if (j.count("DeviceReportInterval")) {
-				newDeviceReportInterval= j["DeviceReportInterval"].get<uint32_t>();
+				newDeviceReportInterval = j["DeviceReportInterval"].get<uint32_t>();
 			}
 			if (j.count("ReportTrafficToRfc1918")) {
 				newReportTrafficToRfc1918 = j["ReportTrafficToRfc1918"].get<bool>();
 			}
 			if (j.count("PruneInterval")) {
-				newPruneInterval= j["PruneInterval"].get<uint32_t>();
+				newPruneInterval = j["PruneInterval"].get<uint32_t>();
 			}
 			if (j.count("MatchInterval")) {
-				newMatchInterval= j["MatchInterval"].get<uint32_t>();
+				newMatchInterval = j["MatchInterval"].get<uint32_t>();
 			}
 			if (j.count("ExpireHost")) {
-				newExpireHost= j["ExpireHost"].get<uint32_t>();
+				newExpireHost = j["ExpireHost"].get<uint32_t>();
 			}
 			// FIXME: upload mode not currently implemented
 			if (j.count("UploadMode")) {
@@ -230,6 +235,7 @@ public:
 		WhitelistedMacAddresses = newWhitelistedMacAddresses;
 		LanInterfaces = newLanInterfaces;
 		WanInterfaces = newWanInterfaces;
+		WsDiscoveryProbeInterval = newWsDiscoveryProbeInterval;
 		TrafficReportInterval = newTrafficReportInterval;
 		DeviceReportInterval = newDeviceReportInterval;
 		ReportTrafficToRfc1918 = newReportTrafficToRfc1918;
