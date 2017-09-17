@@ -27,6 +27,7 @@
 
 #include <iostream>
 #include <unordered_map>
+#include <set>
 #include <string>
 #include <map>
 
@@ -46,13 +47,20 @@ struct WsDiscoveryHost {
 
 struct MdnsHost {
     std::string IpAddress;
-    std::string wsdTypes;
-    std::string wsdXAddrs;
+    std::set<std::string> PtrRrs;
+    std::string Os;
+    std::string Hw;
+    std::string Url;
+    std::string Manufacturer;
+    std::string Model;
 
-    bool operator == (const WsDiscoveryHost &rhs) const {
+
+
+    bool operator == (const MdnsHost &rhs) const {
         return IpAddress == rhs.IpAddress &&
-                wsdXAddrs == rhs.wsdXAddrs &&
-                wsdTypes == wsdTypes;
+                PtrRrs == rhs.PtrRrs &&
+                Os == Os &&
+                Hw == Hw;
     }
 };
 

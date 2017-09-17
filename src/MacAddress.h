@@ -11,10 +11,11 @@
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>. * MacAddress.h
- *
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+ * MacAddress.h
  *  Created on: May 24, 2017
- *      Author: Steven Hessing (steven.hessing@gmail.com)
+ *  Author: Steven Hessing (steven.hessing@gmail.com)
  */
 
 #ifndef MACADDRESS_H_

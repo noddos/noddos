@@ -62,7 +62,9 @@ bool WsDiscovery::Probe () {
 
 bool WsDiscovery::ParseWsDiscoveryMessage (std::shared_ptr<WsDiscoveryHost> host, const char * msgbuf, const int nbytes) {
     uint32_t pos = 0;
-    syslog (LOG_DEBUG, "WsDiscovery message: %s", msgbuf);
+    if (Debug == true) {
+        syslog (LOG_DEBUG, "WsDiscovery message: %s", msgbuf);
+    }
 
     std::string line = msgbuf;
     std::smatch m;

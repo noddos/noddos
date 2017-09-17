@@ -56,6 +56,7 @@
 #include "Host.h"
 #include "PacketSnoop.h"
 #include "WsDiscovery.h"
+#include "Mdns.h"
 #include "InterfaceMap.h"
 #include "Config.h"
 #include "noddos.h"
@@ -96,12 +97,15 @@ int main(int argc, char** argv) {
 	}
 	write_pidfile(config.PidFile);
 
+	//
+	// Set up CURL initializer
+	//
 	CURLcode cc = curl_global_init(CURL_GLOBAL_ALL);
 	if (cc != 0) {
 	    syslog (LOG_CRIT, "Noddos: Curl init failure: %d", cc);
 	}
 
-	// Vector containing threads
+	// Vector containing threads for HTTPS API calls to Noddos cloud
 	std::vector<std::future<uint32_t>> futures;
 
 	//
@@ -167,6 +171,9 @@ int main(int argc, char** argv) {
     add_epoll_filehandle(epfd, epollmap, w);
     w.Probe();
 
+    Mdns m(hC, 86400, "", config.Debug);
+    add_epoll_filehandle(epfd, epollmap, m);
+
     std::set<std::string> localIpAddresses = hC.getLocalIpAddresses();
     FlowTrack ft(hC, config, localIpAddresses) ;
     ft.Open();
@@ -182,6 +189,14 @@ int main(int argc, char** argv) {
 	uint32_t NextWsDiscoveryProbe = time(nullptr) + config.WsDiscoveryProbeInterval + rand() % 15;
 
 	struct epoll_event* epoll_events = static_cast<epoll_event*>(calloc(MAXEPOLLEVENTS, sizeof (epoll_event)));
+
+	//
+	// epoll setup complete
+	//
+
+	//
+	// main program loop waiting for events
+	//
 	while (true) {
     	if (config.Debug) {
     		syslog(LOG_DEBUG, "Noddos: Starting epoll event wait");
@@ -196,12 +211,16 @@ int main(int argc, char** argv) {
 		int ev;
     	for (ev = 0; ev< eCnt; ev++) {
 
-			if ((epoll_events[ev].events & EPOLLERR) || (epoll_events[ev].events & EPOLLHUP) ||
+			//
+    	    // epoll event error handling
+    	    //
+    	    if ((epoll_events[ev].events & EPOLLERR) || (epoll_events[ev].events & EPOLLHUP) ||
                     (not epoll_events[ev].events & EPOLLIN)) {
 				syslog(LOG_ERR, "Noddos: Epoll event error for FD %d", epoll_events[ev].data.fd);
 				epollmap.erase(epoll_events[ev].data.fd);
 				if (epoll_events[ev].data.fd == ft.getFileHandle() && geteuid() == 0) {
-					ft.Close();
+					// Connection tracking has shown it can have hickups so we re-initiate it when that happens
+				    ft.Close();
 					ft.Open();
 			    	add_epoll_filehandle(epfd, epollmap, ft);
 				} else {
@@ -209,11 +228,16 @@ int main(int argc, char** argv) {
 				    close(epoll_events[ev].data.fd);
 				}
 			} else {
+			    //
+			    // epoll event processing
+			    //
 				if (config.Debug) {
 					syslog(LOG_DEBUG, "Noddos: Handling event for FD %d", epoll_events[ev].data.fd);
 				}
 				if (epoll_events[ev].data.fd == sfd) {
-					// Signal received
+					//
+				    // Signal processing
+				    //
 					if (config.Debug) {
 						syslog(LOG_DEBUG, "Processing signal event");
 					}
@@ -252,9 +276,14 @@ int main(int argc, char** argv) {
 					}
 					setup_signal_fd(sfd);
 				} else {
+				    //
+				    // event for on of the iDeviceInfoSource child classes
+				    //
 					iDeviceInfoSource &i = *(epollmap[epoll_events[ev].data.fd]);
 					i.processEvent(epoll_events[ev]);
 				}
+				//
+				// Timer handling
 				auto t = time(nullptr);
 				if (t > NextMatch) {
 					hC.Match();
@@ -293,6 +322,9 @@ int main(int argc, char** argv) {
 				}
 
     		}
+    	    //
+    	    // Processing of completion of HTTPS API calls
+    	    //
 			if (futures.size() > 0) {
 			    for (auto future_it = futures.begin(); future_it != futures.end();) {
 			        if (future_it->valid()) {

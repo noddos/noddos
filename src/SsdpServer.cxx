@@ -14,7 +14,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
- * SsdpHost.cpp
+ * SsdpServer.cpp
  *
  *  Created on: Mar 6, 2017
  *      Author: Steven Hessing (steven.hessing@gmail.com)

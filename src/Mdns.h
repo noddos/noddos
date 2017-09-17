@@ -33,6 +33,7 @@
 #include <memory>
 #include <sys/epoll.h>
 
+#include "tins/dns.h"
 
 class Mdns : public iDeviceInfoSource {
 private:
@@ -65,7 +66,7 @@ public:
     int getFileHandle();
     bool Probe ();
 
-    bool ParseMdnsMessage (std::shared_ptr<MdnsHost> wsdHost, const char * msgbuf, const int nbytes);
+    bool ParseMdnsMessage (std::shared_ptr<MdnsHost> wsdHost, const unsigned char * msgbuf, const int nbytes);
 
 };
 

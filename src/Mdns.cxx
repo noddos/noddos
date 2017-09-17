@@ -63,31 +63,138 @@ bool Mdns::Probe () {
     return true;
 }
 
-bool Mdns::ParseMdnsMessage (std::shared_ptr<MdnsHost> host, const char * msgbuf, const int nbytes) {
+bool Mdns::ParseMdnsMessage (std::shared_ptr<MdnsHost> host, const unsigned char * msgbuf, const int nbytes) {
     uint32_t pos = 0;
-    syslog (LOG_DEBUG, "Mdns message: %s", msgbuf);
 
-    std::string line = msgbuf;
-    std::smatch m;
-    std::regex_search(line, m, wsdxaddrs_rx);
-    if (not m.empty()) {
-        host->wsdXAddrs = m.str(1);
-        if(Debug) {
-            syslog(LOG_DEBUG, "Mdns: Matched XAddrs regex %s", host->wsdXAddrs.c_str());
-        }
+    if (nbytes < 12) {
+        syslog(LOG_WARNING, "Mdns: Received mDNS packet smaller than 12 bytes");
+        return true;
     }
-    std::regex_search(line, m, wsdtypes_rx);
-    if (not m.empty()) {
-        host->wsdTypes = m.str(1);
-        if(Debug) {
-            syslog(LOG_DEBUG, "Mdns: Matched Types regex %s", host->wsdTypes.c_str());
+    Tins::DNS *q;
+    try {
+        q = new Tins::DNS(msgbuf, nbytes);
+    } catch (const Tins::malformed_packet &e) {
+        if (Debug == true) {
+            syslog(LOG_DEBUG, "Mdns: Malformed mDNS packet");
         }
-    }
-    if (host->wsdXAddrs == "" && host->wsdTypes == "") {
         return false;
     }
+    if (Debug == true) {
+        syslog(LOG_DEBUG, "Mdns: Query ID: %u", q->id());
+        syslog(LOG_DEBUG, "Mdns: Questions: %u Answers: %u Additional answers: %u",
+                q->questions_count(), q->answers_count(),
+                q->additional_count());
+    }
+    Tins::DNS::resources_type rt = q->answers();
+    Tins::DNS::resources_type rt_additional = q->additional();
+    rt.insert (rt.begin(), rt_additional.begin(), rt_additional.end());
+    uint16_t i = 0;
+    for (auto it : rt) {
+        char ipaddr[INET6_ADDRSTRLEN];
+        if (it.query_type() != 41) { // OPT pseudo-RR
+            if (Debug == true) {
+                syslog(LOG_DEBUG, "Mdns: Answer %u : %-24s %5u %u %u", ++i,
+                        it.dname().c_str(), it.ttl(), it.query_class(),
+                        it.query_type());
+            }
+            std::string dnsdata = it.data();
+            switch (it.query_type()) {
+            case Tins::DNS::QueryType::A: {
+                if (Debug == true) {
+                    syslog(LOG_DEBUG, "Mdns: A record: %s",
+                            it.data().c_str());
+                }
+                boost::asio::ip::address ip = boost::asio::ip::address::from_string(it.data());
+                break;
+            }
+            case Tins::DNS::QueryType::AAAA: {
+                boost::asio::ip::address ip = boost::asio::ip::address::from_string(it.data());
+                if (Debug == true) {
+                    syslog(LOG_DEBUG, "Mdns: AAAA record: %s",
+                            ip.to_string().c_str());
+                }
+                break;
+            }
+            case Tins::DNS::QueryType::CNAME:
+                if (Debug == true) {
+                    syslog(LOG_DEBUG, "Mdns: CNAME record: %s", dnsdata.c_str());
+                }
+                break;
+            case Tins::DNS::QueryType::PTR:
+                if (Debug == true) {
+                    syslog(LOG_DEBUG, "Mdns: PTR record: %s", dnsdata.c_str());
+                }
+                break;
+            case Tins::DNS::QueryType::TXT:
+                if (Debug == true) {
+                    syslog(LOG_DEBUG, "Mdns: TXT record: %s", dnsdata.c_str());
+                }
+                {
+                    size_t stridx = 0;
+                    while (stridx < dnsdata.length()) {
+                        size_t len = dnsdata[stridx++];
+                        if (stridx + len > dnsdata.length()) {
+                            if(Debug == true) {
+                                syslog (LOG_DEBUG, "Mdns: malformed mDNS TXT record");
+                            }
+                            return true;
+                        }
+                        size_t keylength = dnsdata.find("=", stridx) - stridx;
+                        if (keylength == std::string::npos) {
+                            if(Debug == true) {
+                                syslog (LOG_DEBUG, "Mdns: malformed mDNS TXT record with '=' separating key and value");
+                            }
+                            return true;
+                        }
+                        std::string key = dnsdata.substr(stridx, keylength);
+                        std::transform(key.begin(),key.end(), key.begin(), ::tolower);
+                        size_t valuepos = stridx + keylength + 1;
+                        size_t valuelength = len - keylength - 1;
+                        if(Debug == true) {
+                            syslog (LOG_DEBUG, "Mdns: strindex: %zd, kv-pair length: %zd, key-length: %zd, value-length %zd", stridx, len, keylength, valuelength);
+                        }
+                        std::string value = dnsdata.substr(valuepos, valuelength);
+                        stridx += len;
+                        if (Debug == true) {
+                            syslog(LOG_DEBUG, "Mdns: TXT record kv-pair %s = %s",
+                                    key.c_str(), value.c_str());
+                        }
+                        if (key == "os") {
+                            host->Os = value;
+                        } else if(key == "hw") {
+                            host->Hw = value;
+                        } else if (key == "md" || key == "usb_mdl") {
+                            host->Model = value;
+                        } else if (key == "usb_mfg") {
+                            host->Manufacturer = value;
+                        } else if (key == "adminurl") {
+                            host->Url = value;
+                        }
+                    }
+                }
+                break;
+            case Tins::DNS::QueryType::SRV:
+                if (Debug == true) {
+                    syslog(LOG_DEBUG, "Mdns: SRV record: %s", dnsdata.c_str());
+                }
+                break;
+            default:
+
+                if (Debug == true) {
+                    syslog(LOG_DEBUG, "Mdns: unhandled resource record type %d: %s", it.query_type(), dnsdata.c_str());
+                }
+                break;
+            }
+        } else {
+            if (Debug == true) {
+                syslog(LOG_DEBUG, "Mdns: RR OPT");
+            }
+        }
+    }
+    delete q;
     return true;
 }
+
 bool Mdns::processEvent (struct epoll_event &event) {
     if (socket_fd != event.data.fd) {
         syslog(LOG_CRIT, "Mdns: Mismatch in socket FD between class object and epoll event");
@@ -95,7 +202,7 @@ bool Mdns::processEvent (struct epoll_event &event) {
     if (Debug) {
         syslog(LOG_DEBUG, "Mdns: processing event");
     }
-    char msgbuf[MSGBUFSIZE];
+    unsigned char msgbuf[MSGBUFSIZE];
     memset(&msgbuf, 0, MSGBUFSIZE);
     struct sockaddr addr;
     memset(&addr, 0, sizeof(addr));
