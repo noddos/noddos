@@ -64,7 +64,6 @@ public:
     bool Close();
     bool processEvent(struct epoll_event &event);
     int getFileHandle();
-    bool Probe ();
 
     void ParseMdnsMessage (std::shared_ptr<MdnsHost> wsdHost, const unsigned char * msgbuf, const int nbytes);
 

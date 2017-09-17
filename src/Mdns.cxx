@@ -39,33 +39,6 @@
 #define MDNS_GROUP "224.0.0.251"
 #define MDNS_PORT 5353
 
-bool Mdns::Probe () {
-    if (Debug == true) {
-        syslog (LOG_DEBUG, "Mdns: NOT sending probe to %s", MDNS_GROUP);
-    }
-    // TODO: implement Mdns probe
-    /* Mdns probe disabled
-    if (socket_fd < 0) {
-        syslog (LOG_ERR, "Mdns: can't send probe on socket that hasn't been opened");
-        throw std::logic_error("Mdns: can't send probe over socket that hasn't been opened");
-    }
-    unsigned char msg[] = "<?xml version=\"1.0\" encoding=\"utf-8\"?><soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\" xmlns:wsa=\"http://schemas.xmlsoap.org/ws/2004/08/addressing\" xmlns:wsd=\"http://schemas.xmlsoap.org/ws/2005/04/discovery\" xmlns:wsdp=\"http://schemas.xmlsoap.org/ws/2006/02/devprof\"><soap:Header><wsa:To>urn:schemas-xmlsoap-org:ws:2005:04:discovery</wsa:To><wsa:Action>http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe</wsa:Action><wsa:MessageID>urn:uuid:4ed84e57-4743-412a-ab29-e7887ce6f587</wsa:MessageID></soap:Header><soap:Body><wsd:Probe><wsd:Types>wsdp:Device</wsd:Types></wsd:Probe></soap:Body></soap:Envelope>";
-    struct sockaddr_in addr;
-    memset(&addr,0,sizeof(addr));
-    addr.sin_family=AF_INET;
-    if (inet_pton(AF_INET, MDNS_GROUP, (struct sockaddr *) &(addr.sin_addr)) < 1) {
-        syslog(LOG_ERR, "Mdns: inet_pton");
-        throw std::logic_error("Mdns: inet_pton");
-    }
-    addr.sin_port=htons(MDNS_PORT);
-    if (sendto(socket_fd, msg, sizeof (msg), 0, (struct sockaddr *) &addr, sizeof (addr)) <= 0) {
-        syslog(LOG_ERR, "Mdns: probe sendto");
-        throw std::system_error(errno, std::system_category());
-    }
-    */
-    return true;
-}
-
 void Mdns::ParseMdnsMessage (std::shared_ptr<MdnsHost> host, const unsigned char * msgbuf, const int nbytes) {
     uint32_t pos = 0;
 
