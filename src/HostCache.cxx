@@ -187,7 +187,7 @@ std::shared_ptr<Host> HostCache::FindOrCreateHostByMac (const MacAddress inMac, 
 			syslog(LOG_DEBUG, "HostCache: Adding new Host with MAC address %s for IP %s", inMac.c_str(), inIp.c_str());
 		}
 		auto h = std::make_shared<Host>(inMac.str(), Uuid, Debug);
-		h->IpAddress_set (inIp);
+		h->setIpAddress (inIp);
 		hC[inMac.get()] = h;
 		return h;
 	}
@@ -205,7 +205,7 @@ bool HostCache::AddByMac (const MacAddress inMacAddress, const std::string inIpA
 		return false;
     }
 	auto h = std::make_shared<Host>(inMacAddress, Debug);
-	h->IpAddress_set (inIpAddress);
+	h->setIpAddress (inIpAddress);
 	hC[inMacAddress.get()] = h;
 	Ip2MacMap[inIpAddress] = inMacAddress.get();
 	return true;
@@ -226,7 +226,7 @@ bool HostCache::AddFlow (const std::string srcip, const uint16_t srcport, const 
 
 	std::shared_ptr<Host> h = FindOrCreateHostByIp(srcip);
 	if (h) {
-		h->FlowEntry_set(srcport, dstip, dstport, protocol, FlowExpiration);
+		h->setFlowEntry(srcport, dstip, dstport, protocol, FlowExpiration);
 		return true;
 	}
 	return false;
@@ -271,7 +271,7 @@ bool HostCache::AddDhcpRequest (const std::string IpAddress, const MacAddress in
 	}
 
 	if (h) {
-		h->Dhcp_set(IpAddress, inMac.str(), Hostname, DhcpVendor);
+		h->setDhcp(IpAddress, inMac.str(), Hostname, DhcpVendor);
 		return true;
 	}
 	return false;
@@ -292,7 +292,7 @@ bool HostCache::AddSsdpInfo (const std::shared_ptr<SsdpHost> sHost) {
 
 	std::shared_ptr<Host> h = FindOrCreateHostByIp(sHost->IpAddress);
 	if (h) {
-		h->SsdpInfo_set(sHost);
+		h->setSsdpInfo(sHost);
 		return true;
 	}
 	return false;
@@ -312,12 +312,34 @@ bool HostCache::AddWsDiscoveryInfo (const std::shared_ptr<WsDiscoveryHost> inwsd
 
     std::shared_ptr<Host> h = FindOrCreateHostByIp(inwsdHost->IpAddress);
     if (h) {
-        h->WsDiscoveryInfo_set(inwsdHost);
+        h->setWsDiscoveryInfo(inwsdHost);
         return true;
     }
     return false;
 
 }
+
+bool HostCache::AddMdnsInfo (const std::shared_ptr<MdnsHost> inmdnsHost) {
+    if (Debug == true) {
+        syslog(LOG_DEBUG, "HostCache: Adding mDNS info for host with IP %s", inmdnsHost->IpAddress.c_str());
+    }
+    if (inmdnsHost->IpAddress == "") {
+        syslog(LOG_WARNING, "HostCache: AddWsDiscoveryInfo: no IP address provided");
+        return false;
+    }
+    if (WhitelistedNodes.find(inmdnsHost->IpAddress) != WhitelistedNodes.end()) {
+        return false;
+    }
+
+    std::shared_ptr<Host> h = FindOrCreateHostByIp(inmdnsHost->IpAddress);
+    if (h) {
+        h->setMdnsInfo(inmdnsHost);
+        return true;
+    }
+    return false;
+
+}
+
 
 // These functions are for DnsQueryCache
 void HostCache::addorupdateDnsQueryCache (uint16_t id) {

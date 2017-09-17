@@ -112,7 +112,7 @@ int main(int argc, char** argv) {
 	// Set up HostCache instance
 	//
 	HostCache hC(ifMap, config.DnsCacheFile, config.TrafficReportInterval,
-	        config.FirewallRulesFile, config.FirewallBlockTraffic, config.Debug);
+	        config.FirewallRulesFile, config.FirewallBlockTraffic, config.Debug && config.DebugHostCache);
 	hC.loadDeviceProfiles(config.DeviceProfilesFile);
 	hC.ImportDeviceProfileMatches(config.MatchFile);
 	hC.Whitelists_set(config.WhitelistedIpv4Addresses, config.WhitelistedIpv6Addresses, config.WhitelistedMacAddresses);
@@ -158,20 +158,19 @@ int main(int argc, char** argv) {
     std::unordered_set<std::string> allInterfaces = config.LanInterfaces;
     allInterfaces.insert(config.WanInterfaces.begin(), config.WanInterfaces.end());
     for (auto iface: allInterfaces) {
-        PacketSnoop *p = new PacketSnoop(hC, 64, config.Debug);
+        PacketSnoop *p = new PacketSnoop(hC, 64, config.Debug && config.DebugPacketSnoop);
         p->Open(iface, 64);
         add_epoll_filehandle(epfd, epollmap, *p);
         pInstances.insert(p);
     }
 
-    SsdpServer s(hC, 86400, "", config.Debug);
+    SsdpServer s(hC, 86400, "", config.Debug && config.DebugSsdp);
     add_epoll_filehandle(epfd, epollmap, s);
 
-    WsDiscovery w(hC, 86400, "", config.Debug);
+    WsDiscovery w(hC, 86400, "", config.Debug && config.DebugWsDiscovery);
     add_epoll_filehandle(epfd, epollmap, w);
-    w.Probe();
 
-    Mdns m(hC, 86400, "", config.Debug);
+    Mdns m(hC, 86400, "", config.Debug && config.DebugMdns);
     add_epoll_filehandle(epfd, epollmap, m);
 
     std::set<std::string> localIpAddresses = hC.getLocalIpAddresses();
@@ -186,7 +185,7 @@ int main(int argc, char** argv) {
     uint32_t NextPrune = time(nullptr) + config.PruneInterval + rand() % 15;
 	uint32_t NextDeviceUpload = time(nullptr) + config.DeviceReportInterval + rand() % 5;
 	uint32_t NextTrafficUpload = time(nullptr) + config.TrafficReportInterval + rand() % 5;
-	uint32_t NextWsDiscoveryProbe = time(nullptr) + config.WsDiscoveryProbeInterval + rand() % 15;
+	uint32_t NextWsDiscoveryProbe = 0; // Send out probe at first opportunity
 
 	struct epoll_event* epoll_events = static_cast<epoll_event*>(calloc(MAXEPOLLEVENTS, sizeof (epoll_event)));
 
@@ -313,7 +312,7 @@ int main(int argc, char** argv) {
 					}
 					NextPrune = t + config.PruneInterval;
 				}
-				if (t > NextWsDiscoveryProbe) {
+				if (t > NextWsDiscoveryProbe && config.WsDiscoveryProbeInterval > 0) {
 				    if (config.Debug == true) {
 				        syslog(LOG_DEBUG, "Noddos: Starting WS-Discovery Probe");
 				    }

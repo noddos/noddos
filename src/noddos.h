@@ -47,20 +47,23 @@ struct WsDiscoveryHost {
 
 struct MdnsHost {
     std::string IpAddress;
-    std::set<std::string> PtrRrs;
+    // PTR RRs can be send by mDNS caches so do not reflect the source IP address of the mDNS packet
+    // std::set<std::string> PtrRrs;
     std::string Os;
     std::string Hw;
-    std::string Url;
+    std::string DeviceUrl;
     std::string Manufacturer;
-    std::string Model;
+    std::string ModelName;
 
 
 
     bool operator == (const MdnsHost &rhs) const {
         return IpAddress == rhs.IpAddress &&
-                PtrRrs == rhs.PtrRrs &&
-                Os == Os &&
-                Hw == Hw;
+                Os == rhs.Os &&
+                Hw == rhs.Hw &&
+                DeviceUrl == rhs.DeviceUrl &&
+                Manufacturer == rhs.Manufacturer &&
+                ModelName == rhs.ModelName;
     }
 };
 

@@ -240,6 +240,18 @@ __DeviceReportInterval__: Interval between uploads of data on unmatched devices.
 
 __ExpireHost__: Cached Host records will be deleted if no traffic is seen from them based on this setting. Default: 90 days
 
+__DebugHostCache__: Enable debugging output for the HostCache and Host classes, if debugging is enabled through the command line. Default: false
+
+__DebugFlowTrack__: Enable debugging output for the FlowTrack class implementing Netfilter::Conntrack, if debugging is enabled through the command line. Default: false
+
+__DebugSSdp__: Enable debugging output for the SsdpServer class, if debugging is enabled through the command line. Default: false
+
+__DebugWsDiscovery__: Enable debugging output for the WS-Discovery class, if debugging is enabled through the command line. Default: false
+
+__DebugMdns__: Enable debugging output for the mDNS class, if debugging is enabled through the command line. Default: false
+
+__DebugPacketSnoop__: Enable debugging output for the PacketSnoop and TcpSnoop classes used for snooping DHCP and DNS traffic, if debugging is enabled through the command line. Default: false
+
 ## Signals
 Noddos handles the following signals
 

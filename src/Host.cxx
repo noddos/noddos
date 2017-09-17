@@ -161,6 +161,16 @@ bool Host::Match(const MatchCondition& mc) {
 	    value = Wsd.wsdXAddrs;
 	} else if (mc.Key == "WsDiscoveryTypes") {
 	    value = Wsd.wsdTypes;
+	} else if (mc.Key == "MdnsOs") {
+	    value = Mdns.Os;
+	} else if (mc.Key == "MdnsHw") {
+	    value = Mdns.Hw;
+    } else if (mc.Key == "MdnsDeviceUrl") {
+        value = Mdns.DeviceUrl;
+    } else if (mc.Key == "MdnsManufacturer") {
+        value = Mdns.Manufacturer;
+    } else if (mc.Key == "MdnsModelName") {
+        value = Mdns.ModelName;
 	}
 	if (value == "") {
 		if(Debug) {
@@ -171,7 +181,7 @@ bool Host::Match(const MatchCondition& mc) {
 	size_t mcvaluelength = mc.Value.length();
 	size_t datavaluelength = value.length();
 	std::string mcvalue = mc.Value;
-	if (mc.Key[0] == '*') {
+	if (mc.Value[0] == '*') {
 		mcvalue = mcvalue.substr(1);
 		startpos = datavaluelength - mcvalue.length();
 	} else if (mc.Value[mcvaluelength-1] == '*') {
@@ -236,6 +246,11 @@ bool Host::DeviceStats(json& j, const uint32_t time_interval, bool force, bool d
 	j["SsdpLocation"] = Ssdp.Location;
     j["WsDiscoveryXaddrs"] = Wsd.wsdXAddrs;
     j["WsDiscoveryTypes"] = Wsd.wsdTypes;
+    j["MdnsOs"] = Mdns.Os;
+    j["MdnsHw"] = Mdns.Hw;
+    j["MdnsDeviceUrl"] = Mdns.DeviceUrl;
+    j["MdnsManufacturer"] = Mdns.Manufacturer;
+    j["MdnsModelName"] = Mdns.ModelName;
 
 	std::string fqdns = "";
 	if (Debug == true) {
@@ -348,7 +363,7 @@ void Host::ExportDeviceInfo (json &j, bool detailed) {
  *  Adds or updates the list of flows from a host to a remote host
  *  Returns true if flow was added, false if existing flow was updated
  */
-bool Host::FlowEntry_set(const uint16_t inSrcPort, const std::string inDstIp,
+bool Host::setFlowEntry(const uint16_t inSrcPort, const std::string inDstIp,
 			const uint16_t inDstPort, const uint8_t inProtocol, const uint32_t inExpiration) {
 	iCache::LastSeen = time(nullptr);
 	if (inDstIp == "239.255.255.250") {
@@ -438,7 +453,7 @@ bool Host::FlowEntry_set(const uint16_t inSrcPort, const std::string inDstIp,
 	return false;
 }
 
-bool Host::Dhcp_set (const std::string inIpAddress, const MacAddress inMac, const std::string inHostname, const std::string inDhcpVendor) {
+bool Host::setDhcp (const std::string inIpAddress, const MacAddress inMac, const std::string inHostname, const std::string inDhcpVendor) {
     if (not inMac.isValid()) {
             return false;
     }
@@ -462,7 +477,7 @@ bool Host::Dhcp_set (const std::string inIpAddress, const MacAddress inMac, cons
 	return true;
 }
 
-bool Host::SsdpInfo_set(const std::shared_ptr<SsdpHost> insHost) {
+bool Host::setSsdpInfo(const std::shared_ptr<SsdpHost> insHost) {
 	iCache::LastSeen = time(nullptr);
 	if (Ssdp == *insHost) {
 		return false;
@@ -478,13 +493,23 @@ bool Host::SsdpInfo_set(const std::shared_ptr<SsdpHost> insHost) {
 	return true;
 }
 
-bool Host::WsDiscoveryInfo_set(const std::shared_ptr<WsDiscoveryHost> inwsdHost) {
+bool Host::setWsDiscoveryInfo(const std::shared_ptr<WsDiscoveryHost> inwsdHost) {
     iCache::LastSeen = time(nullptr);
     if (Wsd == *inwsdHost) {
         return false;
     }
     iCache::LastModified = iCache::LastSeen;
     Wsd = *inwsdHost;
+    return true;
+}
+
+bool Host::setMdnsInfo(const std::shared_ptr<MdnsHost> inmdnsHost) {
+    iCache::LastSeen = time(nullptr);
+    if (Mdns == *inmdnsHost) {
+        return false;
+    }
+    iCache::LastModified = iCache::LastSeen;
+    Mdns = *inmdnsHost;
     return true;
 }
 

@@ -69,13 +69,16 @@ public:
 	std::time_t PruneInterval = 3600;
 	std::time_t ExpireHost = 7776000;
 	UploadMode uMode = Anonymous;
-	bool Debug;
+	bool Debug, DebugHostCache, DebugHost, DebugFlowTrack, DebugDhcp, DebugDns, DebugSsdp,
+	    DebugWsDiscovery, DebugMdns, DebugPacketSnoop, DebugTcpSnoop;
 	static const std::string ApiFqdn;
 
 	Config(std::string inConfigFile = "/etc/noddos/noddos.conf", bool inDebug = false): Debug{inDebug} {
 		if (Debug == true) {
 		    syslog (LOG_DEBUG, "Config: constructing instance");
 		}
+		DebugHostCache = DebugHost = DebugFlowTrack = DebugDhcp = DebugDns = DebugSsdp =
+		        DebugWsDiscovery = DebugMdns = DebugPacketSnoop = DebugTcpSnoop = false;
 	    Load(inConfigFile);
 	}
 	~Config() {
@@ -120,6 +123,12 @@ public:
 		time_t newPruneInterval = PruneInterval;
 		time_t newExpireHost = ExpireHost;
 		UploadMode newuMode = uMode;
+		bool newDebugHostCache = DebugHostCache;
+		bool newDebugFlowTrack = DebugFlowTrack;
+		bool newDebugSsdp = DebugSsdp;
+		bool newDebugWsDiscovery = DebugWsDiscovery;
+		bool newDebugMdns = DebugMdns;
+		bool newDebugPacketSnoop = DebugPacketSnoop;
 
 		json j;
 	    try {
@@ -213,6 +222,24 @@ public:
 					newuMode = Anonymous;
 				}
 			}
+            if (j.count("DebugHostCache")) {
+                newDebugHostCache = j["DebugHostCache"].get<bool>();
+            }
+            if (j.count("DebugFlowTrack")) {
+                newDebugFlowTrack = j["DebugFlowTrack"].get<bool>();
+            }
+            if (j.count("DebugSsdp")) {
+                newDebugSsdp = j["DebugSsdp"].get<bool>();
+            }
+            if (j.count("DebugWsDiscovery")) {
+                newDebugWsDiscovery = j["DebugWsDiscovery"].get<bool>();
+            }
+            if (j.count("DebugMdns")) {
+                newDebugMdns = j["DebugMdns"].get<bool>();
+            }
+            if (j.count("DebugPacketSnoop")) {
+                newDebugPacketSnoop = j["DebugPacketSnoop"].get<bool>();
+            }
 		}
 		catch (...) {
 			syslog (LOG_ERR, "Config: Failure to parse json data from Config file, ignoring its contents: %s", inConfigFile.c_str());
@@ -243,6 +270,12 @@ public:
 		PruneInterval = newPruneInterval;
 		ExpireHost = newExpireHost;
 		uMode = newuMode;
+        DebugHostCache = newDebugHostCache;
+        DebugFlowTrack = newDebugFlowTrack;
+        DebugSsdp = newDebugSsdp;
+        DebugWsDiscovery = newDebugWsDiscovery;
+        DebugMdns = newDebugMdns;
+        DebugPacketSnoop = newDebugPacketSnoop;
 		return configfailure;
 	}
 

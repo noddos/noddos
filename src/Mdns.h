@@ -66,7 +66,7 @@ public:
     int getFileHandle();
     bool Probe ();
 
-    bool ParseMdnsMessage (std::shared_ptr<MdnsHost> wsdHost, const unsigned char * msgbuf, const int nbytes);
+    void ParseMdnsMessage (std::shared_ptr<MdnsHost> wsdHost, const unsigned char * msgbuf, const int nbytes);
 
 };
 

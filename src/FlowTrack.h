@@ -66,7 +66,7 @@ private:
 
 public:
 	FlowTrack(HostCache & inhC, Config &inConfig,std::set<std::string> & inlocalIpAddresses):
-	        hC{inhC}, config{inConfig}, Debug{inConfig.Debug}, localIpAddresses{inlocalIpAddresses} {
+	        hC{inhC}, config{inConfig}, Debug{inConfig.Debug && inConfig.DebugFlowTrack}, localIpAddresses{inlocalIpAddresses} {
         if (Debug) {
             syslog (LOG_DEBUG, "FlowTrack: constructing instance");
         }

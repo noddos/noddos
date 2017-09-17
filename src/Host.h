@@ -61,6 +61,7 @@ private:
    	DhcpRequest Dhcp;
    	SsdpHost Ssdp;
    	WsDiscoveryHost Wsd;
+   	MdnsHost Mdns;
    	std::string Uuid;
    	time_t matchversion;
    	ConfidenceLevel IdentifyConfidenceLevel;
@@ -93,13 +94,14 @@ public:
 	ConfidenceLevel Match(const Identifier& i);
 	bool Match(const MatchCondition& mc);
 	bool Match(const ContainCondition& cc);
-	void IpAddress_set (const std::string inIpAddress) { Ipv4Address = inIpAddress; }
-	bool FlowEntry_set(const uint16_t inSrcPort, const std::string inDstIp,
+	void setIpAddress (const std::string inIpAddress) { Ipv4Address = inIpAddress; }
+	bool setFlowEntry(const uint16_t inSrcPort, const std::string inDstIp,
 			const uint16_t inDstPort, const uint8_t inProtocol, const uint32_t inExpiration);
 	uint32_t FlowCacheCount () { return FlowCacheIpv4.size() + FlowCacheIpv6.size(); }
-    bool Dhcp_set (const std::string IpAddress, const MacAddress Mac, const std::string Hostname, const std::string DhcpVendor);
-	bool SsdpInfo_set(const std::shared_ptr<SsdpHost> insHost);
-	bool WsDiscoveryInfo_set(const std::shared_ptr<WsDiscoveryHost> inwsdHost);
+    bool setDhcp (const std::string IpAddress, const MacAddress Mac, const std::string Hostname, const std::string DhcpVendor);
+	bool setSsdpInfo(const std::shared_ptr<SsdpHost> insHost);
+	bool setWsDiscoveryInfo(const std::shared_ptr<WsDiscoveryHost> inwsdHost);
+    bool setMdnsInfo(const std::shared_ptr<MdnsHost> inmdnsHost);
 
 	// This manipulates the DnsQueryCache
 	void addorupdateDnsQueryList (std::string inFqdn) {

@@ -25,6 +25,12 @@
     "TrafficReportInterval": 3600,
     "DeviceReportInterval": 14400,
     "ExpireHost": 604800,
-    "UploadMode": "Anonymous"
+    "UploadMode": "Anonymous",
+	"DebugHostCache": false,
+	"DebugFlowTrack": false,
+	"DebugSsdp": false,
+	"DebugWsDiscovery": false,
+	"DebugMdns": false,
+	"DebugPacketSnoop": false
 }
 

@@ -18,3 +18,10 @@
     "WanInterfaces": ["eth1"],
     "ExpireHost": 604800,
     "UploadMode": "Anonymous",
+    "DebugHostCache": false,
+    "DebugFlowTrack": false,
+    "DebugSsdp": false,
+    "DebugWsDiscovery": false,
+    "DebugMdns": false,
+    "DebugPacketSnoop": false,
+

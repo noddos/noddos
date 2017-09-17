@@ -41,8 +41,10 @@
 
 bool Mdns::Probe () {
     if (Debug == true) {
-        syslog (LOG_DEBUG, "Mdns: sending probe to %s", MDNS_GROUP);
+        syslog (LOG_DEBUG, "Mdns: NOT sending probe to %s", MDNS_GROUP);
     }
+    // TODO: implement Mdns probe
+    /* Mdns probe disabled
     if (socket_fd < 0) {
         syslog (LOG_ERR, "Mdns: can't send probe on socket that hasn't been opened");
         throw std::logic_error("Mdns: can't send probe over socket that hasn't been opened");
@@ -60,24 +62,25 @@ bool Mdns::Probe () {
         syslog(LOG_ERR, "Mdns: probe sendto");
         throw std::system_error(errno, std::system_category());
     }
+    */
     return true;
 }
 
-bool Mdns::ParseMdnsMessage (std::shared_ptr<MdnsHost> host, const unsigned char * msgbuf, const int nbytes) {
+void Mdns::ParseMdnsMessage (std::shared_ptr<MdnsHost> host, const unsigned char * msgbuf, const int nbytes) {
     uint32_t pos = 0;
 
     if (nbytes < 12) {
-        syslog(LOG_WARNING, "Mdns: Received mDNS packet smaller than 12 bytes");
-        return true;
+        syslog(LOG_NOTICE, "Mdns: Malformed mDNS packet smaller than 12 bytes");
+        throw std::runtime_error ("Mdns: malformed mDNS TXT record");
     }
     Tins::DNS *q;
     try {
         q = new Tins::DNS(msgbuf, nbytes);
     } catch (const Tins::malformed_packet &e) {
         if (Debug == true) {
-            syslog(LOG_DEBUG, "Mdns: Malformed mDNS packet");
+            syslog(LOG_NOTICE, "Mdns: Malformed mDNS packet");
         }
-        return false;
+        throw std::runtime_error ("Mdns: malformed mDNS TXT record");
     }
     if (Debug == true) {
         syslog(LOG_DEBUG, "Mdns: Query ID: %u", q->id());
@@ -135,16 +138,16 @@ bool Mdns::ParseMdnsMessage (std::shared_ptr<MdnsHost> host, const unsigned char
                         size_t len = dnsdata[stridx++];
                         if (stridx + len > dnsdata.length()) {
                             if(Debug == true) {
-                                syslog (LOG_DEBUG, "Mdns: malformed mDNS TXT record");
+                                syslog (LOG_NOTICE, "Mdns: malformed mDNS TXT record");
                             }
-                            return true;
+                            throw std::runtime_error ("Mdns: malformed mDNS TXT record");
                         }
                         size_t keylength = dnsdata.find("=", stridx) - stridx;
                         if (keylength == std::string::npos) {
                             if(Debug == true) {
-                                syslog (LOG_DEBUG, "Mdns: malformed mDNS TXT record with '=' separating key and value");
+                                syslog (LOG_NOTICE, "Mdns: malformed mDNS TXT record with '=' separating key and value");
                             }
-                            return true;
+                            throw std::runtime_error ("Mdns: malformed mDNS TXT record");
                         }
                         std::string key = dnsdata.substr(stridx, keylength);
                         std::transform(key.begin(),key.end(), key.begin(), ::tolower);
@@ -164,11 +167,11 @@ bool Mdns::ParseMdnsMessage (std::shared_ptr<MdnsHost> host, const unsigned char
                         } else if(key == "hw") {
                             host->Hw = value;
                         } else if (key == "md" || key == "usb_mdl") {
-                            host->Model = value;
+                            host->ModelName = value;
                         } else if (key == "usb_mfg") {
                             host->Manufacturer = value;
                         } else if (key == "adminurl") {
-                            host->Url = value;
+                            host->DeviceUrl = value;
                         }
                     }
                 }
@@ -179,7 +182,6 @@ bool Mdns::ParseMdnsMessage (std::shared_ptr<MdnsHost> host, const unsigned char
                 }
                 break;
             default:
-
                 if (Debug == true) {
                     syslog(LOG_DEBUG, "Mdns: unhandled resource record type %d: %s", it.query_type(), dnsdata.c_str());
                 }
@@ -192,7 +194,6 @@ bool Mdns::ParseMdnsMessage (std::shared_ptr<MdnsHost> host, const unsigned char
         }
     }
     delete q;
-    return true;
 }
 
 bool Mdns::processEvent (struct epoll_event &event) {
@@ -218,11 +219,12 @@ bool Mdns::processEvent (struct epoll_event &event) {
                 syslog(LOG_DEBUG, "Mdns: Received packet from %s with %d bytes", mdnsHost->IpAddress.c_str(), nbytes);
             }
 
-            if (ParseMdnsMessage(mdnsHost, msgbuf, nbytes)) {
-                // hCache.AddMdnsInfo(mdnsHost);
-            } else {
+            try {
+                ParseMdnsMessage(mdnsHost, msgbuf, nbytes);
+                hCache.AddMdnsInfo(mdnsHost);
+            } catch (...) {
                 if(Debug) {
-                    syslog(LOG_DEBUG, "Mdns: Didn't parse packet");
+                    syslog(LOG_DEBUG, "Mdns: Couldn't parse packet");
                 }
             }
         } else {
@@ -233,10 +235,6 @@ bool Mdns::processEvent (struct epoll_event &event) {
         syslog(LOG_ERR, "Mdns: recvfrom");
         return false;
     }
-    if(Debug) {
-        syslog(LOG_DEBUG, "Mdns: Leaving processevent");
-    }
-
     return true;
 }
 int Mdns::Open (std::string input, uint32_t inExpiration) {
