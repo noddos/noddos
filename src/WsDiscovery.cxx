@@ -60,13 +60,13 @@ bool WsDiscovery::Probe () {
     return true;
 }
 
-bool WsDiscovery::ParseWsDiscoveryMessage (std::shared_ptr<WsDiscoveryHost> host, const char * msgbuf, const int nbytes) {
+bool WsDiscovery::ParseWsDiscoveryMessage (std::shared_ptr<WsDiscoveryHost> host, const unsigned char * msgbuf, const int nbytes) {
     uint32_t pos = 0;
     if (Debug == true) {
         syslog (LOG_DEBUG, "WsDiscovery message: %s", msgbuf);
     }
 
-    std::string line = msgbuf;
+    std::string line = (char *) msgbuf;
     std::smatch m;
     std::regex_search(line, m, wsdxaddrs_rx);
     if (not m.empty()) {
@@ -94,7 +94,7 @@ bool WsDiscovery::processEvent (struct epoll_event &event) {
     if (Debug) {
         syslog(LOG_DEBUG, "WsDiscovery: processing event");
     }
-    char msgbuf[MSGBUFSIZE];
+    unsigned char msgbuf[MSGBUFSIZE];
     memset(&msgbuf, 0, MSGBUFSIZE);
     struct sockaddr addr;
     memset(&addr, 0, sizeof(addr));

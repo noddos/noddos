@@ -65,7 +65,7 @@ public:
     int getFileHandle();
     bool Probe ();
 
-    bool ParseWsDiscoveryMessage (std::shared_ptr<WsDiscoveryHost> wsdHost, const char * msgbuf, const int nbytes);
+    bool ParseWsDiscoveryMessage (std::shared_ptr<WsDiscoveryHost> wsdHost, const unsigned char * msgbuf, const int nbytes);
 
 };
 

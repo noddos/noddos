@@ -39,7 +39,7 @@
 #define MDNS_GROUP "224.0.0.251"
 #define MDNS_PORT 5353
 
-void Mdns::ParseMdnsMessage (std::shared_ptr<MdnsHost> host, const unsigned char * msgbuf, const int nbytes) {
+void Mdns::parseMessage (std::shared_ptr<MdnsHost> host, const unsigned char * msgbuf, const int nbytes) {
     uint32_t pos = 0;
 
     if (nbytes < 12) {
@@ -105,49 +105,7 @@ void Mdns::ParseMdnsMessage (std::shared_ptr<MdnsHost> host, const unsigned char
                 if (Debug == true) {
                     syslog(LOG_DEBUG, "Mdns: TXT record: %s", dnsdata.c_str());
                 }
-                {
-                    size_t stridx = 0;
-                    while (stridx < dnsdata.length()) {
-                        size_t len = dnsdata[stridx++];
-                        if (stridx + len > dnsdata.length()) {
-                            if(Debug == true) {
-                                syslog (LOG_NOTICE, "Mdns: malformed mDNS TXT record");
-                            }
-                            throw std::runtime_error ("Mdns: malformed mDNS TXT record");
-                        }
-                        size_t keylength = dnsdata.find("=", stridx) - stridx;
-                        if (keylength == std::string::npos) {
-                            if(Debug == true) {
-                                syslog (LOG_NOTICE, "Mdns: malformed mDNS TXT record with '=' separating key and value");
-                            }
-                            throw std::runtime_error ("Mdns: malformed mDNS TXT record");
-                        }
-                        std::string key = dnsdata.substr(stridx, keylength);
-                        std::transform(key.begin(),key.end(), key.begin(), ::tolower);
-                        size_t valuepos = stridx + keylength + 1;
-                        size_t valuelength = len - keylength - 1;
-                        if(Debug == true) {
-                            syslog (LOG_DEBUG, "Mdns: strindex: %zd, kv-pair length: %zd, key-length: %zd, value-length %zd", stridx, len, keylength, valuelength);
-                        }
-                        std::string value = dnsdata.substr(valuepos, valuelength);
-                        stridx += len;
-                        if (Debug == true) {
-                            syslog(LOG_DEBUG, "Mdns: TXT record kv-pair %s = %s",
-                                    key.c_str(), value.c_str());
-                        }
-                        if (key == "os") {
-                            host->Os = value;
-                        } else if(key == "hw") {
-                            host->Hw = value;
-                        } else if (key == "md" || key == "usb_mdl") {
-                            host->ModelName = value;
-                        } else if (key == "usb_mfg") {
-                            host->Manufacturer = value;
-                        } else if (key == "adminurl") {
-                            host->DeviceUrl = value;
-                        }
-                    }
-                }
+                parseTxtRr(host, dnsdata);
                 break;
             case Tins::DNS::QueryType::SRV:
                 if (Debug == true) {
@@ -168,6 +126,51 @@ void Mdns::ParseMdnsMessage (std::shared_ptr<MdnsHost> host, const unsigned char
     }
     delete q;
 }
+
+void Mdns::parseTxtRr (std::shared_ptr<MdnsHost> host, const std::string txt) {
+    size_t stridx = 0;
+    while (stridx < txt.length()) {
+        size_t len = txt[stridx++];
+        if (stridx + len > txt.length()) {
+            if(Debug == true) {
+                syslog (LOG_NOTICE, "Mdns: malformed mDNS TXT record");
+            }
+            throw std::runtime_error ("Mdns: malformed mDNS TXT record");
+        }
+        size_t keylength = txt.find("=", stridx) - stridx;
+        if (keylength == std::string::npos) {
+            if(Debug == true) {
+                syslog (LOG_NOTICE, "Mdns: malformed mDNS TXT record with '=' separating key and value");
+            }
+            throw std::runtime_error ("Mdns: malformed mDNS TXT record");
+        }
+        std::string key = txt.substr(stridx, keylength);
+        std::transform(key.begin(),key.end(), key.begin(), ::tolower);
+        size_t valuepos = stridx + keylength + 1;
+        size_t valuelength = len - keylength - 1;
+        if(Debug == true) {
+            syslog (LOG_DEBUG, "Mdns: strindex: %zd, kv-pair length: %zd, key-length: %zd, value-length %zd", stridx, len, keylength, valuelength);
+        }
+        std::string value = txt.substr(valuepos, valuelength);
+        stridx += len;
+        if (Debug == true) {
+            syslog(LOG_DEBUG, "Mdns: TXT record kv-pair %s = %s",
+                    key.c_str(), value.c_str());
+        }
+        if (key == "os") {
+            host->Os = value;
+        } else if(key == "hw") {
+            host->Hw = value;
+        } else if (key == "md" || key == "usb_mdl") {
+            host->ModelName = value;
+        } else if (key == "usb_mfg") {
+            host->Manufacturer = value;
+        } else if (key == "adminurl") {
+            host->DeviceUrl = value;
+        }
+    }
+}
+
 
 bool Mdns::processEvent (struct epoll_event &event) {
     if (socket_fd != event.data.fd) {
@@ -193,7 +196,7 @@ bool Mdns::processEvent (struct epoll_event &event) {
             }
 
             try {
-                ParseMdnsMessage(mdnsHost, msgbuf, nbytes);
+                parseMessage(mdnsHost, msgbuf, nbytes);
                 hCache.AddMdnsInfo(mdnsHost);
             } catch (...) {
                 if(Debug) {

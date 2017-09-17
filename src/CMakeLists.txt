@@ -88,6 +88,18 @@ add_executable(SsdpServer_test SsdpServer_test.cxx
     opensslfingerprint.cxx Ipset.cxx DeviceProfile.cxx)
 target_link_libraries(SsdpServer_test curl ssl crypto ipset pthread)
 
+add_test (WsDiscovery WsDiscovery_test)
+add_executable(WsDiscovery_test WsDiscovery_test.cxx 
+    HostCache.cxx Host.cxx WsDiscovery.cxx
+    opensslfingerprint.cxx Ipset.cxx DeviceProfile.cxx)
+target_link_libraries(WsDiscovery_test curl ssl crypto ipset pthread)
+
+add_test (Mdns Mdns_test)
+add_executable(Mdns_test Mdns_test.cxx  Mdns.cxx
+    HostCache.cxx Host.cxx
+    opensslfingerprint.cxx Ipset.cxx DeviceProfile.cxx)
+target_link_libraries(Mdns_test curl ssl crypto ipset pthread tins)
+
 add_test (MacAddress MacAddress_test)
 add_executable(MacAddress_test MacAddress_test.cxx)
 
