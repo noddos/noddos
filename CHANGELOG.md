@@ -1,3 +1,38 @@
+___Noddos v0.5.0  - 9/17/2017___
+
+New features:
+* Support for mDNS is in: Noddos can now find my Epson TX-410 printer
+* Support for WS-Discovery
+* Debug logging can now be configured more granularly
+
+___Noddos v0.4.1  - 9/1/2017___
+
+New features:
+* Improve Lede installation script
+
+___Noddos v0.4.0  - 8/26/2017___
+
+New features:
+* Dynamic firewall rules are in.
+
+___Noddos v0.3.3  - 8/21/2017___
+
+Bug fixes:
+* Don't call freeifaddrs while still in the loop reading result of getifaddrs
+
+___Noddos v0.3.2  - 8/12/2017___
+
+New features:
+* Improved logging and error handling to facilitate remote troubleshooting
+
+___Noddos v0.3.1  - 8/4/2017___
+
+New features:
+* Persist DnsCache so that at startup, Noddos already has data to populate firewall rules
+
+Bug fixes:
+* pruneTcpSnoopInstances was calling a method of TcpSnoop for a nullptr instance, causing segfaults
+
 ___Noddos v0.3.0  - 7/17/2017___
 
 New features:
