@@ -432,7 +432,8 @@ MacAddress HostCache::MacLookup (const std::string inIpAddress, const std::strin
     /* Get an internet domain socket. */
     int s;
 	if ((s = socket(domain, SOCK_DGRAM, 0)) == -1) {
-        syslog(LOG_ERR, "HostCache: Can't open socket for ARP table lookup");
+        syslog(LOG_ERR, "HostCache: Can't open socket for ARP table lookup for IP %s, domain %d on interface %s",
+			inIpAddress.c_str(), domain, inInterface.c_str());
         return Mac;
     }
 
