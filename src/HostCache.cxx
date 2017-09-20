@@ -438,7 +438,8 @@ MacAddress HostCache::MacLookup (const std::string inIpAddress, const std::strin
     }
 
     if (-1 == ioctl(s,SIOCGARP , (caddr_t) &areq)) {
-		syslog (LOG_ERR, "HostCache: ARP lookup failure for %s", inIpAddress.c_str());
+		syslog (LOG_DEBUG, "HostCache: ARP lookup failure for %s on interface %s", inIpAddress.c_str(), inInterface.c_str());
+		// TODO: remove this, doesn't apply when searching MAC address on individual interfaces
 		if (retries > 0) {
 			if (Debug == true) {
 				syslog(LOG_DEBUG, "HostCache: Additional ARP lookup for %s", inIpAddress.c_str());

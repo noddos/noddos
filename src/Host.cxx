@@ -58,7 +58,7 @@ bool Host::Match(const DeviceProfileMap& dpMap) {
 	std::string matcheduuid = "";
 	for (auto &kv : dpMap) {
 		if(Debug) {
-			syslog(LOG_DEBUG, "Evaluating host %s against device profile %s", Mac.c_str(), kv.first.c_str());
+			syslog(LOG_DEBUG, "Host: Evaluating host %s against device profile %s", Mac.c_str(), kv.first.c_str());
 		}
 		auto &dp = *(kv.second);
 		auto match = Match(dp);
@@ -72,7 +72,7 @@ bool Host::Match(const DeviceProfileMap& dpMap) {
 	}
 	if (bestmatch >= ConfidenceLevel::Low) {
 		Uuid = matcheduuid;
-		syslog(LOG_DEBUG, "Host %s matched %s", Mac.c_str(), Uuid.c_str());
+		syslog(LOG_DEBUG, "Host: Host %s matched %s", Mac.c_str(), Uuid.c_str());
 		return true;
 	}
 	return false;
@@ -83,12 +83,12 @@ ConfidenceLevel Host::Match(const DeviceProfile& dp) {
 	auto v = dp.getIdentifiers();
 	for (auto& i : v) {
 		if(Debug) {
-			syslog (LOG_DEBUG, "Testing identifier");
+			syslog (LOG_DEBUG, "Host: Testing identifier");
 		}
 		auto match = Match(*i);
 		if (match >= ConfidenceLevel::High) {
 			if(Debug) {
-				syslog(LOG_DEBUG, "Host %s matched with high confidence", Mac.c_str());
+				syslog(LOG_DEBUG, "Host: Host %s matched with high confidence", Mac.c_str());
 			}
 			return match;
         }
@@ -97,7 +97,7 @@ ConfidenceLevel Host::Match(const DeviceProfile& dp) {
         }
 	}
 	if(Debug) {
-		syslog(LOG_DEBUG, "Host %s match level %d", Mac.c_str(), static_cast<int>(bestmatch));
+		syslog(LOG_DEBUG, "Host: Host %s match level %d", Mac.c_str(), static_cast<int>(bestmatch));
 	}
 	return bestmatch;
 }
@@ -105,28 +105,28 @@ ConfidenceLevel Host::Match(const DeviceProfile& dp) {
 ConfidenceLevel Host::Match(const Identifier& i) {
 	for (auto& mc : i.MatchConditions_get()) {
 		if(Debug) {
-			syslog (LOG_DEBUG, "Testing match condition %s", (*mc).Key.c_str());
+			syslog (LOG_DEBUG, "Host: Testing match condition %s", (*mc).Key.c_str());
 		}
 		if(not Match (*mc)) {
 			if(Debug) {
-				syslog (LOG_DEBUG, "Host %s did not match condition %s", Mac.c_str(), (*mc).Key.c_str());
+				syslog (LOG_DEBUG, "Host: Host %s did not match condition %s", Mac.c_str(), (*mc).Key.c_str());
 			}
 			return ConfidenceLevel::None;
 		}
 	}
 	for (auto& cc : i.ContainConditions_get()) {
 		if(Debug) {
-			syslog (LOG_DEBUG, "Testing contain condition %s", (*cc).Key.c_str());
+			syslog (LOG_DEBUG, "Host: Testing contain condition %s", (*cc).Key.c_str());
 		}
 		if(not Match (*cc)) {
 			if(Debug) {
-				syslog (LOG_DEBUG, "Host %s did not contain condition %s", Mac.c_str(), (*cc).Key.c_str());
+				syslog (LOG_DEBUG, "Host: Host %s did not contain condition %s", Mac.c_str(), (*cc).Key.c_str());
 			}
 			return ConfidenceLevel::None;
 		}
 	}
 	if(Debug) {
-		syslog(LOG_DEBUG, "Host %s matched MustMatch and/or MustContain conditions", Mac.c_str());
+		syslog(LOG_DEBUG, "Host: Host %s matched MustMatch and/or MustContain conditions", Mac.c_str());
 	}
 	return i.IdentifyConfidenceLevel_get();
 }
@@ -137,7 +137,7 @@ bool Host::Match(const MatchCondition& mc) {
 		value = Mac.str().substr(0,8);
 	} else if (mc.Key == "DhcpVendor") {
 		value = Dhcp.DhcpVendor;
-	} else if (mc.Key == "Hostname") {
+	} else if (mc.Key == "DhcpHostname") {
 		value = Dhcp.Hostname ;
 	} else if (mc.Key == "SsdpFriendlyName" ) {
 		value = Ssdp.FriendlyName;
@@ -174,7 +174,7 @@ bool Host::Match(const MatchCondition& mc) {
 	}
 	if (value == "") {
 		if(Debug) {
-			syslog(LOG_DEBUG, "Host %s has no value for MustMatch condition %s", Mac.c_str(), mc.Key.c_str());
+			syslog(LOG_DEBUG, "Host: Host %s has no value for MustMatch condition %s", Mac.c_str(), mc.Key.c_str());
 		}
 	}
 	size_t startpos = 0;
@@ -190,12 +190,12 @@ bool Host::Match(const MatchCondition& mc) {
 	}
 	if (value.compare(startpos, mcvalue.length() - startpos, mcvalue) == 0) {
 		if(Debug) {
-			syslog(LOG_DEBUG, "Host %s matched MustMatch condition", Mac.c_str());
+			syslog(LOG_DEBUG, "Host: Host %s matched MustMatch condition", Mac.c_str());
 		}
 		return true;
     }
 	if(Debug) {
-		syslog (LOG_DEBUG, "Host %s did not match condition %s with value %s from position %zu", value.c_str(), mc.Key.c_str(), mcvalue.c_str(), startpos);
+		syslog (LOG_DEBUG, "Host: Host %s did not match condition %s with value %s from position %zu", value.c_str(), mc.Key.c_str(), mcvalue.c_str(), startpos);
 	}
 	return false;
 }
@@ -205,23 +205,23 @@ bool Host::Match(const ContainCondition& cc) {
 		for (auto fqdn: cc.Values) {
 		    if (DnsQueryList.find(fqdn) != DnsQueryList.end()) {
 				if(Debug) {
-					syslog(LOG_DEBUG, "Found DnsQuery for %s from host %s", fqdn.c_str(), Mac.c_str());
+					syslog(LOG_DEBUG, "Host: Found DnsQuery for %s from host %s", fqdn.c_str(), Mac.c_str());
 				}
 			} else {
 				if(Debug) {
-					syslog(LOG_DEBUG, "Didn't find DnsQuery for %s from host %s", fqdn.c_str(), Mac.c_str());
+					syslog(LOG_DEBUG, "Host: Didn't find DnsQuery for %s from host %s", fqdn.c_str(), Mac.c_str());
 				}
 				return false;
 			}
 		}
 	} else {
 		if(Debug) {
-			syslog(LOG_DEBUG, "Unsupported MustContain key %s", cc.Key.c_str());
+			syslog(LOG_DEBUG, "Host: Unsupported MustContain key %s", cc.Key.c_str());
 		}
 		return false;
 	}
 	if(Debug) {
-		syslog(LOG_DEBUG, "Host %s matched MustContain condition", Mac.c_str());
+		syslog(LOG_DEBUG, "Host: Host %s matched MustContain condition", Mac.c_str());
 	}
 	return true;
 }
@@ -254,12 +254,12 @@ bool Host::DeviceStats(json& j, const uint32_t time_interval, bool force, bool d
 
 	std::string fqdns = "";
 	if (Debug == true) {
-		syslog (LOG_DEBUG, "Adding items from DnsQueryList to list of fqdns");
+		syslog (LOG_DEBUG, "Host: Adding items from DnsQueryList to list of fqdns");
 	}
 	for (auto &dq: DnsQueryList) {
 		if (detailed == false) {
 			if (Debug == true) {
-				syslog (LOG_DEBUG, "Adding FQDN %s from DnsQueryList to list of fqdns", dq.first.c_str());
+				syslog (LOG_DEBUG, "Host: Adding FQDN %s from DnsQueryList to list of fqdns", dq.first.c_str());
 			}
 			fqdns += dq.first + " ";
 		}
@@ -294,13 +294,13 @@ bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportPriva
 				}
 			}
 			if (Debug == true) {
-				syslog (LOG_DEBUG, "Getting all DNS lookups for %s", ip.to_string().c_str());
+				syslog (LOG_DEBUG, "Host: Getting all DNS lookups for %s", ip.to_string().c_str());
 			}
 			std::vector<std::string> fqdns = dCip.getAllFqdns(ip);
 			for (auto &itf : fqdns) {
 				std::string fqdn = dCcname.getFqdn(itf);
                 if (Debug) {
-                    syslog (LOG_DEBUG, "Reverse resolved %s to %s, might have CNAME %s", ip.to_string().c_str(), itf.c_str(), fqdn.c_str());
+                    syslog (LOG_DEBUG, "Host: Reverse resolved %s to %s, might have CNAME %s", ip.to_string().c_str(), itf.c_str(), fqdn.c_str());
                 }
 				if (inDnsQueryList(fqdn)) {
 				    endpoints.insert(fqdn);
@@ -368,13 +368,13 @@ bool Host::setFlowEntry(const uint16_t inSrcPort, const std::string inDstIp,
 	iCache::LastSeen = time(nullptr);
 	if (inDstIp == "239.255.255.250") {
 		if(Debug) {
-			syslog(LOG_DEBUG, "Ignoring flow to 239.255.255.0");
+			syslog(LOG_DEBUG, "Host: Ignoring flow to 239.255.255.0");
 		}
 		return false;
 	}
 	auto f = std::make_shared<FlowEntry>();
 	if(Debug) {
-		syslog(LOG_DEBUG, "Creating new Flow Entry for src port %u, dest ip %s, dest port %u, protocol %u", inSrcPort,
+		syslog(LOG_DEBUG, "Host: Creating new Flow Entry for src port %u, dest ip %s, dest port %u, protocol %u", inSrcPort,
 				inDstIp.c_str(), inDstPort, inProtocol);
 	}
 	iCache::LastModified = time(nullptr);
@@ -393,7 +393,7 @@ bool Host::setFlowEntry(const uint16_t inSrcPort, const std::string inDstIp,
 			FlowCacheIpv4[dstIpv4Address] = std::make_shared<FlowEntryList>();
 			FlowCacheIpv4[dstIpv4Address]->push_back(f);
 			if(Debug) {
-				syslog(LOG_DEBUG, "Adding to IPv4 FlowCache with destination %s : %u Protocol %u", inDstIp.c_str(),
+				syslog(LOG_DEBUG, "Host: Adding to IPv4 FlowCache with destination %s : %u Protocol %u", inDstIp.c_str(),
 					inDstPort, inProtocol);
 			}
 			return true;
@@ -404,7 +404,7 @@ bool Host::setFlowEntry(const uint16_t inSrcPort, const std::string inDstIp,
 			// Update existing flow it it matches incoming flow (ignoring Expiration)
 			if (**existingflow == *f) {
 				if(Debug) {
-					syslog(LOG_DEBUG, "Updating expiration of existing FlowEntry in IPv4 FlowCache for destination %s",
+					syslog(LOG_DEBUG, "Host: Updating expiration of existing FlowEntry in IPv4 FlowCache for destination %s",
 						inDstIp.c_str());
 				}
 				(*existingflow)->setExpiration(inExpiration);
@@ -413,7 +413,7 @@ bool Host::setFlowEntry(const uint16_t inSrcPort, const std::string inDstIp,
 		}
 		// This flow doesn't match any of the existing flows
 		if(Debug) {
-			syslog(LOG_DEBUG, "Adding FlowEntry to IPv4 FlowCache for destination %s", inDstIp.c_str());
+			syslog(LOG_DEBUG, "Host: Adding FlowEntry to IPv4 FlowCache for destination %s", inDstIp.c_str());
 		}
 		FlowCacheIpv4[dstIpv4Address]->push_back(f);
 		return true;
@@ -424,7 +424,7 @@ bool Host::setFlowEntry(const uint16_t inSrcPort, const std::string inDstIp,
 			FlowCacheIpv6[dstIpv6Address] = std::make_shared<FlowEntryList>();
 			FlowCacheIpv6[dstIpv6Address]->push_back(f);
 			if(Debug) {
-				syslog(LOG_DEBUG, "Adding to IPv6 FlowCache with destination %s : %u Protocol %u", inDstIp.c_str(),
+				syslog(LOG_DEBUG, "Host: Adding to IPv6 FlowCache with destination %s : %u Protocol %u", inDstIp.c_str(),
 					inDstPort, inProtocol);
 			}
 			return true;
@@ -435,7 +435,7 @@ bool Host::setFlowEntry(const uint16_t inSrcPort, const std::string inDstIp,
 			// Update existing flow it it matches incoming flow (ignoring Expiration)
 			if (**existingflow == *f) {
 				if(Debug) {
-					syslog(LOG_DEBUG, "Updating expiration of existing FlowEntry in IPv6 FlowCache for destination %s",
+					syslog(LOG_DEBUG, "Host: Updating expiration of existing FlowEntry in IPv6 FlowCache for destination %s",
 						inDstIp.c_str());
 				}
 				(*existingflow)->setExpiration(inExpiration);
@@ -444,12 +444,12 @@ bool Host::setFlowEntry(const uint16_t inSrcPort, const std::string inDstIp,
 		}
 		// This flow doesn't match any of the existing flows
 		if(Debug) {
-			syslog(LOG_DEBUG, "Adding FlowEntry to IPv6 FlowCache for destination %s", inDstIp.c_str());
+			syslog(LOG_DEBUG, "Host: Adding FlowEntry to IPv6 FlowCache for destination %s", inDstIp.c_str());
 		}
 		FlowCacheIpv6[dstIpv6Address]->push_back(f);
 		return true;
 	}
-	syslog(LOG_NOTICE, "IP address %s is neither v4 or v6", inDstIp.c_str());
+	syslog(LOG_NOTICE, "Host: IP address %s is neither v4 or v6", inDstIp.c_str());
 	return false;
 }
 
@@ -471,7 +471,7 @@ bool Host::setDhcp (const std::string inIpAddress, const MacAddress inMac, const
 	iCache::FirstSeen = iCache::LastModified = iCache::LastSeen = time(nullptr);
 	Dhcp.setExpiration();
 	if(Debug) {
-		syslog(LOG_DEBUG, "Creating DHCP data for %s with expiration %lu with ipaddress %s, hostname %s, vendor %s ",
+		syslog(LOG_DEBUG, "Host: Creating DHCP data for %s with expiration %lu with ipaddress %s, hostname %s, vendor %s ",
 		        Dhcp.Mac.c_str(), Dhcp.getExpiration(), Dhcp.IpAddress.c_str(), Dhcp.Hostname.c_str(), Dhcp.DhcpVendor.c_str());
 	}
 	return true;
@@ -520,7 +520,7 @@ bool Host::UploadsEnabled() {
 uint32_t Host::Prune (bool Force) {
 	bool pruned = false;
 	if(Debug) {
-		syslog(LOG_DEBUG, "Pruning host %s", Mac.c_str());
+		syslog(LOG_DEBUG, "Host: Pruning host %s", Mac.c_str());
 	}
 	pruneDnsQueryList(Force);
 
@@ -542,7 +542,7 @@ uint32_t Host::Prune (bool Force) {
 				if (Force || (*it)->isExpired()) {
 					if (Debug) {
 						std::string dstIp = (fc->first).to_string();
-						syslog(LOG_DEBUG, "Pruning IPv4 FlowEntry to %s for DstPort %u with expiration %ld while now is %ld",
+						syslog(LOG_DEBUG, "Host: Pruning IPv4 FlowEntry to %s for DstPort %u with expiration %ld while now is %ld",
 								dstIp.c_str(), (*it)->DstPort, (*it)->getExpiration (), time(nullptr));
 					}
 					// Remove element from list
@@ -556,7 +556,7 @@ uint32_t Host::Prune (bool Force) {
 			// If the list of Flow Entry pointers is empty, delete it
 			if (Force || fel.empty()) {
 				if (Debug) {
-					syslog(LOG_DEBUG, "Pruning FlowEntryList for %s as it is now empty", fc->first.to_string().c_str());
+					syslog(LOG_DEBUG, "Host: Pruning FlowEntryList for %s as it is now empty", fc->first.to_string().c_str());
 				}
 				fc = FlowCacheIpv4.erase(fc);
 				pruned = true;
@@ -579,7 +579,7 @@ uint32_t Host::Prune (bool Force) {
 			while (it != fel.end()) {
 				if (Force || (*it)->isExpired()) {
 					if (Debug) {
-						syslog(LOG_DEBUG, "Pruning IPv6 FlowEntry to %s for DstPort %u with expiration %ld while now is %ld",
+						syslog(LOG_DEBUG, "Host: Pruning IPv6 FlowEntry to %s for DstPort %u with expiration %ld while now is %ld",
 								fc->first.to_string().c_str(), (*it)->DstPort, (*it)->getExpiration (), time(nullptr));
 					}
 					// Remove element from list
@@ -593,7 +593,7 @@ uint32_t Host::Prune (bool Force) {
 			// If the list of Flow Entry pointers is empty, delete it
 			if (Force || fel.empty()) {
 				if (Debug) {
-					syslog(LOG_DEBUG, "Pruning FlowEntryList for %s as it is now empty", fc->first.to_string().c_str());
+					syslog(LOG_DEBUG, "Host: Pruning FlowEntryList for %s as it is now empty", fc->first.to_string().c_str());
 				}
 				fc = FlowCacheIpv6.erase(fc);
 				pruned = true;
@@ -603,7 +603,7 @@ uint32_t Host::Prune (bool Force) {
 			}
 		}
 		if(Debug) {
-			syslog (LOG_DEBUG, "Pruned %u Flow Entries and %u flows", pruned_flowentries, pruned_flows);
+			syslog (LOG_DEBUG, "Host: Pruned %u Flow Entries and %u flows", pruned_flowentries, pruned_flows);
 		}
 	}
 	return pruned;
@@ -616,7 +616,7 @@ uint32_t Host::pruneDnsQueryList (time_t Expired, bool Force) {
 	while (i != DnsQueryList.end()) {
 		if (Force || i->second > (now - Expired)) {
 			if (Debug == true) {
-				syslog (LOG_DEBUG, "Deleting %s from DnsQueryList as %lu is later than %lu", i->first.c_str(), i->second, now - Expired);
+				syslog (LOG_DEBUG, "Host: Deleting %s from DnsQueryList as %lu is later than %lu", i->first.c_str(), i->second, now - Expired);
 			}
 			i = DnsQueryList.erase(i);
 			deletecount++;

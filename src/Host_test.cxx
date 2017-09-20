@@ -42,7 +42,7 @@ int main () {
 	hC.AddByMac (MacAddress("00:00:00:00:00:03"), "192.168.1.99");
 	hC.AddByMac (MacAddress("00:00:00:00:00:04"), "192.168.1.235");
 	hC.AddByMac (MacAddress("00:00:00:00:00:05"), "192.168.1.241");
-	hC.AddByMac (MacAddress("00:00:00:00:00:05"), "192.168.1.251");
+	hC.AddByMac (MacAddress("00:00:00:00:00:20"), "192.168.1.251");
 	hC.AddByMac (MacAddress("00:00:00:00:00:06"), "192.168.1.234");
 	hC.AddByMac (MacAddress("00:00:00:00:00:07"), "192.168.1.240");
 
@@ -71,38 +71,34 @@ int main () {
 		testfailed = true;
 	}
 
-	// DELETE DNSMASQ
-	/*
-	auto dr = std::make_shared<DhcpRequest>();
-	dr->DhcpHostname = "udhcp 0.9.9-pre";
-	dr->IpAddress = "192.168.1.98";
-	hC.AddDhcpRequest(dr);
-	hC.AddDnsQueryIp("192.168.1.98", "ctv.zenfs.com", "1.1.1.1");
+	// This should match with 2ae4a61f-75f7-481f-b28c-e3534ee1e04b
+	hC.AddDhcpRequest("192.168.1.98", MacAddress("00:00:00:00:00:02"), "", "udhcp 0.9.9-pre" );
+	hC.AddDnsQueryIp("192.168.1.98", "control-zoo-dtsprod.tvinteractive.tv", "1.1.1.1");
 	hC.AddDnsQueryIp("192.168.1.98", "control2.tvinteractive.tv", "1.1.1.1");
 	hC.AddDnsQueryIp("192.168.1.98", "bis-tv-widgets.secure.yahoo.com", "1.1.1.2");
 	auto res2 = hC.MatchByIpAddress("192.168.1.98");
 	if (res2 != true) {
-		std::cout << "Test failure: Host with DhcpHostname " << dr->DhcpHostname << " and DnsQuery for " << "control2.tvinteractive.tv" << " did not match" << std::endl;
+		std::cout << "Test failure: Host with DhcpVendor " << "udhcp 0.9.9-pre" << " and DnsQuery for " << "control2.tvinteractive.tv" << " did not match" << std::endl;
 		testfailed = true;
 	}
 
 	hC.AddDnsQueryIp("192.168.1.241", "init.itunes.apple.com", "2.2.2.2");
-	hC.AddDnsQueryIp("192.168.1.241", "apps.itunes.com", "2.2.2.3");
-	hC.AddDnsQueryIp("192.168.1.241", "time-ios.g.aaplimg.com", "2.2.2.4");
+	hC.AddDnsQueryIp("192.168.1.241", "iosapps.itunes.apple.com", "2.2.2.3");
+	hC.AddDnsQueryIp("192.168.1.241", "sync.itunes.apple.com", "2.2.2.4");
+    hC.AddDnsQueryIp("192.168.1.241", "time-ios.apple.com", "2.2.2.5");
 	auto res3 = hC.MatchByIpAddress("192.168.1.241");
 	if (res3 != true) {
 		std::cout << "Test failure: Host with Dnsqueries init.itunes.apple.com apps.itunes.com apps.itunes.com did not match" << std::endl;
 		testfailed = true;
 	}
-	dr->DhcpHostname = "kindle-a40752280";
-	dr->IpAddress = "192.168.1.251";
-	hC.AddDhcpRequest(dr);
+
+	hC.AddDhcpRequest("192.168.1.251", MacAddress("00:00:00:00:00:20"), "kindle-a40752280", "");
 	hC.AddDnsQueryIp("192.168.1.251", "api.amazon.com", "1.1.1.5");
 	auto res4 = hC.MatchByIpAddress("192.168.1.251");
 	if (res4 != true) {
-		std::cout << "Test failure: Host with DhcpHostname " << dr->DhcpHostname << " and DnsQuery for " << "api.amazon.com" << " did not match" << std::endl;
+		std::cout << "Test failure: Host with DhcpHostname kindle-a40752280 and DnsQuery for " << "api.amazon.com" << " did not match" << std::endl;
 	}
-	*/
+
 	auto h = Host(MacAddress("01:01:01:01:01:01"), true);
 	if (h.inPrivateAddressRange("11.0.0.0")) {
 		std::cout << "Test failure: 11.0.0.0 is not RFC1918" << std::endl;

@@ -37,8 +37,8 @@ The following command line options are supported by the Noddos client:
 ## Signals
 Noddos handles the following signals
 
-__SIGTERM__: Writes DeviceMatches.json file and exits.
-__SIGHUP__: Reloads noddos.conf and DeviceProfiles.json.
-__SIGUSR1__: Runs matching alogrithm and writes DeviceDump.json file.
-__SIGUSR2__: Runs matching algorithm and uploads (if not disabled) device info and traffic stats to the cloud.
+* __SIGTERM__: Writes DeviceMatches.json file and exits.
+* __SIGHUP__: Reloads noddos.conf and DeviceProfiles.json.
+* __SIGUSR1__: Runs matching alogrithm and writes DeviceDump.json file.
+* __SIGUSR2__: Runs matching algorithm and uploads (if not disabled) device info and traffic stats to the cloud.
 
