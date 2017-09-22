@@ -1,5 +1,9 @@
 #!/usr/bin/lua
 
+-- clientdetails.lua : Provides details about client devices discovered by Noddos
+-- Copyright (C) 2017 Steven Hessing (steven.hessing@gmail.com)
+-- This is free software, licensed under the GNU General Public License v3.
+
 require "nixio.fs"
 
 print ("Content-type: Text/html\n")
@@ -35,8 +39,8 @@ profile = {}
 if nixio.fs.access("/var/lib/noddos/DeviceDump.json") then
         io.input("/var/lib/noddos/DeviceDump.json")
         local t = io.read("*all")
-        local json = require "dkjson"
-        local devdump = json.decode(t)
+	local json = require "luci.jsonc"
+        local devdump = json.parse(t)
         for i, v in ipairs(devdump) do
 				if v.MacAddress == params["mac"] then
                         device = v
@@ -44,7 +48,7 @@ if nixio.fs.access("/var/lib/noddos/DeviceDump.json") then
         end
         io.input("/var/lib/noddos/DeviceProfiles.json")
         t = io.read("*all")
-        local temp = json.decode(t)
+        local temp = json.parse(t)
         for i, v in ipairs(temp) do
                 if device.DeviceProfileUuid == v.DeviceProfileUuid then
                         profile = v

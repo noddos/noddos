@@ -1,7 +1,7 @@
 <%#
- Copyright 2017 Steven Hessing <steven.hessing@gmail.com>
- Licensed to the public under the Apache License 2.0.
- /usr/lib/lua/luci/view/admin_status/clients.htm
+ Copyright (C) 2017 Steven Hessing <steven.hessing@gmail.com>
+  This is free software, licensed under the GNU General Public License v3.
+ /usr/lib/lua/luci/view/clients.htm
 -%>
 
 <%-
@@ -9,13 +9,13 @@
     require "nixio.fs"
     require "os"
 
-	local last_modified = "<boottime>"
+    local last_modified = "<boottime>"
     local style = true
     local v
     local devdump
 
     if nixio.fs.access("/var/lib/noddos/DeviceDump.json") then
-		last_modified = os.date("%c", nixio.fs.stat("/var/lib/noddos/DeviceDump.json")['mtime'])
+        last_modified = os.date("%c", nixio.fs.stat("/var/lib/noddos/DeviceDump.json")['mtime'])
         io.input("/var/lib/noddos/DeviceDump.json")
         t = io.read("*all")
         devdump = luci.jsonc.parse(t)

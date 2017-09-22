@@ -1,6 +1,6 @@
 -- Copyright 2017 Steven Hessing (steven.hessing@gmail.com)
--- Licensed to the public under the Apache License 2.0.
--- /usr/lib/lua/luci/model/cbi/admin_network/noddos.lua
+-- This is free software, licensed under the GNU General Public License v3.
+-- /usr/lib/lua/luci/model/cbi/noddos.lua
 
 m = Map("noddos", translate("Client Firewall"),
     translate("Noddos controls traffic from the clients on your network to the Internet. " ..
@@ -22,7 +22,7 @@ s:option(Flag, "upload",
 
 o = s:option(DynamicList, "whitelistipv4",
     translate("Excluded IPv4 addresses"),
-    translate("Don't monitor of these IPv4 addresses"))
+    translate("Don't monitor these IPv4 addresses"))
 o.optional = true
 o.placeholder = "127.0.0.1 192.168.1.1"
 o.delimiter = " "
@@ -30,14 +30,14 @@ o.datatype="list(ip4addr)"
 
 o = s:option(DynamicList, "whitelistipv6",
     translate("Excluded IPv6 addresses"),
-    translate("Don't monitor of these IPv6 addresses"))
+    translate("Don't monitor these IPv6 addresses"))
 o.optional = true
 o.delimiter = " "
 o.datatype="list(ip6addr)"
 
 o = s:option(DynamicList, "whitelistmac",
     translate("Excluded MAC addresses"),
-    translate("Don't monitor of these MAC addresses"))
+    translate("Don't monitor these MAC addresses"))
 o.optional = true
 o.delimiter = " "
 o.datatype="list(macaddr)"

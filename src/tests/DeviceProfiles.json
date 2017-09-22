@@ -79,7 +79,7 @@
 ,
 {
     "DeviceProfileUuid": "beae329a-1836-446b-974c-d429ad05862b",
-    "DeviceProfileVersion": 3,
+    "DeviceProfileVersion": 4,
     "UploadStats": true,
     "Manufacturer": "Amazon",
     "Model": "Kindle",
@@ -94,6 +94,16 @@
             "MustContain": {
                 "DnsQueries": [ "api.amazon.com" ]
             }
+        },
+        {
+            "IdentifyConfidenceLevel": "Medium",
+            "EnforceConfidenceLevel": "None",
+            "MustMatch": {
+                    "DhcpVendor": "udhcp 1.17.1"
+            },
+            "MustContain": {
+                "DnsQueries": [ "kindle-store.images-amazon.com", "pins.amazon.com" ]
+			}
         },
         {
             "IdentifyConfidenceLevel": "Low",
@@ -288,7 +298,7 @@
 ,
 {
     "DeviceProfileUuid": "76905373-748b-4e25-a550-296b3e1c7086",
-    "DeviceProfileVersion": 3,
+    "DeviceProfileVersion": 4,
     "UploadStats": true,
     "Manufacturer": "Google",
     "Model": "Android device",
@@ -298,7 +308,7 @@
             "IdentifyConfidenceLevel": "High",
             "EnforceConfidenceLevel": "Low",
             "MustMatch": {
-                    "Hostname": "android-*",
+                    "DhcpHostname": "android-*",
                     "DhcpVendor": "dhcpcd-*"
             },
              "MustContain": {
@@ -309,15 +319,15 @@
             "IdentifyConfidenceLevel": "High",
             "EnforceConfidenceLevel": "Low",
             "MustMatch": {
-                    "Hostname": "android-*",
+                    "DhcpHostname": "android-*",
                     "DhcpVendor": "android-dhcp-*"
             },
             "MustContain": {
-                    "Dnsqueries": [ "android.clients.google.com"]
+                    "DnsQueries": [ "android.clients.google.com"]
             }
 		},
         {
-            "IdentifyConfidenceLevel": "High",
+            "IdentifyConfidenceLevel": "Medium",
             "EnforceConfidenceLevel": "Low",
             "MustMatch": {
                     "DhcpVendor": "android-dhcp-*"
@@ -376,13 +386,20 @@
 ,
 {
     "DeviceProfileUuid": "290b8e6e-4ee2-4ec1-a73d-f2b9db1d8500",
-    "DeviceProfileVersion": 2,
+    "DeviceProfileVersion": 3,
     "UploadStats": false,
     "Manufacturer": "Microsoft",
     "Model": "Windows 7/8/8.1/10",
     "ThingClass": "PC",
     "Identifiers": [
         {
+            "IdentifyConfidenceLevel": "High",
+            "EnforceConfidenceLevel": "None",
+            "MustMatch": {
+                    "MdnsOs": "Windows 10"
+            }
+        },
+         {
             "IdentifyConfidenceLevel": "Low",
             "EnforceConfidenceLevel": "None",
             "MustMatch": {
@@ -512,7 +529,7 @@
 ,
 {
     "DeviceProfileUuid": "af6fbbc3-3d63-4d9e-88b0-17da85b26c49",
-    "DeviceProfileVersion": 1,
+    "DeviceProfileVersion": 2,
     "UploadStats": true,
     "Manufacturer": "Samsung",
     "Model": "Galaxy Tab A",
@@ -522,7 +539,7 @@
             "IdentifyConfidenceLevel": "High",
             "EnforceConfidenceLevel": "Low",
             "MustMatch": {
-                    "DhcpHostname": "SAMSUNG-SM-G920A",
+                    "DhcpHostname": "Galaxy-Tab-A",
 					"DhcpVendor": "android-dhcp*"
             }
         }

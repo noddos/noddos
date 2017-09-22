@@ -57,7 +57,7 @@ bool Host::Match(const DeviceProfileMap& dpMap) {
 	ConfidenceLevel bestmatch = ConfidenceLevel::None;
 	std::string matcheduuid = "";
 	for (auto &kv : dpMap) {
-		if(Debug) {
+		if(Debug == true) {
 			syslog(LOG_DEBUG, "Host: Evaluating host %s against device profile %s", Mac.c_str(), kv.first.c_str());
 		}
 		auto &dp = *(kv.second);

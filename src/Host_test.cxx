@@ -58,6 +58,15 @@ int main () {
 	hC.AddByMac (MacAddress("00:00:00:00:00:18"), "192.168.1.224");
 	hC.AddByMac (MacAddress("00:00:00:00:00:19"), "192.168.1.239");
 
+    hC.AddDhcpRequest("192.168.1.226", MacAddress("00:00:00:00:00:09"), "android-49e3daef3e116688", "android-dhcp-7.1.1");
+    hC.AddDnsQueryIp("192.168.1.226", "android.clients.google.com", "1.1.1.1");
+    hC.AddDnsQueryIp("192.168.1.226", "play.googleapis.com", "1.1.1.2");
+    auto resa = hC.MatchByIpAddress("192.168.1.226");
+    if (resa != true) {
+        std::cout << "Test failure: Host with Hostname android-49e3daef3e116688 and DhcpVendor android-dhcp-7.1.1 did not match" << std::endl;
+        testfailed = true;
+    }
+
 	auto sh = std::make_shared<SsdpHost>();
 	sh->IpAddress = "192.168.1.234";
 	sh->Manufacturer = "Amazon.com, Inc.";
