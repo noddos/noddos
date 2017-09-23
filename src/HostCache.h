@@ -103,7 +103,7 @@ public:
 
 	uint32_t Whitelists_set (const std::unordered_set<std::string>& inIpv4Addresses, const std::unordered_set<std::string>& inIpv6Addresses, const std::unordered_set<std::string>& inMacAddresses);
 	bool isWhitelisted(const std::string inAddress) { return (WhitelistedNodes.find(inAddress) != WhitelistedNodes.end()); }
-	bool isWhitelisted(Host &inHost) { return isWhitelisted(inHost.MacAddress_get()) || isWhitelisted(inHost.Ipv4Address_get()) || isWhitelisted(inHost.Ipv6Address_get()); }
+	bool isWhitelisted(Host &inHost) { return isWhitelisted(inHost.getMacAddress()) || isWhitelisted(inHost.getIpv4Address()) || isWhitelisted(inHost.getIpv6Address()); }
 
 	// Matching hosts with device profiles
 	uint32_t Match();

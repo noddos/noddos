@@ -121,10 +121,10 @@ public:
 
 	bool isMatched () { return Uuid != ""; }
 	bool UploadsEnabled ();
-	std::string Uuid_get () { return Uuid; }
-	std::string MacAddress_get () { return Mac.str(); }
-	std::string Ipv4Address_get () { return Ipv4Address; }
-	std::string Ipv6Address_get () { return Ipv6Address; }
+	std::string getUuid () { return Uuid; }
+	std::string getMacAddress () { return Mac.str(); }
+	std::string getIpv4Address () { return Ipv4Address; }
+	std::string getIpv6Address () { return Ipv6Address; }
 	void ExportDeviceInfo (json &j, bool detailed = false);
 	bool DeviceStats(json& j, const uint32_t interval, bool force = false, bool detailed = false);
 	bool TrafficStats(json& j, const uint32_t interval, const bool ReportRfc1918, const std::set<std::string> & LocalIps,

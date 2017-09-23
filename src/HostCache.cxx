@@ -64,17 +64,22 @@ uint32_t HostCache::Prune (bool Force) {
 	    syslog (LOG_DEBUG, "HostCache: starting prune");
 	}
 	uint32_t prunedhosts = 0;
-	for (auto it : hC) {
-        std::string mac = it.second->MacAddress_get();
-        std::string uuid = it.second->Uuid_get();
-		if (it.second->Prune(Force)) {
+
+	for (auto it = hC.begin(); it != hC.end();) {
+        std::string mac = it->second->getMacAddress();
+        std::string uuid = it->second->getUuid();
+		it->second->Prune(Force);
+		if (it->second->isExpired()) {
 			if(uuid != "") {
 			    auto it = dpMap.find(uuid);
 			    if (it != dpMap.end()) {
 			        it->second->removeHost(mac);
 			    }
 			}
+			it = hC.erase (it);
 		    prunedhosts++;
+		} else {
+		    it++;
 		}
 	}
 	if (Debug == true) {
@@ -140,6 +145,9 @@ std::shared_ptr<Host> HostCache::FindOrCreateHostByIp (const std::string inIp, c
 		syslog(LOG_DEBUG, "HostCache: Find or create host for IP %s", inIp.c_str());
 	}
 
+	if (inIp == "0.0.0.0" || inIp == "") {
+	    syslog (LOG_NOTICE, "HostCache: finding host by IP address %s is not possible", inIp.c_str());
+	}
 	if (inIp == "" || WhitelistedNodes.find(inIp) != WhitelistedNodes.end()) {
 		return nullptr;
     }
@@ -148,9 +156,7 @@ std::shared_ptr<Host> HostCache::FindOrCreateHostByIp (const std::string inIp, c
 	if ( it == Ip2MacMap.end()) {
 		Mac = MacLookup(inIp);
 		if (Mac.isValid() == false) {
-			if (Debug == true) {
-				syslog(LOG_DEBUG, "HostCache: Couldn't find ARP entry for %s", inIp.c_str());
-			}
+			syslog(LOG_NOTICE, "HostCache: Got invalid ARP entry %s for %s", Mac.c_str(), inIp.c_str());
 			return nullptr;
 		}
 		Ip2MacMap[inIp] = Mac.get();
@@ -193,6 +199,12 @@ std::shared_ptr<Host> HostCache::FindOrCreateHostByMac (const MacAddress inMac, 
 	}
 	if (Debug == true) {
 		syslog(LOG_DEBUG, "HostCache: Found MAC address %s for IP %s", inMac.c_str(), inIp.c_str());
+	}
+	std::shared_ptr<Host> h = hC[inMac.get()];
+	if (inIp != "" && inIp != "0.0.0.0") {
+	     if (h->getIpv4Address() == "0.0.0.0") {
+	         h->setIpAddress(inIp);
+	     }
 	}
 	return hC[inMac.get()];
 }
@@ -438,8 +450,9 @@ MacAddress HostCache::MacLookup (const std::string inIpAddress, const std::strin
     }
 
     if (-1 == ioctl(s,SIOCGARP , (caddr_t) &areq)) {
-		syslog (LOG_DEBUG, "HostCache: ARP lookup failure for %s on interface %s", inIpAddress.c_str(), inInterface.c_str());
-		// TODO: remove this, doesn't apply when searching MAC address on individual interfaces
+		if (Debug == true) {
+		    syslog (LOG_DEBUG, "HostCache: ARP lookup failure for %s on interface %s", inIpAddress.c_str(), inInterface.c_str());
+		}
 		if (retries > 0) {
 			if (Debug == true) {
 				syslog(LOG_DEBUG, "HostCache: Additional ARP lookup for %s", inIpAddress.c_str());
@@ -974,7 +987,7 @@ bool HostCache::ImportDeviceInfo (json &j) {
 	MacAddress Mac(MacAddressString);
 	auto hit = hC.find(Mac.get());
 	if (hit != hC.end()) {
-		std::string uuid = hit->second->Uuid_get();
+		std::string uuid = hit->second->getUuid();
 		if (uuid != DeviceProfileUuid) {
 			syslog(LOG_WARNING, "HostCache: Conflicting Uuid for imported device with existing Host Cache");
 			return false;
@@ -1080,7 +1093,15 @@ void HostCache::writeIptables()  {
     outputfs << "*filter" << std::endl;
 
     for (auto dp_it: dpMap) {
+        if (Debug == true) {
+            syslog(LOG_DEBUG, "Iptables: Processing Device Profile %s with endpoints? %sand with hosts associated? %s",
+                    dp_it.second->getUuid().c_str(), dp_it.second->hasAllowedEndpoints() ? "true" : "false",
+                    dp_it.second->hasHosts() ? "true" : "false");
+        }
         if (dp_it.second->hasAllowedEndpoints() && dp_it.second->hasHosts()) {
+            if (Debug == true) {
+                syslog(LOG_DEBUG, "Iptables: Device Profile has endpoints");
+            }
             std::string srcipset = getIpsetName(dp_it.second->getUuid(),true,false);
             std::string ipv46flag;
             std::string dstipset;

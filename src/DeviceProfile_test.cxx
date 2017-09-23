@@ -109,7 +109,7 @@ bool test_match (std::string inIp, std::string inDpUuid, HostCache &hc) {
 		return false;
 	}
 	h_ptr->Match(hc.getDeviceProfilesMap());
-	std::string uuid = h_ptr->Uuid_get ();
+	std::string uuid = h_ptr->getUuid ();
 	if (uuid != inDpUuid) {
 		if (uuid == "") {
 			std::cout << inIp << " did not match with profile " << inDpUuid << std::endl;

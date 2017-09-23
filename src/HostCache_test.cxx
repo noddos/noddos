@@ -56,7 +56,7 @@ int main () {
 
 	std::string s;
 	auto h = hC.FindOrCreateHostByIp("192.168.1.99");
-	if ((s = h->MacAddress_get()) != "00:00:00:00:00:03") {
+	if ((s = h->getMacAddress()) != "00:00:00:00:00:03") {
 		testfailure = true;
 		std::cout << "Test failure: Mac lookup failure for 192.168.1.99 resulting in: " << s << std::endl;
 	}
