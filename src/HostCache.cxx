@@ -387,7 +387,7 @@ uint32_t HostCache::pruneDnsQueryCache (bool Force) {
 	return deletecount;
 }
 
-MacAddress HostCache::MacLookup (const std::string inIpAddress, const int retries) {
+MacAddress HostCache::MacLookup (const std::string inIpAddress) {
     MacAddress Mac("00:00:00:00:00:00");
     if (LocalIpAddresses.find(inIpAddress) != LocalIpAddresses.end()) {
         if (Debug == true) {
@@ -399,7 +399,7 @@ MacAddress HostCache::MacLookup (const std::string inIpAddress, const int retrie
         syslog (LOG_DEBUG, "HostCache: MacLookup of %s", inIpAddress.c_str());
     }
     for (auto lanInterface: ifMap->getLanInterfaces()) {
-        Mac = MacLookup(inIpAddress, lanInterface, retries);
+        Mac = MacLookup(inIpAddress, lanInterface);
         if (Mac.isValid() == true) {
             if (Debug == true) {
                 syslog (LOG_DEBUG, "HostCache: Found MAC entry %s on interface %s", Mac.c_str(), lanInterface.c_str());
@@ -416,7 +416,7 @@ MacAddress HostCache::MacLookup (const std::string inIpAddress, const int retrie
     return Mac;
 }
 
-MacAddress HostCache::MacLookup (const std::string inIpAddress, const std::string inInterface, const int retries) {
+MacAddress HostCache::MacLookup (const std::string inIpAddress, const std::string inInterface) {
 	int domain;
 	struct arpreq areq;
 	memset(&areq, 0, sizeof(areq));
@@ -452,15 +452,6 @@ MacAddress HostCache::MacLookup (const std::string inIpAddress, const std::strin
     if (-1 == ioctl(s,SIOCGARP , (caddr_t) &areq)) {
 		if (Debug == true) {
 		    syslog (LOG_DEBUG, "HostCache: ARP lookup failure for %s on interface %s", inIpAddress.c_str(), inInterface.c_str());
-		}
-		if (retries > 0) {
-			if (Debug == true) {
-				syslog(LOG_DEBUG, "HostCache: Additional ARP lookup for %s", inIpAddress.c_str());
-			}
-			if (SendUdpPing (inIpAddress, 1900)) {
-				usleep(1000);
-				return MacLookup (inIpAddress, inInterface, retries - 1);
-			}
 		}
 		return Mac;
 	}
