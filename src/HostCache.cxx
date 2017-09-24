@@ -336,7 +336,7 @@ bool HostCache::AddMdnsInfo (const std::shared_ptr<MdnsHost> inmdnsHost) {
         syslog(LOG_DEBUG, "HostCache: Adding mDNS info for host with IP %s", inmdnsHost->IpAddress.c_str());
     }
     if (inmdnsHost->IpAddress == "") {
-        syslog(LOG_WARNING, "HostCache: AddWsDiscoveryInfo: no IP address provided");
+        syslog(LOG_WARNING, "HostCache: AddMdnsInfo: no IP address provided");
         return false;
     }
     if (WhitelistedNodes.find(inmdnsHost->IpAddress) != WhitelistedNodes.end()) {

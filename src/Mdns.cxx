@@ -176,7 +176,7 @@ bool Mdns::processEvent (struct epoll_event &event) {
     if (socket_fd != event.data.fd) {
         syslog(LOG_CRIT, "Mdns: Mismatch in socket FD between class object and epoll event");
     }
-    if (Debug) {
+    if (Debug == true) {
         syslog(LOG_DEBUG, "Mdns: processing event");
     }
     unsigned char msgbuf[MSGBUFSIZE];

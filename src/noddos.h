@@ -41,7 +41,7 @@ struct WsDiscoveryHost {
     bool operator == (const WsDiscoveryHost &rhs) const {
         return IpAddress == rhs.IpAddress &&
                 wsdXAddrs == rhs.wsdXAddrs &&
-                wsdTypes == wsdTypes;
+                wsdTypes == rhs.wsdTypes;
     }
 };
 

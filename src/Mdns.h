@@ -42,17 +42,12 @@ private:
     time_t Expiration;
     HostCache &hCache;
     bool Debug;
-    std::regex wsdtypes_rx, wsdxaddrs_rx;
     time_t nextProbe = 0;
 
 public:
     Mdns(HostCache &inhCache, const time_t inExpiration, const std::string inIpAddress = "", const bool inDebug = false):
             hCache{inhCache}, Expiration{inExpiration}, IpAddress{inIpAddress}, Debug{inDebug} {
         socket_fd = -1;
-        wsdtypes_rx = std::regex(R"delim(<wsd:Types>(.*?)</wsd:Types>)delim",
-                std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
-        wsdxaddrs_rx = std::regex(R"delim(<wsd:XAddrs>(.*?)</wsd:XAddrs>)delim",
-                std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
 
         Open (IpAddress);
 

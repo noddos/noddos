@@ -480,7 +480,10 @@ bool Host::setDhcp (const std::string inIpAddress, const MacAddress inMac, const
 bool Host::setSsdpInfo(const std::shared_ptr<SsdpHost> insHost) {
 	iCache::LastSeen = time(nullptr);
 	if (Ssdp == *insHost) {
-		return false;
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "Host: not setting Ssdp info as same info is already known");
+        }
+        return false;
 	}
 
 	iCache::LastModified = iCache::LastSeen;
@@ -496,6 +499,9 @@ bool Host::setSsdpInfo(const std::shared_ptr<SsdpHost> insHost) {
 bool Host::setWsDiscoveryInfo(const std::shared_ptr<WsDiscoveryHost> inwsdHost) {
     iCache::LastSeen = time(nullptr);
     if (Wsd == *inwsdHost) {
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "Host: not setting WS-Discovery info as same info is already known");
+        }
         return false;
     }
     iCache::LastModified = iCache::LastSeen;
@@ -506,6 +512,9 @@ bool Host::setWsDiscoveryInfo(const std::shared_ptr<WsDiscoveryHost> inwsdHost) 
 bool Host::setMdnsInfo(const std::shared_ptr<MdnsHost> inmdnsHost) {
     iCache::LastSeen = time(nullptr);
     if (Mdns == *inmdnsHost) {
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "Host: not setting mDNS info as same info is already known");
+        }
         return false;
     }
     iCache::LastModified = iCache::LastSeen;
