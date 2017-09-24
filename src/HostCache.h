@@ -56,7 +56,6 @@ private:
 
 	DeviceProfileMap dpMap;
 	InterfaceMap *ifMap;
-	std::regex arp_rx, dev_rx;
 	std::unordered_set<std::string> WhitelistedNodes;
 	bool Debug;
 	std::set<std::string> LocalInterfaces;
@@ -74,15 +73,10 @@ public:
 			ifMap{&inifMap}, FlowExpiration{inFlowExpiration}, Debug{inDebug},
 			FirewallRulesFile{inFirewallRulesFile},
 			FirewallBlockTraffic{inFirewallBlockTraffic} {
-		if (Debug) {
+		if (Debug == true) {
 			syslog (LOG_DEBUG, "HostCache: constructing instance");
 		}
-		dev_rx = std::regex(R"delim(^([^:]?):)delim",
-				std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
 
-		arp_rx = std::regex(R"delim(^(\d\S+)\s+?\S+?\s+?\S+?\s+?\s+?(\S+)\s+?\S+?\W+?(\S+?)$)delim",
-        	std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
-		// FIXME: We don't really need the below anymore so should remove this call
 		getInterfaceIpAddresses();
 		dCip.setDebug(Debug);
 		dCcname.setDebug(Debug);
@@ -91,7 +85,7 @@ public:
 		}
 	}
 	virtual ~HostCache() {
-		if (Debug) {
+		if (Debug == true) {
 			syslog (LOG_DEBUG, "HostCache: destructing instance");
 		}
 	}

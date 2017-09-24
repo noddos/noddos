@@ -28,6 +28,7 @@
 #include <map>
 #include <list>
 #include <memory>
+#include <regex>
 
 #include <json.hpp>
 using json = nlohmann::json;

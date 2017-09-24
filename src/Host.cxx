@@ -243,7 +243,6 @@ bool Host::DeviceStats(json& j, const uint32_t time_interval, bool force, bool d
 	j["SsdpSerialNumber"] = Ssdp.SerialNumber;
 	j["SsdpUserAgent"] = Ssdp.UserAgent;
 	j["SsdpServer"] = Ssdp.Server;
-	j["SsdpLocation"] = Ssdp.Location;
     j["WsDiscoveryXaddrs"] = Wsd.wsdXAddrs;
     j["WsDiscoveryTypes"] = Wsd.wsdTypes;
     j["MdnsOs"] = Mdns.Os;
@@ -251,6 +250,30 @@ bool Host::DeviceStats(json& j, const uint32_t time_interval, bool force, bool d
     j["MdnsDeviceUrl"] = Mdns.DeviceUrl;
     j["MdnsManufacturer"] = Mdns.Manufacturer;
     j["MdnsModelName"] = Mdns.ModelName;
+
+    // We don't want to upload any IP addresses, even if they are RFC1918 so we replace them with 'a.b.c.d'
+    if (Ssdp.Location != "" || Mdns.DeviceUrl != "") {
+        std::regex location_rx = std::regex(R"delim((https?://)\d+\.\d+\.\d+\.\d+(.*)$)delim",
+                std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
+        std::string location = Ssdp.Location;
+        if (Ssdp.Location != "") {
+            std::smatch m;
+            std::regex_search(Ssdp.Location, m, location_rx);
+            if (not m.empty()) {
+                location = m.str(1) + "a.b.c.d" + m.str(2);
+            }
+        }
+        j["SsdpLocation"] = location;
+        location = Mdns.DeviceUrl;
+        if (Mdns.DeviceUrl != "") {
+            std::smatch m;
+            std::regex_search(Mdns.DeviceUrl, m, location_rx);
+            if (not m.empty()) {
+                location = m.str(1) + "a.b.c.d" + m.str(2);
+            }
+        }
+        j["MdnsDeviceUrl"] = location;
+    }
 
 	std::string fqdns = "";
 	if (Debug == true) {
