@@ -53,13 +53,13 @@ add_test (Host Host_test)
 add_executable(Host_test Host_test.cxx 
     Host.cxx HostCache.cxx SsdpServer.cxx SsdpLocation.cxx
 	DeviceProfile.cxx opensslfingerprint.cxx Ipset.cxx)
-target_link_libraries(Host_test curl ssl crypto ipset pthread)
+target_link_libraries(Host_test tins curl ssl crypto ipset pthread)
 
 add_test (HostCache HostCache_test)
 add_executable(HostCache_test HostCache_test.cxx  Ipset.cxx
     Host.cxx HostCache SsdpServer.cxx SsdpLocation.cxx
     DeviceProfile.cxx opensslfingerprint.cxx Ipset.cxx)
-target_link_libraries(HostCache_test curl ssl crypto ipset pthread)
+target_link_libraries(HostCache_test tins curl ssl crypto ipset pthread)
 
 
 add_test (DeviceProfile DeviceProfile_test)
@@ -67,12 +67,12 @@ add_executable(DeviceProfile_test DeviceProfile_test.cxx
 	DeviceProfile.cxx
 	FlowTrack.cxx Config.cxx HostCache.cxx Host.cxx SsdpServer.cxx
 	SsdpLocation.cxx opensslfingerprint.cxx Ipset.cxx)
-target_link_libraries(DeviceProfile_test curl ssl crypto netfilter_conntrack ipset pthread)
+target_link_libraries(DeviceProfile_test tins curl ssl crypto netfilter_conntrack ipset pthread)
 
 add_test (Identifier Identifier_test)
 add_executable(Identifier_test Identifier_test.cxx
 	DeviceProfile.cxx Ipset.cxx)
-target_link_libraries(Identifier_test ipset)
+target_link_libraries(Identifier_test tins ipset)
 
 add_test (Config Config_test)
 add_executable(Config_test Config_test.cxx opensslfingerprint.cxx)
@@ -80,32 +80,32 @@ target_link_libraries(Config_test curl ssl crypto)
 
 add_test (Ipset Ipset_test)
 add_executable(Ipset_test Ipset_test.cxx Ipset.cxx)
-target_link_libraries(Ipset_test ipset)
+target_link_libraries(Ipset_test tins ipset)
 
 add_test (SsdpServer SsdpServer_test)
 add_executable(SsdpServer_test SsdpServer_test.cxx 
     HostCache.cxx Host.cxx SsdpServer.cxx SsdpLocation.cxx
     opensslfingerprint.cxx Ipset.cxx DeviceProfile.cxx)
-target_link_libraries(SsdpServer_test curl ssl crypto ipset pthread)
+target_link_libraries(SsdpServer_test tins curl ssl crypto ipset pthread)
 
 add_test (WsDiscovery WsDiscovery_test)
 add_executable(WsDiscovery_test WsDiscovery_test.cxx 
     HostCache.cxx Host.cxx WsDiscovery.cxx
     opensslfingerprint.cxx Ipset.cxx DeviceProfile.cxx)
-target_link_libraries(WsDiscovery_test curl ssl crypto ipset pthread)
+target_link_libraries(WsDiscovery_test tins curl ssl crypto ipset pthread)
 
 add_test (Mdns Mdns_test)
 add_executable(Mdns_test Mdns_test.cxx  Mdns.cxx
     HostCache.cxx Host.cxx
     opensslfingerprint.cxx Ipset.cxx DeviceProfile.cxx)
-target_link_libraries(Mdns_test curl ssl crypto ipset pthread tins)
+target_link_libraries(Mdns_test tins curl ssl crypto ipset pthread tins)
 
 add_test (MacAddress MacAddress_test)
 add_executable(MacAddress_test MacAddress_test.cxx)
 
 add_test (DnsCache DnsCache_test)
 add_executable(DnsCache_test DnsCache_test.cxx DeviceProfile.cxx Ipset.cxx)
-target_link_libraries(DnsCache_test ipset)
+target_link_libraries(DnsCache_test tins ipset)
 
 add_test (Curl Curl_test)
 add_executable(Curl_test Curl_test.cxx)

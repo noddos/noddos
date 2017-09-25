@@ -754,7 +754,7 @@ void HostCache::UploadTrafficStats(std::vector<std::future<uint32_t>> &futures, 
 	for (auto it : hC) {
 		if ( (not isWhitelisted(*(it.second))) && it.second->isMatched()) {
 			json h;
-			if (it.second->TrafficStats(h, interval, ReportRfc1918, LocalIpAddresses, dCip, false)) {
+			if (it.second->TrafficStats(h, interval, ReportRfc1918, LocalIpAddresses, dCipv4, dCipv6, false)) {
 				uploads++;
 				j.push_back(h);
 			}
@@ -816,12 +816,20 @@ void HostCache::updateDeviceProfileMatchesDnsData () {
                 syslog (LOG_DEBUG, "HostCache: updateDeviceProfileMatchesDnsData adding FQDN %s", fqdn.c_str());
             }
             try {
-                std::map<boost::asio::ip::address, time_t> p = dCip.lookupResourceRecord(fqdn);
+                std::map<Tins::IPv4Address, time_t> p = dCipv4.lookupResourceRecord(fqdn);
                 for (auto ip_it: p) {
                     dp_it.second->addDestination(ip_it.first, ip_it.second);
                 }
             } catch (std::runtime_error &e) {
-                // No A or AAAA records for FQDN, probably only CNAME(s)
+                // No A records for FQDN
+            }
+            try {
+                std::map<Tins::IPv6Address, time_t> p = dCipv6.lookupResourceRecord(fqdn);
+                for (auto ip_it: p) {
+                    dp_it.second->addDestination(ip_it.first, ip_it.second);
+                }
+            } catch (std::runtime_error &e) {
+                // No AAAA records for FQDN
             }
             std::string cname = "";
             while (fqdn != cname) {
@@ -834,12 +842,20 @@ void HostCache::updateDeviceProfileMatchesDnsData () {
                     syslog (LOG_DEBUG, "HostCache: updateDeviceProfileMatchesDnsData adding CNAME %s for FQDN %s", cname.c_str(), fqdn.c_str());
                 }
                 try {
-                    std::map<boost::asio::ip::address, time_t> p = dCip.lookupResourceRecord(cname.c_str());
+                    std::map<Tins::IPv4Address, time_t> p = dCipv4.lookupResourceRecord(cname.c_str());
                     for (auto ip_it: p) {
                         dp_it.second->addDestination(ip_it.first, ip_it.second);
                     }
                 } catch (std::runtime_error &e) {
-                    // No A or AAAA records for FQDN, probably only CNAME(s)
+                    // No A records for FQDN
+                }
+                try {
+                    std::map<Tins::IPv6Address, time_t> p = dCipv6.lookupResourceRecord(cname.c_str());
+                    for (auto ip_it: p) {
+                        dp_it.second->addDestination(ip_it.first, ip_it.second);
+                    }
+                } catch (std::runtime_error &e) {
+                    // No A records for FQDN
                 }
                 // All traffic allowed to a FQDN is also allowed to its CNAME
                 // so if subsequently an A record is received for the CNAME,
@@ -861,7 +877,8 @@ bool HostCache::exportDnsCache (const std::string filename) {
         return true;
     }
     json j;
-    dCip.exportJson(j);
+    dCipv4.exportJson(j);
+    dCipv6.exportJson(j);
     dCcname.exportJson(j);
 
     ofs << std::setw(4) << j << std::endl;
@@ -886,7 +903,8 @@ bool HostCache::importDnsCache (const std::string filename) {
     }
 
     try {
-        size_t dnsRecords = dCip.importJson(j, fdpMap);
+        size_t dnsRecords = dCipv4.importJson(j, fdpMap);
+        dnsRecords += dCipv6.importJson(j, fdpMap);
         if (Debug == true) {
             syslog(LOG_DEBUG, "HostCache: Read %zu cached DNS IP address records", dnsRecords);
         }
@@ -901,9 +919,14 @@ bool HostCache::importDnsCache (const std::string filename) {
     return false;
 }
 
-void HostCache::addorupdateDnsIpCache(const std::string inFqdn, const boost::asio::ip::address inIp, time_t inTtl) {
-    dCip.addorupdateResourceRecord(inFqdn, inIp, fdpMap, inTtl);
+void HostCache::addorupdateDnsIpCache(const std::string inFqdn, const Tins::IPv4Address inIp, time_t inTtl) {
+    dCipv4.addorupdateResourceRecord(inFqdn, inIp, fdpMap, inTtl);
 }
+
+void HostCache::addorupdateDnsIpCache(const std::string inFqdn, const Tins::IPv6Address inIp, time_t inTtl) {
+    dCipv6.addorupdateResourceRecord(inFqdn, inIp, fdpMap, inTtl);
+}
+
 
 void HostCache::addorupdateDnsCnameCache(const std::string inFqdn, const std::string inCname, time_t inTtl) {
     dCcname.addorupdateCname(inFqdn, inCname, fdpMap, inTtl);

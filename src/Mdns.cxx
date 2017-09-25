@@ -22,6 +22,8 @@
 
 #include "Mdns.h"
 
+#include <tins/tins.h>
+
 #include <string>
 #include <memory>
 #include <stdexcept>
@@ -83,17 +85,15 @@ bool Mdns::parseMessage (std::shared_ptr<MdnsHost> host, const unsigned char * m
             switch (it.query_type()) {
             case Tins::DNS::QueryType::A: {
                 if (Debug == true) {
-                    syslog(LOG_DEBUG, "Mdns: A record: %s",
-                            it.data().c_str());
+                    syslog(LOG_DEBUG, "Mdns: A record: %s", it.data().c_str());
                 }
-                boost::asio::ip::address ip = boost::asio::ip::address::from_string(it.data());
+                Tins::IPv4Address ip(it.data());
                 break;
             }
             case Tins::DNS::QueryType::AAAA: {
-                boost::asio::ip::address ip = boost::asio::ip::address::from_string(it.data());
+                Tins::IPv6Address ip(it.data());
                 if (Debug == true) {
-                    syslog(LOG_DEBUG, "Mdns: AAAA record: %s",
-                            ip.to_string().c_str());
+                    syslog(LOG_DEBUG, "Mdns: AAAA record: %s", ip.to_string().c_str());
                 }
                 break;
             }

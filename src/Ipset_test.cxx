@@ -27,7 +27,7 @@
 #include <sys/types.h>
 #include <syslog.h>
 
-#include "boost/asio.hpp"
+#include <tins/tins.h>
 
 int main(int argc, char** argv) {
     openlog("Ipsettest", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
@@ -39,9 +39,9 @@ int main(int argc, char** argv) {
     Ipset i(true);
     i.Open("noddostestv4", "hash:ip", true, true);
 
-    boost::asio::ip::address ipfirst = boost::asio::ip::address::from_string("192.168.1.1");
+    Tins::IPv4Address ipfirst("192.168.1.1");
 
-    if (i.Add(ipfirst) == false ) {
+    if (i.Add(ipfirst, 604800) == false ) {
         testfailed = 1;
         std::cout << "Failed to add IP address to hash:ip ipset" << std::endl;
     } else {
@@ -58,8 +58,9 @@ int main(int argc, char** argv) {
             }
         }
     }
-    boost::asio::ip::address ipthird = boost::asio::ip::address::from_string("192.168.1.3");    struct in_addr sin3;
-    if (i.Add(ipthird) == false ) {
+    Tins::IPv4Address ipthird("192.168.1.3");
+    struct in_addr sin3;
+    if (i.Add(ipthird, 604800) == false ) {
         testfailed = 1;
         std::cout << "Failed to add 3rd IP address to hash:ip ipset" << std::endl;
     } else {
@@ -79,8 +80,8 @@ int main(int argc, char** argv) {
     Ipset s(true);
     i.Open("noddostestv6", "hash:ip", false, true);
 
-    boost::asio::ip::address ipsix = boost::asio::ip::address::from_string("fdbb:2ad1:cea0:0:1e1b:dff:fe7d:f5ec");
-    if (i.Add(ipsix) == false ) {
+    Tins::IPv4Address ipsix("fdbb:2ad1:cea0:0:1e1b:dff:fe7d:f5ec");
+    if (i.Add(ipsix, 604800) == false ) {
         testfailed = 1;
         std::cout << "Failed to add IPv6 address to hash:ip ipset" << std::endl;
     } else {
@@ -100,9 +101,9 @@ int main(int argc, char** argv) {
 
 
     Ipset j("noddostest2", "hash:ip", NFPROTO_IPV4, true);
-    boost::asio::ip::address ipfourth = boost::asio::ip::address::from_string("192.168.1.1");
+    Tins::IPv4Address ipfourth("192.168.1.1");
 
-    if (j.Add(ipfourth) == false ) {
+    if (j.Add(ipfourth, 604800) == false ) {
         testfailed = 1;
         std::cout << "Failed to add IP address to second hash:ip ipset" << std::endl;
     } else {
@@ -132,7 +133,7 @@ int main(int argc, char** argv) {
 
     std::string mstr = Mac.str();
 
-    if (m.Add(Mac) == false ) {
+    if (m.Add(Mac, 604800) == false ) {
         testfailed = 1;
         std::cout << "Failed to add MAC address to hash:mac ipset" << std::endl;
     } else {

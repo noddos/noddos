@@ -24,7 +24,9 @@
 #include <fstream>
 #include <set>
 
-#include "boost/asio.hpp"
+#include <tins/tins.h>
+
+#include <unistd.h>
 
 #include "DnsCache.h"
 #include "DeviceProfile.h"
@@ -35,7 +37,7 @@ int main () {
 
     FqdnDeviceProfileMap fdpMap;
     DnsCnameCache c(true);
-    DnsIpCache <boost::asio::ip::address> i(true);
+    DnsIpCache <Tins::IPv4Address> i(true);
 
     std::string filename = "tests/DnsCache.json";
     std::ifstream ifs(filename);
@@ -59,7 +61,7 @@ int main () {
 
     }
     ifs.close();
-    boost::asio::ip::address ip4 = boost::asio::ip::address::from_string("23.41.176.89");
+    Tins::IPv4Address ip4("23.41.176.89");
     std::vector<std::string> fqdns = i.getAllFqdns(ip4);
     if (fqdns.size() != 1) {
         syslog (LOG_DEBUG,"Simple reverse lookup for 23.41.176.89 returned %lu fqdns", fqdns.size());

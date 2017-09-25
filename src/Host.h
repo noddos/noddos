@@ -30,6 +30,8 @@
 #include <memory>
 #include <regex>
 
+#include <tins/tins.h>
+
 #include <json.hpp>
 using json = nlohmann::json;
 
@@ -42,7 +44,7 @@ using json = nlohmann::json;
 #include "MatchCondition.h"
 #include "MacAddress.h"
 #include "DnsCache.h"
-#include "boost/asio.hpp"
+
 
 typedef std::list<std::shared_ptr<FlowEntry>> FlowEntryList;
 
@@ -53,9 +55,8 @@ class Host : public iCache {
 private:
     std::map<std::string,time_t> DnsQueryList;
 
- 	// std::map<std::string, std::shared_ptr<DnsLogEntry>> DnsHostCache;
-   	std::map<boost::asio::ip::address_v4, std::shared_ptr<FlowEntryList>> FlowCacheIpv4;
-   	std::map<boost::asio::ip::address_v6, std::shared_ptr<FlowEntryList>> FlowCacheIpv6;
+ 	std::map<Tins::IPv4Address, std::shared_ptr<FlowEntryList>> FlowCacheIpv4;
+   	std::map<Tins::IPv6Address, std::shared_ptr<FlowEntryList>> FlowCacheIpv6;
    	std::string Ipv4Address;
    	std::string Ipv6Address;
    	MacAddress Mac;
@@ -128,8 +129,11 @@ public:
 	std::string getIpv6Address () { return Ipv6Address; }
 	void ExportDeviceInfo (json &j, bool detailed = false);
 	bool DeviceStats(json& j, const uint32_t interval, bool force = false, bool detailed = false);
-	bool TrafficStats(json& j, const uint32_t interval, const bool ReportRfc1918, const std::set<std::string> & LocalIps,
-	        const DnsIpCache <boost::asio::ip::address> &dCip, const DnsCnameCache &dCcname, bool force = false);
+	bool TrafficStats(json& j, const uint32_t interval, const bool ReportRfc1918,
+	        const std::set<std::string> & LocalIps,
+	        const DnsIpCache <Tins::IPv4Address> &dCipv4,
+	        const DnsIpCache <Tins::IPv6Address> &dCipv6,
+	        const DnsCnameCache &dCcname, bool force = false);
 	bool inPrivateAddressRange(const std::string ip );
 
 	// iCache interface methods.

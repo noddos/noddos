@@ -31,11 +31,12 @@
 #include <arpa/inet.h>
 #include <syslog.h>
 #include <sys/stat.h>
+#include <fcntl.h>
 
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 #include <libnetfilter_conntrack/libnetfilter_conntrack_tcp.h>
 
-// #include "log/Log.h"
+#include <tins/tins.h>
 
 #include "iDeviceInfoSource.h"
 #include "HostCache.h"
@@ -142,7 +143,7 @@ public:
         std::unordered_set<std::string> ignoreIpAddresses = config.WhitelistedIpv4Addresses;
         for (auto ipaddress: localIpAddresses) {
             try {
-                boost::asio::ip::address_v4::from_string(ipaddress);
+                Tins::IPv4Address a(ipaddress);
                 ignoreIpAddresses.insert(ipaddress);
             } catch (...) {}
         }

@@ -32,7 +32,7 @@
 #include <json.hpp>
 using json = nlohmann::json;
 
-#include "boost/asio.hpp"
+#include <tins/tins.h>
 
 #include <syslog.h>
 #include <ctime>
@@ -57,7 +57,8 @@ private:
 	Ipset srcIpset, dstv4Ipset, dstv6Ipset;
 	std::set<std::string> Hosts;
 	std::set<std::string> AllowedFqdns;
-	std::set<boost::asio::ip::address> AllowedIps;
+	std::set<Tins::IPv4Address> AllowedIpv4s;
+    std::set<Tins::IPv6Address> AllowedIpv6s;
 
 public:
 	DeviceProfile(const json &j, const bool inDebug = false): Debug{inDebug}, withAllowedEndpoints{false} {
@@ -112,16 +113,18 @@ public:
     // Adding destinations we do immediately as it is based on DNS lookups.
     // We also add the IP to the list of AllowedEndpoints in case we don't have any
     // matched hosts yet but need the data if later on we match a host to the device profile
-    void addDestination (const boost::asio::ip::address &inIpAddress, const time_t inTtl = 604800) {
-	    AllowedIps.insert(inIpAddress);
+    void addDestination (const Tins::IPv4Address &inIpAddress, const time_t inTtl = 604800) {
+	    AllowedIpv4s.insert(inIpAddress);
 	    if (withAllowedEndpoints == true && Hosts.size() > 0) {
-	        if(inIpAddress.is_v4()) {
-	            dstv4Ipset.Add(inIpAddress, inTtl);
-	        } else {
-	            dstv6Ipset.Add(inIpAddress, inTtl);
-	        }
+	        dstv4Ipset.Add(inIpAddress, inTtl);
 	    }
 	}
+    void addDestination (const Tins::IPv6Address &inIpAddress, const time_t inTtl = 604800) {
+        AllowedIpv6s.insert(inIpAddress);
+        if (withAllowedEndpoints == true && Hosts.size() > 0) {
+            dstv6Ipset.Add(inIpAddress, inTtl);
+        }
+    }
 	void addDestination (const std::string inFqdn) {
 	    AllowedFqdns.insert(inFqdn);
 	}

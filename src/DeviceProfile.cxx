@@ -22,112 +22,113 @@
 
 #include "DeviceProfile.h"
 
-    void DeviceProfile::createorupdateIpsets (bool inForce) {
-        if (inForce || (hasAllowedEndpoints() && Hosts.size() > 0)) {
-            try {
-                srcIpset.Open(getIpsetName(DeviceProfileUuid, true, false), "hash:mac", false, true);
-                dstv4Ipset.Open(getIpsetName(DeviceProfileUuid, false, true), "hash:ip", true, true);
-                dstv6Ipset.Open(getIpsetName(DeviceProfileUuid, false, false), "hash:ip", false, true);
-            } catch (...) {
-            }
+void DeviceProfile::createorupdateIpsets (bool inForce) {
+    if (inForce || (hasAllowedEndpoints() && Hosts.size() > 0)) {
+        try {
+            srcIpset.Open(getIpsetName(DeviceProfileUuid, true, false), "hash:mac", false, true);
+            dstv4Ipset.Open(getIpsetName(DeviceProfileUuid, false, true), "hash:ip", true, true);
+            dstv6Ipset.Open(getIpsetName(DeviceProfileUuid, false, false), "hash:ip", false, true);
+        } catch (...) {
+        }
 
-            for (auto ip: AllowedIps) {
-                if (ip.is_v4()) {
-                    dstv4Ipset.Add(ip);
-                } else {
-                    dstv6Ipset.Add(ip);
-                }
-            }
-            for (auto host: Hosts) {
-                srcIpset.Add(host);
-            }
+        for (auto ip: AllowedIpv4s) {
+            dstv4Ipset.Add(ip, 31449600); // 1 year
+        }
+        for (auto ip: AllowedIpv4s) {
+            dstv6Ipset.Add(ip, 31449600); // 1 year
+        }
+        for (auto host: Hosts) {
+            srcIpset.Add(host, 604800); // 1 week
         }
     }
+}
 
-    bool DeviceProfile::from_json(const json &j) {
-        if (j.find("DeviceProfileUuid") == j.end()) {
-            syslog(LOG_ERR, "No DeviceProfileUuid set, ignoring this Object");
-            return false;
-        }
-        if (! j["DeviceProfileUuid"].is_string()) {
-            syslog(LOG_ERR, "DeviceProfileUuid is not a string, ignoring this Object");
-            return false;
-        }
-        if (DeviceProfileUuid != j["DeviceProfileUuid"].get<std::string>())
-            return false;
+bool DeviceProfile::from_json(const json &j) {
+    if (j.find("DeviceProfileUuid") == j.end()) {
+        syslog(LOG_ERR, "No DeviceProfileUuid set, ignoring this Object");
+        return false;
+    }
+    if (! j["DeviceProfileUuid"].is_string()) {
+        syslog(LOG_ERR, "DeviceProfileUuid is not a string, ignoring this Object");
+        return false;
+    }
+    if (DeviceProfileUuid != j["DeviceProfileUuid"].get<std::string>())
+        return false;
 
-        if (Debug == true) {
-            syslog(LOG_DEBUG, "Read Device Profile for UUID %s", DeviceProfileUuid.c_str());
-        }
+    if (Debug == true) {
+        syslog(LOG_DEBUG, "Read Device Profile for UUID %s", DeviceProfileUuid.c_str());
+    }
 
-        if (j.find("DeviceProfileVersion") == j.end()) {
-            syslog(LOG_ERR, "No DeviceProfileVersion value set, ignoring this Object");
-            return false;
-        }
-        if (! j["DeviceProfileVersion"].is_number()) {
-            syslog(LOG_ERR, "DeviceProfile:DeviceProfileVersion is not a number, ignoring this Object");
-            return false;
-        }
-        DeviceProfileVersion = j["DeviceProfileVersion"].get<uint32_t>();
+    if (j.find("DeviceProfileVersion") == j.end()) {
+        syslog(LOG_ERR, "No DeviceProfileVersion value set, ignoring this Object");
+        return false;
+    }
+    if (! j["DeviceProfileVersion"].is_number()) {
+        syslog(LOG_ERR, "DeviceProfile:DeviceProfileVersion is not a number, ignoring this Object");
+        return false;
+    }
+    DeviceProfileVersion = j["DeviceProfileVersion"].get<uint32_t>();
 
-        if (j.find("UploadStats") == j.end()) {
-            syslog(LOG_DEBUG, "DeviceProfile:No UploadStats value set, defaulting to false");
-            UploadStats = false;
-        } else if (! j["UploadStats"].is_boolean()) {
-            syslog(LOG_DEBUG, "UDeviceProfile:ploadStats is not a bool, defaulting to false");
-            UploadStats = false;
-        } else {
-            UploadStats = j["UploadStats"].get<bool>();
-        }
+    if (j.find("UploadStats") == j.end()) {
+        syslog(LOG_DEBUG, "DeviceProfile:No UploadStats value set, defaulting to false");
+        UploadStats = false;
+    } else if (! j["UploadStats"].is_boolean()) {
+        syslog(LOG_DEBUG, "UDeviceProfile:ploadStats is not a bool, defaulting to false");
+        UploadStats = false;
+    } else {
+        UploadStats = j["UploadStats"].get<bool>();
+    }
 
-        DeviceDescription = "";
-        if (j.find("Manufacturer") != j.end() && j["Manufacturer"].is_string()) {
-            DeviceDescription = j["Manufacturer"].get<std::string>();
-        }
-        if (j.find("Model") != j.end() && j["Model"].is_string()) {
-            DeviceDescription += j["Model"].get<std::string>();
-        }
+    DeviceDescription = "";
+    if (j.find("Manufacturer") != j.end() && j["Manufacturer"].is_string()) {
+        DeviceDescription = j["Manufacturer"].get<std::string>();
+    }
+    if (j.find("Model") != j.end() && j["Model"].is_string()) {
+        DeviceDescription += j["Model"].get<std::string>();
+    }
 
-        Identifiers.clear();
+    Identifiers.clear();
 
-        if (j.find("Identifiers") == j.end()) {
-            syslog(LOG_WARNING, "DeviceProfile:No Identifiers for profile %s so all devices would match this profile, ignoring this Profile", DeviceProfileUuid.c_str());
-            return false;
-        }
-        json ijson = j["Identifiers"];
+    if (j.find("Identifiers") == j.end()) {
+        syslog(LOG_WARNING, "DeviceProfile:No Identifiers for profile %s so all devices would match this profile, ignoring this Profile", DeviceProfileUuid.c_str());
+        return false;
+    }
+    json ijson = j["Identifiers"];
+    if (! ijson.is_array()) {
+        syslog(LOG_ERR, "DeviceProfile:Identifiers is not an array so ignoring this profile %s", DeviceProfileUuid.c_str());
+        return false;
+    }
+    for (json::iterator it = ijson.begin(); it != ijson.end(); ++it ) {
+        syslog(LOG_ERR, "Adding Identifier");
+        auto i = std::make_shared<Identifier>(*it);
+        Identifiers.push_back(i);
+    }
+
+    if (j.find("AllowedEndpoints") == j.end()) {
+        syslog(LOG_DEBUG, "DeviceProfile: No whitelist found for profile %s", DeviceProfileUuid.c_str());
+    } else {
+        json ajson = j["AllowedEndpoints"];
         if (! ijson.is_array()) {
-            syslog(LOG_ERR, "DeviceProfile:Identifiers is not an array so ignoring this profile %s", DeviceProfileUuid.c_str());
+            syslog(LOG_ERR, "DeviceProfile:AllowedEndpoints is not an array so ignoring this profile %s", DeviceProfileUuid.c_str());
             return false;
         }
-        for (json::iterator it = ijson.begin(); it != ijson.end(); ++it ) {
-            syslog(LOG_ERR, "Adding Identifier");
-            auto i = std::make_shared<Identifier>(*it);
-            Identifiers.push_back(i);
-        }
-
-        if (j.find("AllowedEndpoints") == j.end()) {
-            syslog(LOG_DEBUG, "DeviceProfile: No whitelist found for profile %s", DeviceProfileUuid.c_str());
-        } else {
-            json ajson = j["AllowedEndpoints"];
-            if (! ijson.is_array()) {
-                syslog(LOG_ERR, "DeviceProfile:AllowedEndpoints is not an array so ignoring this profile %s", DeviceProfileUuid.c_str());
-                return false;
+        for (json::iterator it = ajson.begin(); it != ajson.end(); ++it ) {
+            withAllowedEndpoints = true;
+            std::string endpoint = it->get<std::string>();
+            if (Debug == true) {
+                syslog(LOG_DEBUG, "DeviceProfile: Adding allowed endpoint %s", endpoint.c_str());
             }
-            for (json::iterator it = ajson.begin(); it != ajson.end(); ++it ) {
-                withAllowedEndpoints = true;
-                std::string endpoint = it->get<std::string>();
-                if (Debug == true) {
-                    syslog(LOG_DEBUG, "DeviceProfile: Adding allowed endpoint %s", endpoint.c_str());
-                }
-                try {
-                    AllowedIps.insert(boost::asio::ip::address::from_string(endpoint));
-                } catch (...) {
-                    // Boost threw an exception presumably because the string was not an IPv4 or IPv6 address
-                    addDestination(endpoint);
-                }
+            addDestination(endpoint);
+            if (endpoint.find('.') != endpoint.npos) {
+                Tins::IPv4Address ip(endpoint);
+                AllowedIpv4s.insert(ip);
+            } else if (endpoint.find(':') != endpoint.npos) {
+                Tins::IPv6Address ip(endpoint);
+                AllowedIpv6s.insert(ip);
             }
         }
-        return true;
     }
+    return true;
+}
 
 

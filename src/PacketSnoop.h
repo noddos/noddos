@@ -54,7 +54,7 @@
 #include <linux/if_packet.h>
 #include <netinet/in.h>
 
-#include "boost/asio.hpp"
+#include <tins/tins.h>
 
 #include "tins/dns.h"
 #include "tins/dhcp.h"
@@ -94,7 +94,8 @@ private:
 	int sock  = -1;
 	bool Debug = false;
 	HostCache *hC = nullptr;
-	std::map<boost::asio::ip::address,std::map<uint16_t,std::map<boost::asio::ip::address,std::map<uint16_t,std::shared_ptr<TcpSnoop>>>>> tcpSnoops;
+	std::map<Tins::IPv4Address,std::map<uint16_t,std::map<Tins::IPv4Address,std::map<uint16_t,std::shared_ptr<TcpSnoop>>>>> tcpv4Snoops;
+    std::map<Tins::IPv6Address,std::map<uint16_t,std::map<Tins::IPv6Address,std::map<uint16_t,std::shared_ptr<TcpSnoop>>>>> tcpv6Snoops;
 
 	// void *user;
     // rx_cb_t cb;
@@ -125,15 +126,26 @@ public:
 	bool Close();
 	bool processEvent(struct epoll_event &event);
 	bool Parse (unsigned char *frame);
+
 	bool parseDnsTcpPacket(unsigned char *payload, size_t size);
 	bool parseDnsPacket(const unsigned char *payload, const size_t size, const MacAddress &inMac, const std::string sourceIp, const int ifindex);
 	bool parseDhcpv4UdpPacket(unsigned char *payload, size_t size);
-	std::shared_ptr<TcpSnoop> getTcpSnoopInstance(const boost::asio::ip::address inSrc, const uint16_t srcPort,
-			const boost::asio::ip::address inDest, const uint16_t destPort);
-	void addTcpSnoopInstance(const boost::asio::ip::address inSrc, const uint16_t inSrcPort,
-			const boost::asio::ip::address inDest, const uint16_t inDestPort, const std::shared_ptr<TcpSnoop> ts_ptr);
-    void clearTcpSnoopInstance(const boost::asio::ip::address inSrc, const uint16_t inSrcPort,
-            const boost::asio::ip::address inDest, const uint16_t inDestPort);
+
+	std::shared_ptr<TcpSnoop> getTcpSnoopInstance(const Tins::IPv4Address inSrc, const uint16_t srcPort,
+			const Tins::IPv4Address inDest, const uint16_t destPort);
+    std::shared_ptr<TcpSnoop> getTcpSnoopInstance(const Tins::IPv6Address inSrc, const uint16_t srcPort,
+            const Tins::IPv6Address inDest, const uint16_t destPort);
+
+	void addTcpSnoopInstance(const Tins::IPv4Address inSrc, const uint16_t inSrcPort,
+			const Tins::IPv4Address inDest, const uint16_t inDestPort, const std::shared_ptr<TcpSnoop> ts_ptr);
+    void addTcpSnoopInstance(const Tins::IPv6Address inSrc, const uint16_t inSrcPort,
+            const Tins::IPv6Address inDest, const uint16_t inDestPort, const std::shared_ptr<TcpSnoop> ts_ptr);
+
+	void clearTcpSnoopInstance(const Tins::IPv4Address inSrc, const uint16_t inSrcPort,
+            const Tins::IPv4Address inDest, const uint16_t inDestPort);
+    void clearTcpSnoopInstance(const Tins::IPv6Address inSrc, const uint16_t inSrcPort,
+            const Tins::IPv6Address inDest, const uint16_t inDestPort);
+
     uint32_t pruneTcpSnoopInstances(const bool Force = false);
 };
 

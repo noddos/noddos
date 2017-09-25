@@ -296,7 +296,8 @@ bool Host::DeviceStats(json& j, const uint32_t time_interval, bool force, bool d
 }
 
 bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportPrivateAddresses, const std::set<std::string> &LocalIps,
-		const DnsIpCache <boost::asio::ip::address> &dCip, const DnsCnameCache &dCcname, bool force) {
+		const DnsIpCache <Tins::IPv4Address> &dCipv4, const DnsIpCache <Tins::IPv6Address> &dCipv6,
+		const DnsCnameCache &dCcname, bool force) {
 	if (not isMatched()) {
 		return false;
 	}
@@ -307,34 +308,69 @@ bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportPriva
 	std::map<std::string,std::shared_ptr<std::unordered_set<std::string>>> allIps;
 
 	std::unordered_set<std::string> endpoints;
-	for (auto &fc: FlowCacheIpv4) {
-		const boost::asio::ip::address_v4  &ip = fc.first;
-		if (ReportPrivateAddresses || not inPrivateAddressRange(ip.to_string())) {
-			auto it = allIps.find(ip.to_string());
-			if (it != allIps.end()) {
-				for (auto &fqdn: *(it->second)) {
-					endpoints.insert(fqdn);
-				}
-			}
-			if (Debug == true) {
-				syslog (LOG_DEBUG, "Host: Getting all DNS lookups for %s", ip.to_string().c_str());
-			}
-			std::vector<std::string> fqdns = dCip.getAllFqdns(ip);
-			for (auto &itf : fqdns) {
-				std::string fqdn = dCcname.getFqdn(itf);
+	{
+	    for (auto &fc: FlowCacheIpv4) {
+	        bool foundFqdn = false;
+	        Tins::IPv4Address  ip(fc.first);
+	        if (ReportPrivateAddresses == true || not ip.is_private()) {
+	            auto it = allIps.find(ip.to_string());
+	            if (it != allIps.end()) {
+	                for (auto &fqdn: *(it->second)) {
+	                    endpoints.insert(fqdn);
+	                    foundFqdn = true;
+	                }
+	            }
+	            if (Debug == true) {
+	                syslog (LOG_DEBUG, "Host: Getting all DNS lookups for %s", ip.to_string().c_str());
+	            }
+	            std::vector<std::string> fqdns = dCipv4.getAllFqdns(ip);
+	            for (auto &itf : fqdns) {
+	                std::string fqdn = dCcname.getFqdn(itf);
+	                if (Debug) {
+	                    syslog (LOG_DEBUG, "Host: Reverse resolved %s to %s, might have CNAME %s", ip.to_string().c_str(), itf.c_str(), fqdn.c_str());
+	                }
+	                if (inDnsQueryList(fqdn)) {
+	                    endpoints.insert(fqdn);
+	                    foundFqdn = true;
+	                }
+	            }
+	            if (foundFqdn) {
+	                endpoints.insert(ip.to_string());
+	            }
+	        }
+	    }
+	}
+    {
+        for (auto &fc: FlowCacheIpv6) {
+            bool foundFqdn = false;
+            const Tins::IPv6Address  &ip = fc.first;
+            auto it = allIps.find(ip.to_string());
+            if (it != allIps.end()) {
+                for (auto &fqdn: *(it->second)) {
+                    endpoints.insert(fqdn);
+                    foundFqdn = true;
+                }
+            }
+            if (Debug == true) {
+                syslog (LOG_DEBUG, "Host: Getting all DNS lookups for %s", ip.to_string().c_str());
+            }
+            std::vector<std::string> fqdns = dCipv6.getAllFqdns(ip);
+            for (auto &itf : fqdns) {
+                std::string fqdn = dCcname.getFqdn(itf);
                 if (Debug) {
                     syslog (LOG_DEBUG, "Host: Reverse resolved %s to %s, might have CNAME %s", ip.to_string().c_str(), itf.c_str(), fqdn.c_str());
                 }
-				if (inDnsQueryList(fqdn)) {
-				    endpoints.insert(fqdn);
-				}
-			}
-			if (endpoints.size() == 0) {
-				endpoints.insert(ip.to_string());
-			}
-		}
-	}
+                if (inDnsQueryList(fqdn)) {
+                    endpoints.insert(fqdn);
+                    foundFqdn = true;
+                }
+            }
+            if (foundFqdn == true) {
+                endpoints.insert(ip.to_string());
+            }
 
+        }
+    }
 	if (endpoints.size() > 0) {
 		j = { {"DeviceProfileUuid", Uuid } };
 		j["TrafficStats"] = endpoints;
@@ -407,11 +443,8 @@ bool Host::setFlowEntry(const uint16_t inSrcPort, const std::string inDstIp,
 	f->Protocol = inProtocol;
 	f->setExpiration(inExpiration);
 
-	boost::asio::ip::address dstIpAddress = boost::asio::ip::address::from_string(inDstIp);
-
-	// Is there already at least one flow from the Host to the destination IP?
-	if (dstIpAddress.is_v4()) {
-		boost::asio::ip::address_v4 dstIpv4Address = dstIpAddress.to_v4();
+	try {
+		Tins::IPv4Address dstIpv4Address(inDstIp);
 
 		if (FlowCacheIpv4.find(dstIpv4Address) == FlowCacheIpv4.end()) {
 			FlowCacheIpv4[dstIpv4Address] = std::make_shared<FlowEntryList>();
@@ -441,8 +474,8 @@ bool Host::setFlowEntry(const uint16_t inSrcPort, const std::string inDstIp,
 		}
 		FlowCacheIpv4[dstIpv4Address]->push_back(f);
 		return true;
-	} else if (dstIpAddress.is_v6()) {
-		boost::asio::ip::address_v6 dstIpv6Address = dstIpAddress.to_v6();
+	} catch (...) {
+		Tins::IPv6Address dstIpv6Address(inDstIp);
 
 		if (FlowCacheIpv6.find(dstIpv6Address) == FlowCacheIpv6.end()) {
 			FlowCacheIpv6[dstIpv6Address] = std::make_shared<FlowEntryList>();

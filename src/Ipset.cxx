@@ -150,7 +150,46 @@ bool Ipset::ipset_exec(enum ipset_cmd cmd) {
     return r == 0;
 }
 
-bool Ipset::ipset_exec(enum ipset_cmd cmd, const boost::asio::ip::address &inIpAddress, uint32_t timeout) {
+void Ipset::ipset_exec_opt_ip (const Tins::IPv4Address &inIpAddress) {
+    uint8_t family = NFPROTO_IPV4;
+    if (ipset_session_data_set(session, IPSET_OPT_FAMILY, &family) < 0) {
+        std::string e = "Can't set session data to the IPv6 family, error: ";
+        e.append(ipset_session_error(session));
+        ipset_session_fini(session);
+        throw std::runtime_error(e);
+    }
+    struct in_addr sin;
+    inet_aton (inIpAddress.to_string().c_str(), &sin);
+    if (ipset_session_data_set(session, IPSET_OPT_IP, &sin) < 0) {
+        std::string e = "Can't set session data to the IPv4 address, error: ";
+        e.append(ipset_session_error(session));
+        ipset_session_fini(session);
+        throw std::runtime_error(e);
+    }
+}
+
+void Ipset::ipset_exec_opt_ip (const Tins::IPv6Address &inIpAddress) {
+    uint8_t family = NFPROTO_IPV6;
+     if (ipset_session_data_set(session, IPSET_OPT_FAMILY, &family) < 0) {
+         std::string e = "Can't set session data to the IPv6 family, error: ";
+         e.append(ipset_session_error(session));
+         ipset_session_fini(session);
+         throw std::runtime_error(e);
+     }
+
+     unsigned char buf[sizeof(struct in6_addr)];
+     int s = inet_pton(AF_INET6, inIpAddress.to_string().c_str(), buf);
+     if (ipset_session_data_set(session, IPSET_OPT_IP, &buf) < 0) {
+         std::string e = "Can't set session data to the IPv6 address, error: ";
+         e.append(ipset_session_error(session));
+         ipset_session_fini(session);
+         throw std::runtime_error(e);
+     }
+}
+
+// template <class T>
+// bool Ipset::ipset_exec(enum ipset_cmd cmd,  T const &inIpAddress, time_t timeout) {
+bool Ipset::ipset_exec(enum ipset_cmd cmd,  const Tins::IPv4Address &inIpAddress, time_t timeout) {
     if (Debug == true) {
         syslog(LOG_DEBUG, "Ipset: received command %d for IP address %s for ipset %s", cmd, inIpAddress.to_string().c_str(), ipsetName.c_str());
     }
@@ -169,40 +208,9 @@ bool Ipset::ipset_exec(enum ipset_cmd cmd, const boost::asio::ip::address &inIpA
         return false;
     }
     int r = 0;
-    if (inIpAddress.is_v4()) {
-        uint8_t family = NFPROTO_IPV4;
-        if (ipset_session_data_set(session, IPSET_OPT_FAMILY, &family) < 0) {
-            std::string e = "Can't set session data to the IPv6 family, error: ";
-            e.append(ipset_session_error(session));
-            ipset_session_fini(session);
-            throw std::runtime_error(e);
-        }
-        struct in_addr sin;
-        inet_aton (inIpAddress.to_string().c_str(), &sin);
-        if (ipset_session_data_set(session, IPSET_OPT_IP, &sin) < 0) {
-            std::string e = "Can't set session data to the IPv4 address, error: ";
-            e.append(ipset_session_error(session));
-            ipset_session_fini(session);
-            throw std::runtime_error(e);
-        }
-    } else {
-        uint8_t family = NFPROTO_IPV6;
-        if (ipset_session_data_set(session, IPSET_OPT_FAMILY, &family) < 0) {
-            std::string e = "Can't set session data to the IPv6 family, error: ";
-            e.append(ipset_session_error(session));
-            ipset_session_fini(session);
-            throw std::runtime_error(e);
-        }
 
-        unsigned char buf[sizeof(struct in6_addr)];
-        int s = inet_pton(AF_INET6, inIpAddress.to_string().c_str(), buf);
-        if (ipset_session_data_set(session, IPSET_OPT_IP, &buf) < 0) {
-            std::string e = "Can't set session data to the IPv6 address, error: ";
-            e.append(ipset_session_error(session));
-            ipset_session_fini(session);
-            throw std::runtime_error(e);
-        }
-    }
+    ipset_exec_opt_ip(inIpAddress);
+
     if (timeout) {
         if (ipset_session_data_set(session, IPSET_OPT_TIMEOUT, &timeout) != 0) {
             std::string e = "Can't set timeout for " + ipsetName + ", error: " + ipset_session_error(session);
@@ -219,13 +227,51 @@ bool Ipset::ipset_exec(enum ipset_cmd cmd, const boost::asio::ip::address &inIpA
         throw std::runtime_error(e);
         return false;
     }
-// The below is from sample Ipset code but does not seem needed.
-//    r = ipset_commit(session);
-//    ipset_data_reset(session->data);
     return true;
 }
 
-bool Ipset::ipset_exec(enum ipset_cmd cmd, const std::string Mac, uint32_t timeout) {
+bool Ipset::ipset_exec(enum ipset_cmd cmd,  const Tins::IPv6Address &inIpAddress, time_t timeout) {
+    if (Debug == true) {
+        syslog(LOG_DEBUG, "Ipset: received command %d for IP address %s for ipset %s", cmd, inIpAddress.to_string().c_str(), ipsetName.c_str());
+    }
+    if (ipset_session_data_set(session, IPSET_SETNAME, ipsetName.c_str()) < 0) {
+        std::string e = "Can't set session data to " + ipsetName + ", error: ";
+        e.append(ipset_session_error(session));
+        ipset_session_fini(session);
+        throw std::runtime_error(e);
+    }
+    const struct ipset_type *type = ipset_type_get(session, cmd);
+    if (type == NULL) {
+        std::string e = "Can't get ipset type for command, error: ";
+        e.append(ipset_session_error(session));
+        ipset_session_fini(session);
+        throw std::runtime_error(e);
+        return false;
+    }
+    int r = 0;
+
+    ipset_exec_opt_ip(inIpAddress);
+
+    if (timeout) {
+        if (ipset_session_data_set(session, IPSET_OPT_TIMEOUT, &timeout) != 0) {
+            std::string e = "Can't set timeout for " + ipsetName + ", error: " + ipset_session_error(session);
+            ipset_session_fini(session);
+            throw std::runtime_error(e);
+            return false;
+        }
+    }
+    r = ipset_cmd(session, cmd, 0);
+    if (r != 0) {
+        std::string e = "Can't call ipset_cmd, error: ";
+        e.append(ipset_session_error(session));
+        ipset_session_fini(session);
+        throw std::runtime_error(e);
+        return false;
+    }
+    return true;
+}
+
+bool Ipset::ipset_exec(enum ipset_cmd cmd, const std::string Mac, time_t timeout) {
     if (Debug == true) {
         syslog(LOG_DEBUG, "Ipset: received command %d for MAC address %s for ipset %s", cmd, Mac.c_str(), ipsetName.c_str());
     }

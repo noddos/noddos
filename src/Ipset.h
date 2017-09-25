@@ -36,7 +36,7 @@
 #include <libipset/types.h>
 #include <libipset/session.h>
 
-#include "boost/asio.hpp"
+#include <tins/tins.h>
 
 #include "MacAddress.h"
 
@@ -53,11 +53,15 @@ private:
     bool isIpsetv4;
     bool Debug;
 
-    bool ipset_exec(enum ipset_cmd cmd, const boost::asio::ip::address &inIpAddress, uint32_t timeout);
-    bool ipset_exec(enum ipset_cmd cmd, const std::string Mac, uint32_t timeout);
+    // template <class T>
+    bool ipset_exec(enum ipset_cmd cmd,  const Tins::IPv4Address &inIpAddress, time_t timeout);
+    bool ipset_exec(enum ipset_cmd cmd,  const Tins::IPv6Address &inIpAddress, time_t timeout);
+
+
+    bool ipset_exec(enum ipset_cmd cmd, const std::string Mac, time_t timeout);
     bool ipset_exec(enum ipset_cmd cmd);
-    // bool ipset_exec(enum ipset_cmd cmd, const MacAddress &Mac, uint32_t timeout = 0);
-    // bool ipsec_exec(enum ipset_cmd cmd, const boost::asio::ip::address &inIpAddress, uint32_t timeout);
+    void ipset_exec_opt_ip (const Tins::IPv4Address &inIpAddress);
+    void ipset_exec_opt_ip (const Tins::IPv6Address &inIpAddress);
 
 public:
     Ipset (const bool inDebug = false): Debug{inDebug}, ipsetType{""}, ipsetName{""}, isIpsetv4{false} {
@@ -104,7 +108,8 @@ public:
         return false;
      }
 
-     bool Add(const boost::asio::ip::address &inIpAddress, time_t timeout = 604800) {
+    template <class T>
+    bool Add(const T &inIpAddress, time_t timeout) {
          try {
              return ipset_exec(IPSET_CMD_ADD, inIpAddress, timeout);
          } catch (...) {
@@ -113,7 +118,7 @@ public:
          return false;
      }
 
-     bool Add(const MacAddress &inMac, time_t timeout = 7776000) {
+     bool Add(const MacAddress &inMac, const time_t timeout) {
          try {
              return ipset_exec(IPSET_CMD_ADD, inMac.str(), timeout);
          } catch (...) {
@@ -121,8 +126,16 @@ public:
          }
          return false;
      }
-
-     bool Remove(const boost::asio::ip::address &inIpAddress) {
+     bool Add(const std::string &inMac, const time_t timeout) {
+         try {
+             return ipset_exec(IPSET_CMD_ADD, inMac, timeout);
+         } catch (...) {
+             syslog (LOG_ERR, "Ipset: Failed to add MAC address %s to ipset %s", inMac.c_str(), ipsetName.c_str());
+         }
+         return false;
+     }
+     template <class T>
+     bool Remove(const T &inIpAddress) {
          try {
              return ipset_exec(IPSET_CMD_DEL, inIpAddress, 0);
          } catch (...) {
@@ -130,6 +143,7 @@ public:
          }
          return false;
      }
+
      bool Remove(const MacAddress &Mac) {
          try {
          return ipset_exec(IPSET_CMD_DEL, Mac.str(), 0);
@@ -147,7 +161,8 @@ public:
          return false;
      }
 
-     bool In(const boost::asio::ip::address &inIpAddress) {
+     template <class T>
+     bool In(const T &inIpAddress) {
          try {
          return ipset_exec(IPSET_CMD_TEST, inIpAddress, 0);
          } catch (...) {
@@ -155,7 +170,8 @@ public:
          }
          return false;
      }
-     bool In(const MacAddress &Mac) {
+
+      bool In(const MacAddress &Mac) {
          try {
          return ipset_exec(IPSET_CMD_TEST, Mac.str(), 0);
          } catch (...) {
@@ -163,7 +179,6 @@ public:
          }
          return false;
      }
-
 };
 
 #endif /* IPSET_H_ */

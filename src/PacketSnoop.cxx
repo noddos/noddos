@@ -20,9 +20,8 @@
  *      Author: Steven Hessing (steven.hessing@gmail.com)
  */
 
-#include "boost/asio.hpp"
+#include <tins/tins.h>
 
-// #include "dnslib.h"
 #include "InterfaceMap.h"
 #include "PacketSnoop.h"
 #include "TcpSnoop.h"
@@ -218,6 +217,7 @@ bool PacketSnoop::processEvent(struct epoll_event &event) {
     return false;
 }
 
+
 bool PacketSnoop::Parse(unsigned char *frame) {
 	if (Debug == true) {
     	syslog(LOG_DEBUG, "Parsing packet on interface %d", ifindex);
@@ -227,11 +227,15 @@ bool PacketSnoop::Parse(unsigned char *frame) {
     uint8_t af;
     unsigned short iphdrlen;
     unsigned short protocol;
+    bool isIPv4 = true;
     uint16_t ipPayloadLen = 0;
     uint16_t ipPacketLen = 0;
 
-    char srcString[INET6_ADDRSTRLEN], destString[INET6_ADDRSTRLEN];
+    std::string srcString, destString;
+    // char srcString[INET6_ADDRSTRLEN], destString[INET6_ADDRSTRLEN];
 
+    Tins::IPv4Address srcv4, dstv4;
+    Tins::IPv6Address srcv6, dstv6;
     if (ntohs(ethh->h_proto) == 0x0800) {
         af = AF_INET;
         struct iphdr *iph = (struct iphdr*) (frame + sizeof(struct ethhdr));
@@ -276,22 +280,13 @@ bool PacketSnoop::Parse(unsigned char *frame) {
             return false;
         }
         protocol = iph->protocol;
-        struct sockaddr_in source, dest;
-        memset(&source, 0, sizeof(source));
-        memset(&dest, 0, sizeof(dest));
-        source.sin_addr.s_addr = iph->saddr;
-        dest.sin_addr.s_addr = iph->daddr;
-        if (inet_ntop(af, &(source.sin_addr), srcString, INET6_ADDRSTRLEN)
-                == nullptr) {
-            syslog(LOG_ERR, "PacketSnoop: Received packet with invalid source IPv4 address");
-            return false;
-        }
-        if (inet_ntop(af, &(dest.sin_addr), destString, INET6_ADDRSTRLEN)
-                == nullptr) {
-            syslog(LOG_ERR, "PacketSnoop: Received packet with invalid destination IPv4 address");
-            return false;
-        }
+        srcv4 = Tins::IPv4Address(iph->saddr);
+        dstv4 = Tins::IPv4Address(iph->daddr);
+        srcString = srcv4.to_string();
+        destString = dstv4.to_string();
+
     } else if (ntohs(ethh->h_proto) == 0x86DD) {
+        isIPv4 = false;
         af = AF_INET6;
         iphdrlen = 40;
         struct ipv6hdr *ipv6h =
@@ -304,16 +299,21 @@ bool PacketSnoop::Parse(unsigned char *frame) {
             return true;
         }
         protocol = ipv6h->nexthdr;
-        if (inet_ntop(af, &(ipv6h->saddr), srcString, INET6_ADDRSTRLEN)
+        char buf[INET6_ADDRSTRLEN];
+        if (inet_ntop(af, &(ipv6h->saddr), buf, INET6_ADDRSTRLEN)
+                 == nullptr) {
+             syslog(LOG_ERR, "PacketSnoop: Received packet with invalid source IPv6 address");
+             return false;
+        }
+        srcv6 = Tins::IPv6Address(buf);
+        if (inet_ntop(af, &(ipv6h->saddr), buf, INET6_ADDRSTRLEN)
                 == nullptr) {
             syslog(LOG_ERR, "PacketSnoop: Received packet with invalid source IPv6 address");
             return false;
         }
-        if (inet_ntop(af, &(ipv6h->daddr), destString, INET6_ADDRSTRLEN)
-                == nullptr) {
-            syslog(LOG_ERR, "PacketSnoop: Received packet with invalid destination IPv6 address");
-            return false;
-        }
+        dstv6 = Tins::IPv6Address(buf);
+        srcString = srcv6.to_string();
+        destString = dstv6.to_string();
     } else {
         syslog(LOG_INFO,
                 "PacketSnoop: Received packet with unsupported protocol %u", ethh->h_proto);
@@ -325,7 +325,7 @@ bool PacketSnoop::Parse(unsigned char *frame) {
     if (Debug == true) {
         syslog(LOG_DEBUG,
                 "PacketSnoop: Parsing %s packet from %s to %s, protocol %u, packet size %u, header length %u payload length %u  from MAC %s",
-                ntohs(ethh->h_proto) == 0x0800 ? "IPv4" : "IPv6", srcString, destString, protocol, ipPacketLen, iphdrlen, ipPayloadLen,
+                ntohs(ethh->h_proto) == 0x0800 ? "IPv4" : "IPv6", srcString.c_str(), destString.c_str(), protocol, ipPacketLen, iphdrlen, ipPayloadLen,
                 Mac.c_str());
     }
 
@@ -357,9 +357,6 @@ bool PacketSnoop::Parse(unsigned char *frame) {
         }
         uint16_t srcPort = ntohs(tcph->source);
         uint16_t destPort = ntohs(tcph->dest);
-        boost::asio::ip::address src, dest;
-        src.from_string(srcString);
-        dest.from_string(destString);
 
         if (Debug == true) {
             syslog(LOG_DEBUG, "PacketSnoop: TCP source port %u, dest port %u, headersize %u",
@@ -368,8 +365,14 @@ bool PacketSnoop::Parse(unsigned char *frame) {
         if (ntohs(tcph->source) == 53 || ntohs(tcph->dest) == 53) {
             bool finFlag = (tcph->th_flags & TH_FIN);
             bool rstFlag = (tcph->th_flags & TH_RST) >> 2;
-            std::shared_ptr<TcpSnoop> tsPtr = getTcpSnoopInstance(src, srcPort,
-                    dest, destPort);
+            std::shared_ptr<TcpSnoop> tsPtr;
+            if (isIPv4) {
+                tsPtr = getTcpSnoopInstance(srcv4, srcPort, dstv4, destPort);
+            } else {
+                tsPtr = getTcpSnoopInstance(srcv6, srcPort, dstv6, destPort);
+
+            }
+
             // FIXME: the below logic does free up memory but a FIN may be followed by an ACK of an incoming FIN so
             // a new TcpSnoopInstance would be created and would have to be pruned using the periodic pruning algorithm
             // But we do free up memory with the current solution so the extra `cost' is worth it.
@@ -378,7 +381,13 @@ bool PacketSnoop::Parse(unsigned char *frame) {
                     if (Debug == true) {
                         syslog (LOG_DEBUG, "PacketSnoop: saw FIN or RST for TCP stream, pruning TcpSnoop instance");
                     }
-                    clearTcpSnoopInstance(src, srcPort, dest, destPort);
+                    if (isIPv4) {
+                        clearTcpSnoopInstance(srcv4, srcPort, dstv4, destPort);
+
+                    } else {
+                        clearTcpSnoopInstance(srcv6, srcPort, dstv6, destPort);
+
+                    }
                 }
                 return true;
             }
@@ -387,7 +396,12 @@ bool PacketSnoop::Parse(unsigned char *frame) {
                 if (Debug == true) {
                     syslog (LOG_DEBUG, "Creating TcpSnoop shared pointer at %p", tsPtr);
                 }
-                addTcpSnoopInstance(src, srcPort, dest, destPort, tsPtr);
+                if (isIPv4) {
+                    addTcpSnoopInstance(srcv4, srcPort, dstv4, destPort, tsPtr);
+                } else {
+                    addTcpSnoopInstance(srcv6, srcPort, dstv6, destPort, tsPtr);
+
+                }
             }
             //
             // For TCP, we pass both TCP header and payload
@@ -438,76 +452,148 @@ bool PacketSnoop::Parse(unsigned char *frame) {
 }
 
 std::shared_ptr<TcpSnoop> PacketSnoop::getTcpSnoopInstance(
-        const boost::asio::ip::address inSrc, const uint16_t inSrcPort,
-        const boost::asio::ip::address inDest, const uint16_t inDestPort) {
-    auto sit = tcpSnoops.find(inSrc);
-    if (sit == tcpSnoops.end()) {
+        const Tins::IPv4Address inSrc, const uint16_t inSrcPort,
+        const Tins::IPv4Address inDest, const uint16_t inDestPort) {
+    auto sit = tcpv4Snoops.find(inSrc);
+    if (sit == tcpv4Snoops.end()) {
         return nullptr;
     }
-    auto spit = tcpSnoops[inSrc].find(inSrcPort);
-    if (spit == tcpSnoops[inSrc].end()) {
+    auto spit = tcpv4Snoops[inSrc].find(inSrcPort);
+    if (spit == tcpv4Snoops[inSrc].end()) {
         return nullptr;
     }
-    auto dit = tcpSnoops[inSrc][inSrcPort].find(inDest);
-    if (dit == tcpSnoops[inSrc][inSrcPort].end()) {
+    auto dit = tcpv4Snoops[inSrc][inSrcPort].find(inDest);
+    if (dit == tcpv4Snoops[inSrc][inSrcPort].end()) {
         return nullptr;
     }
-    auto dpit = tcpSnoops[inSrc][inSrcPort][inDest].find(inDestPort);
-    if (dpit == tcpSnoops[inSrc][inSrcPort][inDest].end()) {
+    auto dpit = tcpv4Snoops[inSrc][inSrcPort][inDest].find(inDestPort);
+    if (dpit == tcpv4Snoops[inSrc][inSrcPort][inDest].end()) {
         return nullptr;
     }
     return dpit->second;
 }
 
-void PacketSnoop::clearTcpSnoopInstance(const boost::asio::ip::address inSrc, const uint16_t inSrcPort,
-        const boost::asio::ip::address inDest, const uint16_t inDestPort) {
-    tcpSnoops[inSrc][inSrcPort][inDest][inDestPort] = nullptr;
-}
-
-uint32_t PacketSnoop::pruneTcpSnoopInstances(const bool Force) {
-    uint32_t deletedinstances = 0;
-    auto sit = tcpSnoops.begin();
-    while (sit != tcpSnoops.end()) {
-        auto spit = sit->second.begin();
-        while (spit != sit->second.end()) {
-            auto dit = spit->second.begin();
-            while (dit != spit->second.end()) {
-                auto dpit = dit->second.begin();
-                while (dpit != dit->second.end()) {
-                    if (Force == true || dpit->second == nullptr || dpit->second->isExpired() == true) {
-                        dpit = dit->second.erase(dpit);
-                    } else {
-                        ++dpit;
-                    }
-                }
-                if (Force == true || dit->second.empty() == true) {
-                    dit = spit->second.erase(dit);
-                } else {
-                    ++dit;
-                }
-            }
-            if (Force == true || spit->second.empty() == true) {
-                spit = sit->second.erase(spit);
-            } else {
-                ++spit;
-            }
-        }
-        if (Force == true || sit->second.empty()) {
-            sit = tcpSnoops.erase(sit);
-        } else {
-            ++sit;
-        }
+std::shared_ptr<TcpSnoop> PacketSnoop::getTcpSnoopInstance(
+        const Tins::IPv6Address inSrc, const uint16_t inSrcPort,
+        const Tins::IPv6Address inDest, const uint16_t inDestPort) {
+    auto sit = tcpv6Snoops.find(inSrc);
+    if (sit == tcpv6Snoops.end()) {
+        return nullptr;
     }
-    return deletedinstances;
+    auto spit = tcpv6Snoops[inSrc].find(inSrcPort);
+    if (spit == tcpv6Snoops[inSrc].end()) {
+        return nullptr;
+    }
+    auto dit = tcpv6Snoops[inSrc][inSrcPort].find(inDest);
+    if (dit == tcpv6Snoops[inSrc][inSrcPort].end()) {
+        return nullptr;
+    }
+    auto dpit = tcpv6Snoops[inSrc][inSrcPort][inDest].find(inDestPort);
+    if (dpit == tcpv6Snoops[inSrc][inSrcPort][inDest].end()) {
+        return nullptr;
+    }
+    return dpit->second;
 }
 
-void PacketSnoop::addTcpSnoopInstance(const boost::asio::ip::address inSrc,
-        const uint16_t inSrcPort, const boost::asio::ip::address inDest,
+void PacketSnoop::clearTcpSnoopInstance(const Tins::IPv4Address inSrc, const uint16_t inSrcPort,
+        const Tins::IPv4Address inDest, const uint16_t inDestPort) {
+    tcpv4Snoops[inSrc][inSrcPort][inDest][inDestPort] = nullptr;
+}
+
+void PacketSnoop::clearTcpSnoopInstance(const Tins::IPv6Address inSrc, const uint16_t inSrcPort,
+        const Tins::IPv6Address inDest, const uint16_t inDestPort) {
+    tcpv6Snoops[inSrc][inSrcPort][inDest][inDestPort] = nullptr;
+}
+
+void PacketSnoop::addTcpSnoopInstance(const Tins::IPv4Address inSrc,
+        const uint16_t inSrcPort, const Tins::IPv4Address inDest,
         const uint16_t inDestPort, const std::shared_ptr<TcpSnoop> ts_ptr) {
     if (Debug == true) {
         syslog (LOG_DEBUG, "Adding TcpSnoop shared pointer at %p", ts_ptr);
     }
-    tcpSnoops[inSrc][inSrcPort][inDest][inDestPort] = ts_ptr;
+    tcpv4Snoops[inSrc][inSrcPort][inDest][inDestPort] = ts_ptr;
+}
+
+void PacketSnoop::addTcpSnoopInstance(const Tins::IPv6Address inSrc,
+        const uint16_t inSrcPort, const Tins::IPv6Address inDest,
+        const uint16_t inDestPort, const std::shared_ptr<TcpSnoop> ts_ptr) {
+    if (Debug == true) {
+        syslog (LOG_DEBUG, "Adding TcpSnoop shared pointer at %p", ts_ptr);
+    }
+    tcpv6Snoops[inSrc][inSrcPort][inDest][inDestPort] = ts_ptr;
+}
+
+uint32_t PacketSnoop::pruneTcpSnoopInstances(const bool Force) {
+    uint32_t deletedinstances = 0;
+    {
+        auto sit = tcpv4Snoops.begin();
+        while (sit != tcpv4Snoops.end()) {
+            auto spit = sit->second.begin();
+            while (spit != sit->second.end()) {
+                auto dit = spit->second.begin();
+                while (dit != spit->second.end()) {
+                    auto dpit = dit->second.begin();
+                    while (dpit != dit->second.end()) {
+                        if (Force == true || dpit->second == nullptr || dpit->second->isExpired() == true) {
+                            dpit = dit->second.erase(dpit);
+                        } else {
+                            ++dpit;
+                        }
+                    }
+                    if (Force == true || dit->second.empty() == true) {
+                        dit = spit->second.erase(dit);
+                    } else {
+                        ++dit;
+                    }
+                }
+                if (Force == true || spit->second.empty() == true) {
+                    spit = sit->second.erase(spit);
+                } else {
+                    ++spit;
+                }
+            }
+            if (Force == true || sit->second.empty()) {
+                sit = tcpv4Snoops.erase(sit);
+            } else {
+                ++sit;
+            }
+        }
+    }
+    {
+        auto sit = tcpv6Snoops.begin();
+        while (sit != tcpv6Snoops.end()) {
+            auto spit = sit->second.begin();
+            while (spit != sit->second.end()) {
+                auto dit = spit->second.begin();
+                while (dit != spit->second.end()) {
+                    auto dpit = dit->second.begin();
+                    while (dpit != dit->second.end()) {
+                        if (Force == true || dpit->second == nullptr || dpit->second->isExpired() == true) {
+                            dpit = dit->second.erase(dpit);
+                        } else {
+                            ++dpit;
+                        }
+                    }
+                    if (Force == true || dit->second.empty() == true) {
+                        dit = spit->second.erase(dit);
+                    } else {
+                        ++dit;
+                    }
+                }
+                if (Force == true || spit->second.empty() == true) {
+                    spit = sit->second.erase(spit);
+                } else {
+                    ++spit;
+                }
+            }
+            if (Force == true || sit->second.empty()) {
+                sit = tcpv6Snoops.erase(sit);
+            } else {
+                ++sit;
+            }
+        }
+    }
+    return deletedinstances;
 }
 
 bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
@@ -599,12 +685,12 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
                         syslog(LOG_DEBUG, "PacketSnoop: A record: %s",
                                 it.data().c_str());
                     }
-                    boost::asio::ip::address ip = boost::asio::ip::address::from_string(it.data());
+                    Tins::IPv4Address ip(it.data());
                     hC->addorupdateDnsIpCache(it.dname(), ip);
                     break;
                 }
                 case Tins::DNS::QueryType::AAAA: {
-                    boost::asio::ip::address ip = boost::asio::ip::address::from_string(it.data());
+                    Tins::IPv6Address ip(it.data());
 
                     hC->addorupdateDnsIpCache(it.dname(), ip);
                     if (Debug == true) {

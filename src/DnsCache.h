@@ -28,7 +28,6 @@
 #include <unordered_set>
 #include <set>
 #include "syslog.h"
-#include "boost/asio.hpp"
 
 #include <json.hpp>
 using nlohmann::json;
@@ -319,13 +318,18 @@ public:
             auto fdp_it = fdpMap.find(fqdn);
             json ipj = it.value();
             for (json::iterator ip_it = ipj.begin(); ip_it != ipj.end(); ++ip_it) {
-                dnsRecords++;
-                T IpAddress = T::from_string(ip_it.key());
-                time_t ttl = ip_it.value();
-                if (fdp_it != fdpMap.end()) {
-                    addorupdateResourceRecord (fqdn, IpAddress, fdp_it, ttl);
-                } else {
-                    addorupdateResourceRecord (fqdn, IpAddress, ttl);
+                try {
+                    T IpAddress = T(ip_it.key());
+                    dnsRecords++;
+
+                    time_t ttl = ip_it.value();
+                    if (fdp_it != fdpMap.end()) {
+                        addorupdateResourceRecord (fqdn, IpAddress, fdp_it, ttl);
+                    } else {
+                        addorupdateResourceRecord (fqdn, IpAddress, ttl);
+                    }
+                } catch (...) {
+                    // Must be either IPv4 address while IPv6 template or vice versa
                 }
             }
         }

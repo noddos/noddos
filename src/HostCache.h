@@ -36,7 +36,8 @@
 #include "InterfaceMap.h"
 
 
-#include "boost/asio.hpp"
+#include <tins/tins.h>
+
 #include "DnsCache.h"
 #include "noddos.h"
 
@@ -50,7 +51,8 @@ private:
 	// This map is used to validate that answers received correspond to queries sent out. They are pruned after 30 seconds
 	std::map<uint16_t, time_t> DnsQueryCache;
 	// These maps cache IPv4 & IPv6 addresses and CNAMEs for at least the TrafficReport interval
-	DnsIpCache <boost::asio::ip::address> dCip;
+	DnsIpCache <Tins::IPv4Address> dCipv4;
+	DnsIpCache <Tins::IPv6Address> dCipv6;
 	DnsCnameCache dCcname;
 	FqdnDeviceProfileMap fdpMap;
 
@@ -78,7 +80,8 @@ public:
 		}
 
 		getInterfaceIpAddresses();
-		dCip.setDebug(Debug);
+		dCipv4.setDebug(Debug);
+        dCipv6.setDebug(Debug);
 		dCcname.setDebug(Debug);
 		if (inDnsCacheFilename != "") {
 		    importDnsCache(inDnsCacheFilename);
@@ -127,7 +130,8 @@ public:
 	uint32_t pruneDnsQueryCache (bool Force = false);
 
 	// These functions are for the new DnsCache filled by the PacketSnoop class
-	void addorupdateDnsIpCache(const std::string inFqdn, const boost::asio::ip::address inIp, time_t inTtl = 604800);
+	void addorupdateDnsIpCache(const std::string inFqdn, const Tins::IPv4Address inIp, time_t inTtl = 604800);
+    void addorupdateDnsIpCache(const std::string inFqdn, const Tins::IPv6Address inIp, time_t inTtl = 604800);
 	void addorupdateDnsCnameCache(const std::string inFqdn, const std::string inCname, time_t inTtl = 604800);
 	void updateDeviceProfileMatchesDnsData ();
 
@@ -135,12 +139,15 @@ public:
 	bool exportDnsCache (const std::string filename);
     bool importDnsCache (const std::string filename);
 	uint32_t pruneDnsIpCache(bool Force = false) {
-		std::set<std::string> PrunedFqdns = dCip.pruneResourceRecords(Force);
+		std::set<std::string> PrunedFqdns = dCipv4.pruneResourceRecords(Force);
+        std::set<std::string> PrunedIpv6Fqdns = dCipv6.pruneResourceRecords(Force);
+        PrunedFqdns.insert(PrunedIpv6Fqdns.begin(), PrunedIpv6Fqdns.end());
 		for(auto Fqdn: PrunedFqdns) {
 		    fdpMap.erase(Fqdn);
 		}
 		return PrunedFqdns.size();
 	}
+
     uint32_t pruneDnsCnameCache(bool Force = false) {
         std::set<std::string> PrunedCnames = dCcname.pruneCnames(Force);
         for(auto Cname: PrunedCnames) {
