@@ -234,7 +234,7 @@ bool Host::DeviceStats(json& j, const uint32_t time_interval, bool force, bool d
 	}
 	j["MacOid"] = Mac.str().substr(0,8);
 	j["DhcpVendor"] = Dhcp.DhcpVendor;
-	j["Hostname"] = Dhcp.Hostname;
+	j["DhcpHostname"] = Dhcp.Hostname;
 	j["SsdpFriendlyName"] = Ssdp.FriendlyName;
 	j["SsdpManufacturer"] = Ssdp.Manufacturer;
 	j["SsdpManufacturerUrl"] = Ssdp.ManufacturerUrl;
@@ -372,6 +372,7 @@ void Host::ExportDeviceInfo (json &j, bool detailed) {
 	json h{{"MacAddress", Mac.str()},
 			{"DeviceProfileUuid", Uuid},
 			{"Ipv4Address", Ipv4Address},
+			{"Ipv6Address", Ipv6Address},
 			{"SsdpManufacturer", Ssdp.Manufacturer},
 			{"SsdpModelName", Ssdp.ModelName}
 	};
