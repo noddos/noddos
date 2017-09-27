@@ -60,13 +60,22 @@ std::string getIpsetName (const std::string inUuid, bool inSrc, bool inIpv4) {
     return res;
 }
 
-bool isIpv4Address(const std::string inIpAddress) {
+bool isIpv4Address(const std::string inIpAddress, const bool Debug) {
     unsigned char buf[sizeof(struct in6_addr)];
     if (inet_pton(AF_INET, inIpAddress.c_str(), buf) == 1) {
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "Ipset: %s is an IPv4 address", inIpAddress.c_str());
+        }
         return true;
     }
     if (inet_pton(AF_INET6, inIpAddress.c_str(), buf) == 1) {
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "Ipset: %s is an IPv6 address", inIpAddress.c_str());
+        }
         return false;
+    }
+    if (Debug == true) {
+        syslog (LOG_DEBUG, "Ipset: %s is not an IPv4/v6 address", inIpAddress.c_str());
     }
     throw std::runtime_error ("Not an IP address " + inIpAddress);
 }
@@ -91,7 +100,7 @@ void Ipset::Open (const std::string inIpsetName, std::string inIpsetType, bool i
     }
     if (Exists()) {
         if (Debug == true) {
-            syslog (LOG_DEBUG, "Not creating set %s as it already exists", ipsetName.c_str());
+            syslog (LOG_DEBUG, "Ipset: Not creating set %s as it already exists", ipsetName.c_str());
         }
         return;
     }

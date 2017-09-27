@@ -38,7 +38,7 @@ int main () {
     FqdnDeviceProfileMap fdpMap;
     DnsCnameCache c(true);
     DnsIpCache <Tins::IPv4Address> i(true);
-
+    DnsIpCache <Tins::IPv6Address> isix(true);
     std::string filename = "tests/DnsCache.json";
     std::ifstream ifs(filename);
     if (not ifs.is_open()) {
@@ -48,12 +48,18 @@ int main () {
     json k;
     ifs >> k;
     size_t importedRecords = i.importJson(k, fdpMap);
-    if (importedRecords != 571) {
+    if (importedRecords != 564) {
         testfailed = true;
-        syslog(LOG_WARNING, "Imported A/AAAA records %lu", importedRecords);
+        syslog(LOG_WARNING, "Imported A records %lu", importedRecords);
 
     }
 
+    importedRecords = isix.importJson(k, fdpMap);
+    if (importedRecords != 7) {
+        testfailed = true;
+        syslog(LOG_WARNING, "Imported AAAA records %lu", importedRecords);
+
+    }
     importedRecords = c.importJson(k,fdpMap);
     if (importedRecords != 85) {
         testfailed = true;

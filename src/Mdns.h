@@ -60,7 +60,7 @@ public:
     bool processEvent(struct epoll_event &event);
     int getFileHandle();
 
-    void parseMessage (std::shared_ptr<MdnsHost> msdnHost, const unsigned char * msgbuf, const int nbytes);
+    bool parseMessage (std::shared_ptr<MdnsHost> msdnHost, const unsigned char * msgbuf, const int nbytes);
     void parseTxtRr (std::shared_ptr<MdnsHost> msdnHost, const std::string txt);
 
 };

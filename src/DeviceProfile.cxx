@@ -34,7 +34,7 @@ void DeviceProfile::createorupdateIpsets (bool inForce) {
         for (auto ip: AllowedIpv4s) {
             dstv4Ipset.Add(ip, 31449600); // 1 year
         }
-        for (auto ip: AllowedIpv4s) {
+        for (auto ip: AllowedIpv6s) {
             dstv6Ipset.Add(ip, 31449600); // 1 year
         }
         for (auto host: Hosts) {
@@ -119,7 +119,7 @@ bool DeviceProfile::from_json(const json &j) {
                 syslog(LOG_DEBUG, "DeviceProfile: Adding allowed endpoint %s", endpoint.c_str());
             }
             try {
-                if (isIpv4Address(endpoint)) {
+                if (isIpv4Address(endpoint, Debug)) {
                     Tins::IPv4Address ip(endpoint);
                     AllowedIpv4s.insert(ip);
                 } else {

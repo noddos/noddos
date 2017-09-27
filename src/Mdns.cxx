@@ -65,7 +65,7 @@ bool Mdns::parseMessage (std::shared_ptr<MdnsHost> host, const unsigned char * m
                 q->questions_count(), q->answers_count(),
                 q->additional_count());
     }
-    if (q->answers_count == 0) {
+    if (q->answers_count() == 0) {
         delete q;
         return false;
     }

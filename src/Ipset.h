@@ -43,7 +43,7 @@
 
 std::string getIpsetUuid (std::string inUuid);
 std::string getIpsetName (std::string inUuid, bool inSrc, bool inIpv4 = true);
-bool isIpv4Address(std::string inIpAddress);
+bool isIpv4Address(std::string inIpAddress, bool Debug = false);
 
 class Ipset {
 private:
