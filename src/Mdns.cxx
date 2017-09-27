@@ -168,9 +168,9 @@ void Mdns::parseTxtRr (std::shared_ptr<MdnsHost> host, const std::string txt) {
             host->Os = value;
         } else if(key == "hw") {
             host->Hw = value;
-        } else if (key == "md" || key == "usb_mdl") {
+        } else if (key == "md" || key == "mdl" || key == "usb_mdl") {
             host->ModelName = value;
-        } else if (key == "usb_mfg") {
+        } else if (key == "mfg" || key == "usb_mfg") {
             host->Manufacturer = value;
         } else if (key == "adminurl") {
             host->DeviceUrl = value;
