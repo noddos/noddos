@@ -118,13 +118,16 @@ bool DeviceProfile::from_json(const json &j) {
             if (Debug == true) {
                 syslog(LOG_DEBUG, "DeviceProfile: Adding allowed endpoint %s", endpoint.c_str());
             }
-            addDestination(endpoint);
-            if (endpoint.find('.') != endpoint.npos) {
-                Tins::IPv4Address ip(endpoint);
-                AllowedIpv4s.insert(ip);
-            } else if (endpoint.find(':') != endpoint.npos) {
-                Tins::IPv6Address ip(endpoint);
-                AllowedIpv6s.insert(ip);
+            try {
+                if (isIpv4Address(endpoint)) {
+                    Tins::IPv4Address ip(endpoint);
+                    AllowedIpv4s.insert(ip);
+                } else {
+                    Tins::IPv6Address ip(endpoint);
+                    AllowedIpv6s.insert(ip);
+                }
+            } catch (...) {
+                addDestination(endpoint);
             }
         }
     }

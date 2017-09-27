@@ -41,9 +41,9 @@
 #include "MacAddress.h"
 
 
-std::string getIpsetUuid (const std::string inUuid);
-std::string getIpsetName (const std::string inUuid, bool inSrc, bool inIpv4 = true);
-
+std::string getIpsetUuid (std::string inUuid);
+std::string getIpsetName (std::string inUuid, bool inSrc, bool inIpv4 = true);
+bool isIpv4Address(std::string inIpAddress);
 
 class Ipset {
 private:
@@ -180,5 +180,7 @@ public:
          return false;
      }
 };
+
+
 
 #endif /* IPSET_H_ */

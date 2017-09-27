@@ -60,6 +60,17 @@ std::string getIpsetName (const std::string inUuid, bool inSrc, bool inIpv4) {
     return res;
 }
 
+bool isIpv4Address(const std::string inIpAddress) {
+    unsigned char buf[sizeof(struct in6_addr)];
+    if (inet_pton(AF_INET, inIpAddress.c_str(), buf) == 1) {
+        return true;
+    }
+    if (inet_pton(AF_INET6, inIpAddress.c_str(), buf) == 1) {
+        return false;
+    }
+    throw std::runtime_error ("Not an IP address " + inIpAddress);
+}
+
 void Ipset::Open (const std::string inIpsetName, std::string inIpsetType, bool inisIpsetv4, bool inDebug) {
     Debug = inDebug;
     if (Debug == true) {
