@@ -59,8 +59,7 @@ struct MdnsHost {
 
     bool operator == (const MdnsHost &rhs) const {
         return IpAddress == rhs.IpAddress &&
-                Os == rhs.Os &&
-                Hw == rhs.Hw &&
+                Os == rhs.Os && Hw == rhs.Hw &&
                 DeviceUrl == rhs.DeviceUrl &&
                 Manufacturer == rhs.Manufacturer &&
                 ModelName == rhs.ModelName;

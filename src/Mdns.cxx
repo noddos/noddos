@@ -34,12 +34,14 @@
 #include <arpa/inet.h>
 #include <sys/epoll.h>
 
+#include "boost/asio.hpp"
+
 #define MSGBUFSIZE 10000
 
 #define MDNS_GROUP "224.0.0.251"
 #define MDNS_PORT 5353
 
-void Mdns::parseMessage (std::shared_ptr<MdnsHost> host, const unsigned char * msgbuf, const int nbytes) {
+bool Mdns::parseMessage (std::shared_ptr<MdnsHost> host, const unsigned char * msgbuf, const int nbytes) {
     uint32_t pos = 0;
 
     if (nbytes < 12) {
@@ -60,6 +62,10 @@ void Mdns::parseMessage (std::shared_ptr<MdnsHost> host, const unsigned char * m
         syslog(LOG_DEBUG, "Mdns: Questions: %u Answers: %u Additional answers: %u",
                 q->questions_count(), q->answers_count(),
                 q->additional_count());
+    }
+    if (q->answers_count == 0) {
+        delete q;
+        return false;
     }
     Tins::DNS::resources_type rt = q->answers();
     Tins::DNS::resources_type rt_additional = q->additional();
@@ -125,6 +131,7 @@ void Mdns::parseMessage (std::shared_ptr<MdnsHost> host, const unsigned char * m
         }
     }
     delete q;
+    return true;
 }
 
 void Mdns::parseTxtRr (std::shared_ptr<MdnsHost> host, const std::string txt) {
@@ -196,8 +203,9 @@ bool Mdns::processEvent (struct epoll_event &event) {
             }
 
             try {
-                parseMessage(mdnsHost, msgbuf, nbytes);
-                hCache.AddMdnsInfo(mdnsHost);
+                if (parseMessage(mdnsHost, msgbuf, nbytes) == true) {
+                    hCache.AddMdnsInfo(mdnsHost);
+                }
             } catch (...) {
                 if(Debug) {
                     syslog(LOG_DEBUG, "Mdns: Couldn't parse packet");
