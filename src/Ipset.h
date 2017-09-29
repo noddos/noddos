@@ -60,8 +60,6 @@ private:
 
     bool ipset_exec(enum ipset_cmd cmd, const std::string Mac, time_t timeout);
     bool ipset_exec(enum ipset_cmd cmd);
-    void ipset_exec_opt_ip (const Tins::IPv4Address &inIpAddress);
-    void ipset_exec_opt_ip (const Tins::IPv6Address &inIpAddress);
 
 public:
     Ipset (const bool inDebug = false): Debug{inDebug}, ipsetType{""}, ipsetName{""}, isIpsetv4{false} {

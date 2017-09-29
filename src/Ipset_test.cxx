@@ -80,7 +80,7 @@ int main(int argc, char** argv) {
     Ipset s(true);
     i.Open("noddostestv6", "hash:ip", false, true);
 
-    Tins::IPv4Address ipsix("fdbb:2ad1:cea0:0:1e1b:dff:fe7d:f5ec");
+    Tins::IPv6Address ipsix("fdbb:2ad1:cea0:0:1e1b:dff:fe7d:f5ec");
     if (i.Add(ipsix, 604800) == false ) {
         testfailed = 1;
         std::cout << "Failed to add IPv6 address to hash:ip ipset" << std::endl;
