@@ -35,8 +35,8 @@
 #include "Config.h"
 #include "InterfaceMap.h"
 
-
-#include <tins/tins.h>
+#include <tins/ip_address.h>
+#include <tins/ipv6_address.h>
 
 #include "DnsCache.h"
 #include "noddos.h"

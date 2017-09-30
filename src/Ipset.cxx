@@ -167,7 +167,7 @@ void Ipset::Open (const std::string inIpsetName, std::string inIpsetType, bool i
         ipset_session_fini(session);
         throw std::runtime_error("Can't call ipset_commit for " + ipsetName + ": " + ipset_session_error(session));
     }
-    // ipset_session_fini(session);
+    ipset_session_fini(session);
 }
 
 
@@ -204,7 +204,7 @@ bool Ipset::ipset_exec(enum ipset_cmd cmd) {
         ipset_session_fini(session);
         throw std::runtime_error("Can't call ipset_commit for " + ipsetName + ": " + ipset_session_error(session));
     }
-
+    ipset_session_fini(session);
     return true;
 }
 
@@ -269,6 +269,7 @@ bool Ipset::ipset_exec(enum ipset_cmd cmd,  const Tins::IPv4Address &inIpAddress
         ipset_session_fini(session);
         throw std::runtime_error("Can't call ipset_commit for " + ipsetName + ": " + ipset_session_error(session));
     }
+    ipset_session_fini(session);
     return true;
 }
 
@@ -320,12 +321,11 @@ bool Ipset::ipset_exec(enum ipset_cmd cmd,  const Tins::IPv6Address &inIpAddress
             syslog (LOG_ERR, "Ipset: Can't set timeout for setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
             ipset_session_fini(session);
             throw std::runtime_error("Can't set timeout for " + ipsetName + ": " + ipset_session_error(session));
-            return false;
         }
     }
     if (ipset_cmd(session, cmd, 0) != 0) {
-        ipset_session_fini(session);
         syslog (LOG_ERR, "Ipset: Can't exec ipset cmd for setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
+        ipset_session_fini(session);
         throw std::runtime_error("Can't exec ipset cmd for " + ipsetName + ": " + ipset_session_error(session));
     }
     if (ipset_commit(session) < 0) {
@@ -333,6 +333,7 @@ bool Ipset::ipset_exec(enum ipset_cmd cmd,  const Tins::IPv6Address &inIpAddress
         ipset_session_fini(session);
         throw std::runtime_error("Can't call ipset_commit for " + ipsetName + ": " + ipset_session_error(session));
     }
+    ipset_session_fini(session);
     return true;
 }
 
@@ -373,12 +374,11 @@ bool Ipset::ipset_exec(enum ipset_cmd cmd, const std::string Mac, time_t timeout
             syslog (LOG_ERR, "Ipset: Can't set timeout for setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
             ipset_session_fini(session);
             throw std::runtime_error("Can't set timeout for " + ipsetName + ": " + ipset_session_error(session));
-            return false;
         }
     }
     if (ipset_cmd(session, cmd, 0) != 0) {
-        ipset_session_fini(session);
         syslog (LOG_ERR, "Ipset: Can't exec ipset cmd for setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
+        ipset_session_fini(session);
         throw std::runtime_error("Can't exec ipset cmd for " + ipsetName + ": " + ipset_session_error(session));
     }
     if (ipset_commit(session) < 0) {
@@ -386,6 +386,7 @@ bool Ipset::ipset_exec(enum ipset_cmd cmd, const std::string Mac, time_t timeout
         ipset_session_fini(session);
         throw std::runtime_error("Can't call ipset_commit for " + ipsetName + ": " + ipset_session_error(session));
     }
+    ipset_session_fini(session);
     return true;
 }
 
