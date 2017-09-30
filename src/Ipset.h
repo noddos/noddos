@@ -47,7 +47,7 @@ bool isIpv4Address(std::string inIpAddress, bool Debug = false);
 
 class Ipset {
 private:
-    struct ipset_session *session ;
+    // struct ipset_session *session ;
     std::string ipsetType;
     std::string ipsetName;
     bool isIpsetv4;
@@ -63,7 +63,7 @@ private:
 
 public:
     Ipset (const bool inDebug = false): Debug{inDebug}, ipsetType{""}, ipsetName{""}, isIpsetv4{false} {
-        session = nullptr;
+        // session = nullptr;
         if (Debug == true) {
             syslog (LOG_DEBUG, "Ipset: new instance");
         }
@@ -81,10 +81,10 @@ public:
         if (Debug == true) {
             syslog (LOG_DEBUG, "Ipset: deleting instance");
         }
-        if (session != nullptr) {
-            ipset_session_fini(session);
-            session = nullptr;
-        }
+        // if (session != nullptr) {
+        //    ipset_session_fini(session);
+        //    session = nullptr;
+        // }
     }
     void Open (const std::string inIpsetName, std::string inIpsetType, bool inisIpsetv4, bool inDebug = false);
 
@@ -98,6 +98,18 @@ public:
     }
     bool Exists() {
         try {
+            struct ipset_session *session = ipset_session_init(printf);
+            if (session == nullptr) {
+                syslog (LOG_ERR, "Ipset: Cannot initialize ipset session.");
+                ipset_session_fini(session);
+                throw std::runtime_error ("Cannot initialize ipset session.");
+            }
+
+            if (ipset_envopt_parse(session, IPSET_ENV_EXIST, NULL) < 0) {
+                syslog (LOG_ERR, "Ipset: Can't set environment option.");
+                ipset_session_fini(session);
+                throw std::runtime_error ("Can't set environment option.");
+            }
             ipset_session_data_set(session, IPSET_SETNAME, ipsetName.c_str());
             return ipset_cmd(session, IPSET_CMD_HEADER, 0) == 0;
         } catch (...) {

@@ -90,7 +90,7 @@ void Ipset::Open (const std::string inIpsetName, std::string inIpsetType, bool i
     isIpsetv4 = inisIpsetv4;
     ipset_load_types();
 
-    session = ipset_session_init(printf);
+    struct ipset_session *session = ipset_session_init(printf);
     if (session == nullptr) {
         syslog (LOG_ERR, "Ipset: Cannot initialize ipset session.");
         ipset_session_fini(session);
@@ -176,6 +176,18 @@ bool Ipset::ipset_exec(enum ipset_cmd cmd) {
     if (Debug == true) {
         syslog(LOG_DEBUG, "Ipset: received command %d for ipset %s", cmd, ipsetName.c_str());
     }
+    struct ipset_session *session = ipset_session_init(printf);
+    if (session == nullptr) {
+        syslog (LOG_ERR, "Ipset: Cannot initialize ipset session.");
+        ipset_session_fini(session);
+        throw std::runtime_error ("Cannot initialize ipset session.");
+    }
+
+    if (ipset_envopt_parse(session, IPSET_ENV_EXIST, NULL) < 0) {
+        syslog (LOG_ERR, "Ipset: Can't set environment option.");
+        ipset_session_fini(session);
+        throw std::runtime_error ("Can't set environment option.");
+    }
     if (ipset_session_data_set(session, IPSET_SETNAME, ipsetName.c_str()) < 0) {
         syslog (LOG_ERR, "Ipset: Can't set setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
         ipset_session_fini(session);
@@ -200,6 +212,18 @@ bool Ipset::ipset_exec(enum ipset_cmd cmd) {
 bool Ipset::ipset_exec(enum ipset_cmd cmd,  const Tins::IPv4Address &inIpAddress, time_t timeout) {
     if (Debug == true) {
         syslog(LOG_DEBUG, "Ipset: received command %d for IP address %s for ipset %s", cmd, inIpAddress.to_string().c_str(), ipsetName.c_str());
+    }
+    struct ipset_session *session = ipset_session_init(printf);
+    if (session == nullptr) {
+        syslog (LOG_ERR, "Ipset: Cannot initialize ipset session.");
+        ipset_session_fini(session);
+        throw std::runtime_error ("Cannot initialize ipset session.");
+    }
+
+    if (ipset_envopt_parse(session, IPSET_ENV_EXIST, NULL) < 0) {
+        syslog (LOG_ERR, "Ipset: Can't set environment option.");
+        ipset_session_fini(session);
+        throw std::runtime_error ("Can't set environment option.");
     }
     if (ipset_session_data_set(session, IPSET_SETNAME, ipsetName.c_str()) < 0) {
         syslog (LOG_ERR, "Ipset: Can't set setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
@@ -252,6 +276,18 @@ bool Ipset::ipset_exec(enum ipset_cmd cmd,  const Tins::IPv6Address &inIpAddress
     if (Debug == true) {
         syslog(LOG_DEBUG, "Ipset: received command %d for IP address %s for ipset %s", cmd, inIpAddress.to_string().c_str(), ipsetName.c_str());
     }
+    struct ipset_session *session = ipset_session_init(printf);
+    if (session == nullptr) {
+        syslog (LOG_ERR, "Ipset: Cannot initialize ipset session.");
+        ipset_session_fini(session);
+        throw std::runtime_error ("Cannot initialize ipset session.");
+    }
+
+    if (ipset_envopt_parse(session, IPSET_ENV_EXIST, NULL) < 0) {
+        syslog (LOG_ERR, "Ipset: Can't set environment option.");
+        ipset_session_fini(session);
+        throw std::runtime_error ("Can't set environment option.");
+    }
     if (ipset_session_data_set(session, IPSET_SETNAME, ipsetName.c_str()) < 0) {
         syslog (LOG_ERR, "Ipset: Can't set setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
         ipset_session_fini(session);
@@ -303,6 +339,18 @@ bool Ipset::ipset_exec(enum ipset_cmd cmd,  const Tins::IPv6Address &inIpAddress
 bool Ipset::ipset_exec(enum ipset_cmd cmd, const std::string Mac, time_t timeout) {
     if (Debug == true) {
         syslog(LOG_DEBUG, "Ipset: received command %d for MAC address %s for ipset %s", cmd, Mac.c_str(), ipsetName.c_str());
+    }
+    struct ipset_session *session = ipset_session_init(printf);
+    if (session == nullptr) {
+        syslog (LOG_ERR, "Ipset: Cannot initialize ipset session.");
+        ipset_session_fini(session);
+        throw std::runtime_error ("Cannot initialize ipset session.");
+    }
+
+    if (ipset_envopt_parse(session, IPSET_ENV_EXIST, NULL) < 0) {
+        syslog (LOG_ERR, "Ipset: Can't set environment option.");
+        ipset_session_fini(session);
+        throw std::runtime_error ("Can't set environment option.");
     }
     if (ipset_session_data_set(session, IPSET_SETNAME, ipsetName.c_str()) < 0) {
         syslog (LOG_ERR, "Ipset: Can't set setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
