@@ -32,7 +32,8 @@
 #include <json.hpp>
 using json = nlohmann::json;
 
-#include <tins/tins.h>
+#include <tins/ip_address.h>
+#include <tins/ipv6_address.h>
 
 #include <syslog.h>
 #include <ctime>

@@ -30,7 +30,8 @@
 #include <memory>
 #include <regex>
 
-#include <tins/tins.h>
+#include <tins/ip_address.h>
+#include <tins/ipv6_address.h>
 
 #include <json.hpp>
 using json = nlohmann::json;

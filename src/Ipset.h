@@ -36,7 +36,8 @@
 #include <libipset/types.h>
 #include <libipset/session.h>
 
-#include <tins/tins.h>
+#include <tins/ip_address.h>
+#include <tins/ipv6_address.h>
 
 #include "MacAddress.h"
 

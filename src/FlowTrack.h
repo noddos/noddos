@@ -36,7 +36,8 @@
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 #include <libnetfilter_conntrack/libnetfilter_conntrack_tcp.h>
 
-#include <tins/tins.h>
+#include <tins/ip_address.h>
+#include <tins/ipv6_address.h>
 
 #include "iDeviceInfoSource.h"
 #include "HostCache.h"

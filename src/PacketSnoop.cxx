@@ -20,7 +20,8 @@
  *      Author: Steven Hessing (steven.hessing@gmail.com)
  */
 
-#include <tins/tins.h>
+#include <tins/ip_address.h>
+#include <tins/ipv6_address.h>
 
 #include "InterfaceMap.h"
 #include "PacketSnoop.h"

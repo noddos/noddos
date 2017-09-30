@@ -27,7 +27,8 @@
 #include <sys/types.h>
 #include <syslog.h>
 
-#include <tins/tins.h>
+#include <tins/ip_address.h>
+#include <tins/ipv6_address.h>
 
 int main(int argc, char** argv) {
     openlog("Ipsettest", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);

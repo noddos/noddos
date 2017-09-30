@@ -54,7 +54,8 @@
 #include <linux/if_packet.h>
 #include <netinet/in.h>
 
-#include <tins/tins.h>
+#include <tins/ip_address.h>
+#include <tins/ipv6_address.h>
 
 #include "tins/dns.h"
 #include "tins/dhcp.h"

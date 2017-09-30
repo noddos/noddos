@@ -22,7 +22,8 @@
 
 #include "Mdns.h"
 
-#include <tins/tins.h>
+#include <tins/ip_address.h>
+#include <tins/ipv6_address.h>
 
 #include <string>
 #include <memory>
@@ -35,8 +36,6 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <sys/epoll.h>
-
-#include "boost/asio.hpp"
 
 #define MSGBUFSIZE 10000
 

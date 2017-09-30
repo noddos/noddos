@@ -24,7 +24,8 @@
 #include <fstream>
 #include <set>
 
-#include <tins/tins.h>
+#include <tins/ip_address.h>
+#include <tins/ipv6_address.h>
 
 #include <unistd.h>
 
