@@ -1,0 +1,121 @@
+{#
+ Copyright (C) 2017 Steven Hessing (steven.hessing@gmail.com)
+  This is free software, licensed under the GNU General Public License v3.
+ /usr/lib/lua/luci/view/clients.htm
+#}
+
+{%
+    local cjson = require "cjson"
+    local os = require "os"
+    local lfs = require "lfs"
+
+    local noddosdir = "/var/lib/noddos/"
+    local dumpfile= noddosdir .. "DeviceDump.json"
+    local profilefile = noddosdir .. "DeviceProfiles.json"
+
+    local last_modified = "<boottime>"
+    local devices
+    local profiles
+
+    function file_exists(path)
+        local file = io.open(path, "rb")
+        if file then file:close() end
+            return file ~= nil
+    end
+
+    last_modified = os.date("%c", lfs.attributes(dumpfile)[modification])
+    io.input(dumpfile)
+    t = io.read("*all")
+    devices = cjson.decode(t)
+
+    io.input(profilefile)
+    t = io.read("*all")
+    profiles = cjson.decode(t)
+
+    devicevalues = {}
+    local v
+    for i, v in ipairs(profiles) do
+        devicevalues[v.DeviceProfileUuid] = v
+    end
+%}
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Noddos Clients</title>
+</head>
+<body>
+<div>
+    <h2 name="content">Clients</h2>
+    <div>The following clients have been discovered on the network. The last discovery was completed at {{last_modified}}</div>
+
+    <fieldset>
+        <legend>Recognized Clients</legend>
+        <div>
+            <table>
+                <tr>
+                    <th>Hostname</th>
+                    <th>IPv4</th>
+                    <th>MAC</th>
+                    <th>Manufacturer</th>
+                    <th>Model</th>
+                    <th>Class</th>
+                </tr>
+
+                {%
+                    for i,v in ipairs(devices) do
+                        if v.DeviceProfileUuid ~= "" then
+                %}
+                <tr>
+                    <td>{{v.Hostname}}</td>
+                    <td>{{v.Ipv4Address}}</td>
+                    <td><a href="clientdetails.html?mac={{v.MacAddress}}">{{v.MacAddress}}</a></td>
+                    <td>{{devicevalues[v.DeviceProfileUuid].Manufacturer}}</td>
+                    <td>{{devicevalues[v.DeviceProfileUuid].Model}}</td>
+                    <td>{{devicevalues[v.DeviceProfileUuid].ThingClass}}</td>
+                </tr>
+                {%
+                        end
+                    end
+                %}
+            </table>
+        </div>
+    </fieldset>
+    <br />
+    <fieldset>
+        <legend>Unrecognized Clients</legend>
+        <div>
+            <table>
+                <tr>
+                    <th>Hostname</th>
+                    <th>IPv4</th>
+                    <th>MAC</th>
+                    <th>Manufacturer</th>
+                    <th>Model</th>
+                    <th>DhcpVendor</th>
+                    <th>DhcpHostname</th>
+                </tr>
+
+                {%
+                    for i,v in ipairs(devices) do
+                        if v.DeviceProfileUuid == "" then
+                %}
+                <tr>
+                    <td>{{v.Hostname}}</td>
+                    <td>{{v.Ipv4Address}}</td>
+                    <td><a href="clientdetails.html?mac={{v.MacAddress}}">{{v.MacAddress}}</a></td>
+                    <td>{{v.SsdpManufacturer}}</td>
+                    <td>{{v.SsdpModelName}}</td>
+                    <td>{{v.DhcpVendor1}}</td>
+                    <td>{{v.DhcpHostname}}</td>
+                </tr>
+                {%
+                        end
+                    end
+                %}
+            </table>
+        </div>
+    </fieldset>
+</div>
+</body>
+</html>

@@ -1,0 +1,65 @@
+{#
+    clientdetails.html : Provides details about client devices discovered by Noddos
+    Copyright (C) 2017 Steven Hessing (steven.hessing@gmail.com)
+    This is free software, licensed under the GNU General Public License v3.
+#}
+
+{%
+    local os = require "os" 
+    local cjson = require "cjson"
+
+    local params = {}
+    local echo = {}
+
+    local macaddress = ngx.var.arg_mac
+
+    local profile = {}
+
+    local device = {}
+    io.input("/var/lib/noddos/DeviceDump.json")
+    local t = io.read("*all")
+    local devices = cjson.decode(t)
+    for i, v in ipairs(devices) do
+        if v.MacAddress == macaddress then
+            device = v
+        end
+    end
+
+    io.input("/var/lib/noddos/DeviceProfiles.json")
+    t = io.read("*all")
+    local profiles = cjson.decode(t)
+
+    for i, v in ipairs(profiles) do
+        if device.DeviceProfileUuid == v.DeviceProfileUuid then
+            profile = v
+        end
+    end
+%}
+
+<html>
+  <head>
+    <title>Client Details by Noddos</title>
+    <meta charset="utf-8">
+  </head>
+  <body >
+    <h1>Client Details</h1>
+    <fieldset>
+        <legend>Client details</legend>
+         <div>
+            <table>
+                {%
+                    for i, key in ipairs{"MacAddress", "Ipv4Address", "Ipv6Address", "DeviceProfileUuid", "DhcpHostname", "DhcpVendor", "SsdpFriendlyName", "SsdpLocation", "SsdpManufacturer", "SsdpModelName", "SsdpModelUrl", "SsdpSerialNumber", "SsdpServer","SsdpUserAgent", "MdnsDeviceUrl", "MdnsHw", "MdnsManufacturer", "MdnsModelName", "MdnsOs", "WsDiscoveryTypes", "WsDiscoveryXaddrs", "DnsQueries"} do
+                %}
+                <tr>
+                    <th align=left>{{ key }}</th><td>{{ device[key] }}</td>
+                </tr>
+                {%
+                    end
+                %}
+            </table>
+        </div>
+    </fieldset>
+    <br><br>Client Details by <a href=http://www.noddos.io>Noddos</a>
+  </body>
+</html>
+

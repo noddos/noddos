@@ -545,6 +545,9 @@ bool Host::setSsdpInfo(const std::shared_ptr<SsdpHost> insHost) {
 
 	iCache::LastModified = iCache::LastSeen;
 	Ssdp = *insHost;
+    if (Debug == true) {
+        syslog (LOG_DEBUG, "Host: SSDP info has been set");
+    }
 
 	// Information in the SSDP multicast message has changed so if the Location field contains a URL, we query it
 	if (Ssdp.Location != "") {
@@ -563,6 +566,9 @@ bool Host::setWsDiscoveryInfo(const std::shared_ptr<WsDiscoveryHost> inwsdHost) 
     }
     iCache::LastModified = iCache::LastSeen;
     Wsd = *inwsdHost;
+    if (Debug == true) {
+        syslog (LOG_DEBUG, "Host: WS-Discovery info has been set");
+    }
     return true;
 }
 
@@ -576,6 +582,9 @@ bool Host::setMdnsInfo(const std::shared_ptr<MdnsHost> inmdnsHost) {
     }
     iCache::LastModified = iCache::LastSeen;
     Mdns = *inmdnsHost;
+    if (Debug == true) {
+        syslog (LOG_DEBUG, "Host: mDNS info has been set");
+    }
     return true;
 }
 

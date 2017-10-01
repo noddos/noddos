@@ -185,7 +185,7 @@ std::shared_ptr<Host> HostCache::FindOrCreateHostByMac (const MacAddress inMac, 
 		return nullptr;
     }
 	if (inMac.isValid() == false) {
-		syslog(LOG_WARNING, "HostCache: Empty Mac Address provided");
+		syslog(LOG_WARNING, "HostCache: Invalid Mac Address provided: %s", inMac.c_str());
 		return nullptr;
 	}
 	if (hC.find(inMac.get()) == hC.end()) {
@@ -236,11 +236,13 @@ bool HostCache::AddFlow (const std::string srcip, const uint16_t srcport, const 
 		return false;
 	}
 
-	std::shared_ptr<Host> h = FindOrCreateHostByIp(srcip);
-	if (h) {
-		h->setFlowEntry(srcport, dstip, dstport, protocol, FlowExpiration);
-		return true;
-	}
+	try {
+	    std::shared_ptr<Host> h = FindOrCreateHostByIp(srcip);
+	    if (h != nullptr) {
+	        h->setFlowEntry(srcport, dstip, dstport, protocol, FlowExpiration);
+	        return true;
+	    }
+	} catch (...) {}
 	return false;
 }
 
@@ -253,11 +255,13 @@ bool HostCache::AddDnsQueryIp (const std::string clientip, const std::string fqd
 		return false;
 	}
 
-	std::shared_ptr<Host> h = FindOrCreateHostByIp(clientip);
-	if (h) {
-		h->addorupdateDnsQueryList(fqdn);
-		return true;
-	}
+	try {
+	    std::shared_ptr<Host> h = FindOrCreateHostByIp(clientip);
+	    if (h != nullptr) {
+	        h->addorupdateDnsQueryList(fqdn);
+	        return true;
+	    }
+	} catch (...) {}
 	return false;
 }
 
@@ -277,12 +281,20 @@ bool HostCache::AddDhcpRequest (const std::string IpAddress, const MacAddress in
 
 	std::shared_ptr<Host> h;
 	if (inMac.isValid() == true) {
-		h = FindOrCreateHostByMac(inMac, "", IpAddress);
+		try {
+		    h = FindOrCreateHostByMac(inMac, "", IpAddress);
+		} catch (...) {
+		    return false;
+		}
 	} else {
-		h = FindOrCreateHostByIp(IpAddress);
+	    try {
+	        h = FindOrCreateHostByIp(IpAddress);
+	    } catch (...) {
+	        return false;
+        }
 	}
 
-	if (h) {
+	if (h != nullptr) {
 		h->setDhcp(IpAddress, inMac.str(), Hostname, DhcpVendor);
 		return true;
 	}
@@ -302,11 +314,13 @@ bool HostCache::AddSsdpInfo (const std::shared_ptr<SsdpHost> sHost) {
 		return false;
 	}
 
-	std::shared_ptr<Host> h = FindOrCreateHostByIp(sHost->IpAddress);
-	if (h) {
-		h->setSsdpInfo(sHost);
-		return true;
-	}
+	try {
+	    std::shared_ptr<Host> h = FindOrCreateHostByIp(sHost->IpAddress);
+	    if (h != nullptr) {
+	        h->setSsdpInfo(sHost);
+	        return true;
+	    }
+	} catch (...) {}
 	return false;
 }
 
@@ -322,11 +336,13 @@ bool HostCache::AddWsDiscoveryInfo (const std::shared_ptr<WsDiscoveryHost> inwsd
         return false;
     }
 
-    std::shared_ptr<Host> h = FindOrCreateHostByIp(inwsdHost->IpAddress);
-    if (h) {
-        h->setWsDiscoveryInfo(inwsdHost);
-        return true;
-    }
+    try {
+        std::shared_ptr<Host> h = FindOrCreateHostByIp(inwsdHost->IpAddress);
+        if (h != nullptr) {
+            h->setWsDiscoveryInfo(inwsdHost);
+            return true;
+        }
+    } catch (...) {}
     return false;
 
 }
@@ -343,11 +359,13 @@ bool HostCache::AddMdnsInfo (const std::shared_ptr<MdnsHost> inmdnsHost) {
         return false;
     }
 
-    std::shared_ptr<Host> h = FindOrCreateHostByIp(inmdnsHost->IpAddress);
-    if (h) {
-        h->setMdnsInfo(inmdnsHost);
-        return true;
-    }
+    try {
+        std::shared_ptr<Host> h = FindOrCreateHostByIp(inmdnsHost->IpAddress);
+        if (h != nullptr) {
+            h->setMdnsInfo(inmdnsHost);
+            return true;
+        }
+    } catch (...) {}
     return false;
 
 }
@@ -1007,9 +1025,13 @@ bool HostCache::ImportDeviceInfo (json &j) {
 			return false;
 		}
 	}
-	if (not FindOrCreateHostByMac(Mac, DeviceProfileUuid, Ipv4Address)) {
-		syslog(LOG_WARNING, "HostCache: Failed to create Host with MacAddress %s and uuid %s", MacAddressString.c_str(), DeviceProfileUuid.c_str());
-		return false;
+	try {
+	    if (not FindOrCreateHostByMac(Mac, DeviceProfileUuid, Ipv4Address)) {
+	        syslog(LOG_WARNING, "HostCache: Failed to create Host with MacAddress %s and uuid %s", MacAddressString.c_str(), DeviceProfileUuid.c_str());
+	        return false;
+	    }
+	} catch (...) {
+	    return false;
 	}
 
 	try {

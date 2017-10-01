@@ -646,12 +646,16 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
             // look at the reverse DNS path from IP address and match that to the original DNS query. As multiple
             // FQDNs may resolve to the same IP address and the reverse path may thus result in multiple FQDNs,
             // we need to keep track which of those FQDNs were queried by the Host.
-            std::shared_ptr<Host> h = hC->FindOrCreateHostByMac(inMac, "",
+            try {
+                std::shared_ptr<Host> h = hC->FindOrCreateHostByMac(inMac, "",
                     sourceIp);
-            h->addorupdateDnsQueryList(it.dname());
-            if (Debug == true) {
-                syslog (LOG_DEBUG, "PacketSnoop: Adding FQDN %s to DnsQueryList for %s", it.dname().c_str(), sourceIp.c_str());
-            }
+                if (h != nullptr) {
+                    h->addorupdateDnsQueryList(it.dname());
+                }
+                if (Debug == true) {
+                    syslog (LOG_DEBUG, "PacketSnoop: Adding FQDN %s to DnsQueryList for %s", it.dname().c_str(), sourceIp.c_str());
+                }
+            } catch (...) {}
         }
         delete q;
         return false;

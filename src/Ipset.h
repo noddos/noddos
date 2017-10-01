@@ -111,8 +111,14 @@ public:
                 ipset_session_fini(session);
                 throw std::runtime_error ("Can't set environment option.");
             }
-            ipset_session_data_set(session, IPSET_SETNAME, ipsetName.c_str());
-            return ipset_cmd(session, IPSET_CMD_HEADER, 0) == 0;
+            int r = ipset_session_data_set(session, IPSET_SETNAME, ipsetName.c_str());
+            if (ipset_commit(session) < 0) {
+                syslog (LOG_ERR, "Ipset: Can't commit for setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
+                ipset_session_fini(session);
+                throw std::runtime_error("Can't call ipset_commit for " + ipsetName + ": " + ipset_session_error(session));
+            }
+            ipset_session_fini(session);
+            return r == 0;
         } catch (...) {
             syslog (LOG_ERR, "Ipset: Failed to check existence of ipset %s", ipsetName.c_str());
         }

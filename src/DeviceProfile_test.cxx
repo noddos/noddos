@@ -103,26 +103,29 @@ int main()
 }
 
 bool test_match (std::string inIp, std::string inDpUuid, HostCache &hc) {
-	std::shared_ptr<Host> h_ptr = hc.FindHostByIp(inIp);
-	if (h_ptr == nullptr) {
-		std::cout << "IP address " << inIp << " not found in HostCache" << std::endl;
-		return false;
-	}
-	h_ptr->Match(hc.getDeviceProfilesMap());
-	std::string uuid = h_ptr->getUuid ();
-	if (uuid != inDpUuid) {
-		if (uuid == "") {
-			std::cout << inIp << " did not match with profile " << inDpUuid << std::endl;
-		} else {
-			std::cout << inIp << " did not match with profile " << inDpUuid << " but with " << uuid << std::endl;
-		}
-		json j;
-		h_ptr->DeviceStats(j, true, true);
-		std::cout << j << std::endl;
-		return false;
+	try {
+	    std::shared_ptr<Host> h_ptr = hc.FindHostByIp(inIp);
+	    if (h_ptr == nullptr) {
+	        std::cout << "IP address " << inIp << " not found in HostCache" << std::endl;
+	        return false;
+	        std::string uuid = h_ptr->getUuid ();
+	        if (uuid != inDpUuid) {
+	            if (uuid == "") {
+	                std::cout << inIp << " did not match with profile " << inDpUuid << std::endl;
+	            } else {
+	                std::cout << inIp << " did not match with profile " << inDpUuid << " but with " << uuid << std::endl;
+	            }
+	            json j;
+	            h_ptr->DeviceStats(j, true, true);
+	            std::cout << j << std::endl;
+	            return false;
 
-	} else {
-		std::cout << inIp << " MATCHED " << inDpUuid << std::endl;
-		return true;
-	}
+	        } else {
+	            std::cout << inIp << " MATCHED " << inDpUuid << std::endl;
+	            return true;
+	        }
+	    }
+	    h_ptr->Match(hc.getDeviceProfilesMap());
+	} catch (...) {	}
+	return false;
 }

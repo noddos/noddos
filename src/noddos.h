@@ -55,8 +55,6 @@ struct MdnsHost {
     std::string Manufacturer;
     std::string ModelName;
 
-
-
     bool operator == (const MdnsHost &rhs) const {
         return IpAddress == rhs.IpAddress &&
                 Os == rhs.Os && Hw == rhs.Hw &&

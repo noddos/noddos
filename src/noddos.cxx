@@ -161,22 +161,37 @@ int main(int argc, char** argv) {
         PacketSnoop *p = new PacketSnoop(hC, 64, config.Debug && config.DebugPacketSnoop);
         p->Open(iface, 64);
         add_epoll_filehandle(epfd, epollmap, *p);
+        if (config.Debug) {
+            syslog(LOG_DEBUG, "Noddos: PacketSnoop for interface %s file handle %d", iface.c_str(), p->getFileHandle());
+        }
         pInstances.insert(p);
     }
 
     SsdpServer s(hC, 86400, "", config.Debug && config.DebugSsdp);
     add_epoll_filehandle(epfd, epollmap, s);
+    if (config.Debug) {
+        syslog(LOG_DEBUG, "Noddos: SSDP file handle %d", s.getFileHandle());
+    }
 
     WsDiscovery w(hC, 86400, "", config.Debug && config.DebugWsDiscovery);
     add_epoll_filehandle(epfd, epollmap, w);
+    if (config.Debug) {
+        syslog(LOG_DEBUG, "Noddos: WS-Discovery file handle %d", w.getFileHandle());
+    }
 
     Mdns m(hC, 86400, "", config.Debug && config.DebugMdns);
     add_epoll_filehandle(epfd, epollmap, m);
+    if (config.Debug) {
+        syslog(LOG_DEBUG, "Noddos: mDNS file handle %d", m.getFileHandle());
+    }
 
     std::set<std::string> localIpAddresses = hC.getLocalIpAddresses();
     FlowTrack ft(hC, config, localIpAddresses) ;
     ft.Open();
    	add_epoll_filehandle(epfd, epollmap, ft);
+    if (config.Debug) {
+        syslog(LOG_DEBUG, "Noddos: FlowTrack file handle %d", ft.getFileHandle());
+    }
 
     if (config.User != "" && config.Group != "") {
     	drop_process_privileges(config);
