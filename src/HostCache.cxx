@@ -1121,7 +1121,7 @@ void HostCache::writeIptables()  {
     }
     std::ofstream outputfs(FirewallRulesFile);
     std::vector<std::string> ifaces = ifMap->getLanInterfaces();
-    std::string action = "LOG --log-prefix Noddos-IPtables-LOG";
+    std::string action = "LOG --log-prefix Noddos-IPtables-LOG ";
     if (FirewallBlockTraffic == true) {
         action = "DROP";
     }
