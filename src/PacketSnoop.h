@@ -98,11 +98,8 @@ private:
 	std::map<Tins::IPv4Address,std::map<uint16_t,std::map<Tins::IPv4Address,std::map<uint16_t,std::shared_ptr<TcpSnoop>>>>> tcpv4Snoops;
     std::map<Tins::IPv6Address,std::map<uint16_t,std::map<Tins::IPv6Address,std::map<uint16_t,std::shared_ptr<TcpSnoop>>>>> tcpv6Snoops;
 
-	// void *user;
-    // rx_cb_t cb;
     uint8_t *map = nullptr;
     size_t map_sz = 0;
-    sig_atomic_t cancel = 0;
     unsigned int r_idx = 0;
     unsigned int nr_blocks = 0;
     unsigned int block_sz = 0;
