@@ -58,7 +58,7 @@ end
 pagetop = [[
 <html>
   <head>
-    <title>Client Details by Nddos</title>
+    <title>Client Details by Noddos</title>
     <meta charset="utf-8">
     <!--[if lt IE 9]><script src="/luci-static/bootstrap/html5.js?v=git-17.100.70571-29fabe2"></script><![endif]-->
     <meta name="viewport" content="initial-scale=1.0">

@@ -102,20 +102,17 @@ void Ipset::Open (const std::string inIpsetName, std::string inIpsetType, bool i
         ipset_session_fini(session);
         throw std::runtime_error ("Can't set environment option.");
     }
-    if (Exists()) {
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "Ipset: Not creating set %s as it already exists", ipsetName.c_str());
-            // ipset_session_fini(session);
-        }
-        return;
-    }
-
-    uint32_t timeout;
-
-    if (ipset_session_data_set(session, IPSET_SETNAME, ipsetName.c_str()) < 0) {
+    int r = ipset_session_data_set(session, IPSET_SETNAME, ipsetName.c_str());
+    if ( r < 0) {
         syslog (LOG_ERR, "Ipset: Can't set setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
         ipset_session_fini(session);
         throw std::runtime_error("Can't set setname " + ipsetName + ": " + ipset_session_error(session));
+    } else if (r > 0) {
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "Ipset: Not creating set %s as it already exists", ipsetName.c_str());
+        }
+        ipset_session_fini(session);
+        return;
     }
     if (ipset_session_data_set(session, IPSET_OPT_TYPENAME, ipsetType.c_str()) < 0) {
         syslog (LOG_ERR, "Ipset: Can't set setname %s to type %s: %s", ipsetName.c_str(), ipsetType.c_str(), ipset_session_error(session));
@@ -129,7 +126,7 @@ void Ipset::Open (const std::string inIpsetName, std::string inIpsetType, bool i
         throw std::runtime_error("Can't create ipset " + ipsetName + ": " + ipset_session_error(session));
     }
 
-    timeout = 0; /* default to infinity */
+    uint32_t timeout = 0; /* default to infinity */
     if (ipset_session_data_set(session, IPSET_OPT_TIMEOUT, &timeout) < 0) {
         syslog (LOG_ERR, "Ipset: Can't set setname %s to timeout %d: %s", ipsetName.c_str(), timeout, ipset_session_error(session));
         ipset_session_fini(session);
