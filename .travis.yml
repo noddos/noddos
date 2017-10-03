@@ -8,12 +8,13 @@ dist: trusty
 services:
  - docker
 
-#env:
- #- distribution: ubuntu
-    #version: 16.04
-    #init: /usr/lib/systemd/systemd
-    #run_opts: "--privileged --volume=/sys/fs/cgroup:/sys/fs/cgroup:ro"
-    # playbook: test.yml
+env:
+ global:
+   - distribution=ubuntu
+   - version=16.04
+   # - init: /usr/lib/systemd/systemd
+   # - run_opts: "--privileged --volume=/sys/fs/cgroup:/sys/fs/cgroup:ro"
+   # playbook: test.yml
 
 before_install:
   # C++11
