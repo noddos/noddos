@@ -25,7 +25,7 @@ before_install:
   - sudo docker pull ${distribution}:${version}
  
 install: 
-  - sudo docker run 16.04 echo "hello"
+  - sudo docker run ubuntu:16.04 echo "hello"
   #- docker pull ${DOCKER_REPOSITORY}:last_successful_build || true
   #- docker pull ${DOCKER_REPOSITORY}:${TRAVIS_COMMIT} || true
   #- docker build -t ${DOCKER_REPOSITORY}:${TRAVIS_COMMIT} --pull=true .
