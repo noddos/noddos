@@ -25,7 +25,6 @@ before_install:
   - sudo docker pull ${distribution}:${version}
  
 install: 
-  - sudo docker run ubuntu:16.04 echo "hello"
   #- docker pull ${DOCKER_REPOSITORY}:last_successful_build || true
   #- docker pull ${DOCKER_REPOSITORY}:${TRAVIS_COMMIT} || true
   #- docker build -t ${DOCKER_REPOSITORY}:${TRAVIS_COMMIT} --pull=true .
@@ -42,7 +41,9 @@ install:
   #- sudo apt-get install -qq g++-5
   #- sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-5 90
  
-#script: 
+script: 
+  - sudo docker run ubuntu:16.04 'apt install libnetfilter-conntrack-dev libcurl4-openssldev libssl-dev libtins-dev libipset-dev libtins-dev openssl libtins3.4 ca-certificates'
+  - sudo docker run ubuntu:16.04 'cd src; cmake .; make; make test'
 #  - cd src
 #  - cmake .
 #  - make 
