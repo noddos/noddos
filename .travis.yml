@@ -18,16 +18,17 @@ env:
 
 before_install:
   # C++11
-  - add-apt-repository -y ppa:ubuntu-toolchain-r/test
-  - apt-get update -qq
-  - docker --version
-  - echo "ENV GIT_SHA ${TRAVIS_COMMIT}" >> Dockerfile
-  - docker pull ${distribution}:${version}
+  - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+  - sudo apt-get update -qq
+  - sudo docker --version
+  - sudo echo "ENV GIT_SHA ${TRAVIS_COMMIT}" >> Dockerfile
+  - sudo docker pull ${distribution}:${version}
  
 install: 
-  - docker pull ${DOCKER_REPOSITORY}:last_successful_build || true
-  - docker pull ${DOCKER_REPOSITORY}:${TRAVIS_COMMIT} || true
-  - docker build -t ${DOCKER_REPOSITORY}:${TRAVIS_COMMIT} --pull=true .
+  - sudo docker run 16.04 echo "hello"
+  #- docker pull ${DOCKER_REPOSITORY}:last_successful_build || true
+  #- docker pull ${DOCKER_REPOSITORY}:${TRAVIS_COMMIT} || true
+  #- docker build -t ${DOCKER_REPOSITORY}:${TRAVIS_COMMIT} --pull=true .
   #- sudo apt-get install libnetfilter-conntrack-dev
   #- sudo apt-get install libcurl4-openssl-dev
   #- sudo apt-get install libssl-dev libtins-dev libipset-dev
