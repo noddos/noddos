@@ -116,7 +116,7 @@ start_service() {
     procd_set_param file /etc/config/noddos
     procd_set_param stdout 0 # forward stdout of the command to logd
     procd_set_param stderr 0 # same for stderr
-    procd_set_param user root # run service as user nobody
+    procd_set_param user root 
     procd_close_instance
 }
 
