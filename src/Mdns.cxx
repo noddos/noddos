@@ -31,6 +31,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#include <cstring>
+
 #include <netinet/in.h>
 #include <stdio.h>
 #include <sys/socket.h>
@@ -135,9 +137,10 @@ bool Mdns::parseMessage (std::shared_ptr<MdnsHost> host, const unsigned char * m
 
 void Mdns::parseTxtRr (std::shared_ptr<MdnsHost> host, const std::string txt) {
     size_t stridx = 0;
-    while (stridx < txt.length()) {
-        size_t len = txt[stridx++];
-        if (stridx + len > txt.length()) {
+    size_t txtlen = txt.length();
+    while (stridx < txtlen) {
+        unsigned char len = txt[stridx++];
+        if (stridx + len > txtlen) {
             if(Debug == true) {
                 syslog (LOG_NOTICE, "Mdns: malformed mDNS TXT record");
             }
@@ -155,7 +158,7 @@ void Mdns::parseTxtRr (std::shared_ptr<MdnsHost> host, const std::string txt) {
         size_t valuepos = stridx + keylength + 1;
         size_t valuelength = len - keylength - 1;
         if(Debug == true) {
-            syslog (LOG_DEBUG, "Mdns: strindex: %zd, kv-pair length: %zd, key-length: %zd, value-length %zd", stridx, len, keylength, valuelength);
+            syslog (LOG_DEBUG, "Mdns: TXT-len: %zu, strindex: %zu, kv-pair length: %d, key-length: %zu, value-length %zu", txtlen, stridx, len, keylength, valuelength);
         }
         std::string value = txt.substr(valuepos, valuelength);
         stridx += len;
