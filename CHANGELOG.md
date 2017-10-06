@@ -1,3 +1,23 @@
+___Noddos v0.5.2___ - 10/6/2017
+
+Bug fixes:
+* [#29](https://github.com/noddos/noddos/issues/29) endless loop in parsing specific mDNS TXT record
+* [#31](https://github.com/noddos/noddos/issues/31) add br-lan to default list of LAN interfaces for LEDE routers
+* [#30](https://github.com/noddos/noddos/issues/30) reduce logging when running without debugging enabled
+
+___Noddos v0.5.1  - 10/2/2017___
+
+New features:
+* Improved mDNS TXT handling to support 'mfg' and 'mdl' fields
+* Write IPv6 and DhcpHostname to DeviceDump.json file
+
+Bug fixes:
+* Memory leak in Ipset class fixed
+* No retries for MAC address lookups as we now send out ARP requests
+* Hide IP addresses in device reports for the SSDP Location and the mDNS DeviceURL fields
+* All but stop hosts showing up in DeviceDump.json with as IP address '0.0.0.0'
+* Fix test case for Android clients for DeviceProfile matching
+
 ___Noddos v0.5.0  - 9/17/2017___
 
 New features:
