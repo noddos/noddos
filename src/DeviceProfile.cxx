@@ -25,9 +25,9 @@
 void DeviceProfile::createorupdateIpsets (bool inForce) {
     if (inForce || (hasAllowedEndpoints() && Hosts.size() > 0)) {
         try {
-            srcIpset.Open(getIpsetName(DeviceProfileUuid, true, false), "hash:mac", false, true);
-            dstv4Ipset.Open(getIpsetName(DeviceProfileUuid, false, true), "hash:ip", true, true);
-            dstv6Ipset.Open(getIpsetName(DeviceProfileUuid, false, false), "hash:ip", false, true);
+            srcIpset.Open(getIpsetName(DeviceProfileUuid, true, false), "hash:mac", false, Debug);
+            dstv4Ipset.Open(getIpsetName(DeviceProfileUuid, false, true), "hash:ip", true, Debug);
+            dstv6Ipset.Open(getIpsetName(DeviceProfileUuid, false, false), "hash:ip", false, Debug);
         } catch (...) {
         }
 
@@ -70,10 +70,14 @@ bool DeviceProfile::from_json(const json &j) {
     DeviceProfileVersion = j["DeviceProfileVersion"].get<uint32_t>();
 
     if (j.find("UploadStats") == j.end()) {
-        syslog(LOG_DEBUG, "DeviceProfile:No UploadStats value set, defaulting to false");
+        if (Debug == true) {
+            syslog(LOG_DEBUG, "DeviceProfile:No UploadStats value set, defaulting to false");
+        }
         UploadStats = false;
     } else if (! j["UploadStats"].is_boolean()) {
-        syslog(LOG_DEBUG, "UDeviceProfile:ploadStats is not a bool, defaulting to false");
+        if (Debug == true) {
+            syslog(LOG_DEBUG, "UDeviceProfile:ploadStats is not a bool, defaulting to false");
+        }
         UploadStats = false;
     } else {
         UploadStats = j["UploadStats"].get<bool>();
@@ -99,13 +103,17 @@ bool DeviceProfile::from_json(const json &j) {
         return false;
     }
     for (json::iterator it = ijson.begin(); it != ijson.end(); ++it ) {
-        syslog(LOG_ERR, "Adding Identifier");
+        if (Debug == true) {
+            syslog(LOG_DEBUG, "DeviceProfile: Adding Identifier");
+        }
         auto i = std::make_shared<Identifier>(*it);
         Identifiers.push_back(i);
     }
 
     if (j.find("AllowedEndpoints") == j.end()) {
-        syslog(LOG_DEBUG, "DeviceProfile: No whitelist found for profile %s", DeviceProfileUuid.c_str());
+        if (Debug == true) {
+            syslog(LOG_DEBUG, "DeviceProfile: No whitelist found for profile %s", DeviceProfileUuid.c_str());
+        }
     } else {
         json ajson = j["AllowedEndpoints"];
         if (! ijson.is_array()) {

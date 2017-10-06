@@ -66,7 +66,9 @@ public:
 			}
 		}
 		if (j.find("EnforceConfidenceLevel") == j.end()) {
-			syslog(LOG_INFO, "No EnforceConfidenceLevel set, defaulting to `None'");
+			if (Debug == true) {
+			    syslog(LOG_DEBUG, "No EnforceConfidenceLevel set, defaulting to `None'");
+			}
 			EnforceConfidenceLevel = ConfidenceLevel::None;
 		} else {
 			if (not j["EnforceConfidenceLevel"].is_string()) {

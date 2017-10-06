@@ -136,7 +136,9 @@ int main(int argc, char** argv) {
     	syslog(LOG_ERR, "Noddos: Setting up signal fd");
     	throw std::system_error(errno, std::system_category());
     } else {
-    	syslog(LOG_INFO, "Noddos: Signal FD is: %d", sfd);
+    	if (config.Debug == true) {
+    	    syslog(LOG_DEBUG, "Noddos: Signal FD is: %d", sfd);
+    	}
         struct epoll_event event;
         memset (&event, 0, sizeof (event));
         event.data.fd = sfd;
@@ -368,6 +370,7 @@ exitprog:
 	ft.Close();
 	close (epfd);
 	close (sfd);
+	syslog (LOG_INFO, "Noddos: Exiting");
 	closelog();
 	unlink (config.PidFile.c_str());
 	free (epoll_events);
@@ -471,12 +474,16 @@ bool daemonize (Config &inConfig) {
 	if (ifs.is_open()) {
 		ifs >> origpid;
 		std::string pidprocpath = "/proc/" + origpid + "/stat";
-		fprintf (stderr, "Checking if pid file %s exists\n", pidprocpath.c_str());
+		if (inConfig.Debug == true) {
+		    fprintf (stderr, "Checking if pid file %s exists\n", pidprocpath.c_str());
+		}
 		struct stat buf;
 		if (stat (pidprocpath.c_str(), &buf) == 0) {
 		    throw std::runtime_error ("Pid file " + inConfig.PidFile + " exists and contains PID of a running process ");
 		}
-		fprintf (stderr, "Deleting stale pid file %s\n", pidprocpath.c_str());
+        if (inConfig.Debug == true) {
+            fprintf (stderr, "Deleting stale pid file %s\n", pidprocpath.c_str());
+        }
 		unlink(inConfig.PidFile.c_str());
 		ifs.close();
 	}
@@ -488,7 +495,7 @@ bool daemonize (Config &inConfig) {
 	pid = fork();
 	// The parent process continues with a process ID greater than 0
 	if(pid > 0)	{
-	    fprintf (stderr, "We've forked so existing parent process\n");
+	    // fprintf (stderr, "We've forked so existing parent process\n");
 	    exit(0);
 	}
 	// A process ID lower than 0 indicates a failure in either process
