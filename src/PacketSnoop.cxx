@@ -735,9 +735,15 @@ bool PacketSnoop::parseDhcpv4UdpPacket(unsigned char *payload, size_t size) {
         if (Debug == true) {
             syslog(LOG_DEBUG, "PacketSnoop: Malformed DHCPv4 packet");
         }
+        if (d != nullptr) {
+            delete d;
+        }
         return true;
     } catch (...) {
         syslog(LOG_ERR, "PacketSnoop: DHCPv4 exception");
+        if (d != nullptr) {
+            delete d;
+        }
         return true;
     }
     uint8_t msgType = d->type();
@@ -746,7 +752,6 @@ bool PacketSnoop::parseDhcpv4UdpPacket(unsigned char *payload, size_t size) {
     std::string clientIp = yiaddr.to_string();
 
     Tins::BootP::chaddr_type chaddr = d->chaddr();
-    // std::string macAddress = chaddr.to_string().substr(0,chaddr.address_size  + 1);
     MacAddress mac (chaddr.to_string());
 
     std::string hostname = "";

@@ -1,3 +1,8 @@
+___Noddos v0.5.3___ - 10/15/2017
+
+Bug fix:
+* [#32](https://github.com/noddos/noddos/issues/32) Noddos runs out of file descriptors
+
 ___Noddos v0.5.2___ - 10/6/2017
 
 Bug fixes:

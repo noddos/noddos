@@ -467,12 +467,13 @@ MacAddress HostCache::MacLookup (const std::string inIpAddress, const std::strin
         return Mac;
     }
 
-    if (-1 == ioctl(s,SIOCGARP , (caddr_t) &areq)) {
+    if (-1 == ioctl(s, SIOCGARP , (caddr_t) &areq)) {
 		if (Debug == true) {
 		    syslog (LOG_DEBUG, "HostCache: ARP lookup failure for %s on interface %s", inIpAddress.c_str(), inInterface.c_str());
 		}
 		return Mac;
 	}
+    close (s);
 	char mA[18];
 	unsigned char *ptr = (unsigned char *) areq.arp_ha.sa_data;
 	sprintf(mA, "%02X:%02X:%02X:%02X:%02X:%02X",
@@ -593,26 +594,17 @@ bool HostCache::ExportDeviceProfileMatches(const std::string filename, bool deta
 	return true;
 }
 
-/* TODO: Can't seem to get this to work
-std::unique_ptr<std::future<uint32_t>> HostCache::test_RestApiCall_async(const std::string api, const json j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload) {
-    std::future<uint32_t> f = std::async(RestApiCall, api, j, ClientApiCertFile, ClientApiKeyFile, doUpload, Debug);
-    std::unique_ptr<std::future<uint32_t>> fptr = std::make_unique<std::future<uint32_t>>(f);
-
-    return fptr;
-}
-*/
-
 void HostCache::RestApiCall_async (std::vector<std::future<uint32_t>> &futures, const std::string api, const json j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload) {
      futures.emplace_back(std::async(RestApiCall, api, j, ClientApiCertFile, ClientApiKeyFile, doUpload, Debug));
-    // async(launch::async, (RestApiCall(api, j, ClientApiCertFile, ClientApiKeyFile, doUpload)).detach();
 }
+
 uint32_t RestApiCall (const std::string api, const json &j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload, bool Debug) {
 	std::string url = "https://api.noddos.io/" + api;
 
 	std::string body = j.dump();
 	char buf[strlen(body.c_str())+1];
 	strcpy(buf, body.c_str());
-	if (Debug) {
+	if (Debug == true) {
 		syslog (LOG_DEBUG, "HostCache: Uploading %zu bytes of data to %s", strlen(buf), url.c_str());
 		syslog (LOG_DEBUG, "HostCache: Upload using cert %s and key %s", ClientApiCertFile.c_str(), ClientApiKeyFile.c_str());
 	}
@@ -758,8 +750,10 @@ void HostCache::UploadDeviceStats(std::vector<std::future<uint32_t>> &futures, c
 		}
 	}
 	if (uploads > 0) {
+	    // TOD: Might be a race condition in RestApiCall as they both use global Curl instance
 	    RestApiCall_async(futures, "v1/uploaddevices", j, ClientApiCertFile, ClientApiKeyFile, doUpload);
-		syslog(LOG_INFO, "HostCache: Called v1/uploaddevices API with for %u devices", uploads);
+	    // RestApiCall("v1/uploaddevices", j, ClientApiCertFile, ClientApiKeyFile, doUpload);
+	    syslog(LOG_INFO, "HostCache: Called v1/uploaddevices API with for %u devices", uploads);
 	} else {
 		syslog(LOG_INFO, "HostCache: Not calling v1/uploaddevices API as there is no data to report");
 	}
@@ -779,7 +773,9 @@ void HostCache::UploadTrafficStats(std::vector<std::future<uint32_t>> &futures, 
 		}
 	}
 	if (uploads > 0) {
+        // TODO: Might be a race condition in RestApiCall as they both use global Curl instance
 	    RestApiCall_async(futures, "v1/uploadstats", j, ClientCertFile, ClientApiKeyFile, doUpload);
+	    // RestApiCall("v1/uploadstats", j, ClientCertFile, ClientApiKeyFile, doUpload);
 		syslog(LOG_INFO, "HostCache: Called v1/uploadstats API with for %u hosts", uploads);
 	} else {
 		syslog(LOG_INFO, "HostCache: Not calling v1/uploadstats API as there is no data to report");
