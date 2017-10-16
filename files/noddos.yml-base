@@ -1,0 +1,100 @@
+# The file with the list of device profiles for matching hosts against
+DeviceProfilesFile: /var/lib/noddos/DeviceProfiles.json
+
+# Noddos will write all current matched devices to this file after
+# receiving aSIGTERM signal. At startup, Noddos will read this file to
+# have an initial list of matched devices.
+MatchFile: /etc/noddos/DeviceMatches.json
+
+# Noddos will write all informaiton it has on devices to this file after
+# receiving a SIGUSR1 signal.
+DumpFile: /var/lib/noddos/DeviceDump.json
+
+# Noddos will write all cached DNS data to this file after received a
+# SIGUSR1 signal or at program exit.
+DnsCacheFile: /var/lib/noddos/DnsCache.json
+
+# Certificate for key used to authenticate against Noddos API
+ClientApiCertFile: /etc/noddos/noddosapiclient.pem
+
+# Key used to authenticate against Noddos API.
+ClientApiKeyFile: /etc/noddos/noddosapiclient.key
+
+# Certificate used to validate the digital signature for the
+# DeviceProfiles.json file. 
+SignatureCertFile: /etc/noddos/noddossignature.pem
+
+# Location of file where Noddos will save the firewall rules for the
+# NODDOS chain. Noddos will then execute the iptables-restore command to
+# update the NODDOS chain in the filter table of iptables.
+FirewallRulesFile: /var/lib/noddos/iptables.rules
+
+# Boolean that specifies whether firewall rules should block (true)
+# certain traffic or whether it should just log (false) violations. As
+#  Noddos is still pre-release software, blocking traffic may impact the
+# functioning of your devices and is thus not adviced.
+FirewallBlockTraffic: false
+
+# Location for file with the pid of the noddos client.
+PidFile: /var/lib/noddos/noddos.pid
+
+# Interval between sending of WS-Discovery probes. Setting it to 0
+# disables sending probes.
+WsDiscoveryProbeInterval: 3600
+
+# When Noddos tries to match devices against device profiles
+MatchInterval: 300
+
+# When Noddos purges obsolete collected data
+PruneInterval: 3600
+
+# 
+ListenIpAddresses: []
+
+#
+ListenInterfaces: []
+
+# Interfaces on which Noddos should listen for DNS messages without
+# answers. Noddos only performs ARP requests on these interfaces.
+# Currently unimplemented but planned: Noddos will only listen
+# to SSDP/mDNS/WS-Discovery multicast on these interfaces 
+LanInterfaces:
+    - eth0
+    - br-lan
+
+# Interfaces on which it accepts unicast DNS packets with answers
+WanInterfaces:
+    - eth1
+
+# Hosts last seen more than this many seconds will be deleted from the
+# database.
+ExpireHost: 604800
+
+# If and how Noddos uploads data: Possible values: None or Anonymous.
+UploadMode: Anonymous
+
+# Enable debugging output for the HostCache and Host classes, if
+# debugging is enabled through the command line.
+DebugHostCache: false
+
+# Enable debugging output for the FlowTrack class implementing
+# Netfilter::Conntrack, if debugging is enabled through the command
+# line.
+DebugFlowTrack: false
+
+# Enable debugging output for the SsdpServer class, if debugging is
+# enabled through the command line.
+DebugSsdp: false
+
+# Enable debugging output for the WS-Discovery class, if debugging is
+# enabled through the command line.
+DebugWsDiscovery: false
+
+# Enable debugging output for the mDNS class, if debugging is enabled
+# through the command line.
+DebugMdns: false
+
+# Enable debugging output for the PacketSnoop and TcpSnoop classes used
+# for snooping DHCP and DNS traffic, if debugging is enabled through the
+# command line.
+DebugPacketSnoop: false

@@ -14,6 +14,8 @@ reload_service() {
 }
 
 start_service() {
+	# Add multicast route if it does not exist as it is
+    # needed for listening to multicast traffic
     netstat -nr | grep '224.0.0' > /dev/null
     if [ "$?" -gt "0" ]; then
         route add -net 224.0.0.0 netmask 224.0.0.0 dev br-lan
@@ -46,63 +48,44 @@ start_service() {
         echo "[]" >/var/lib/noddos/DeviceDump.json
     fi
 
-    CONFFILE=/var/etc/noddos.conf
-    cp /etc/noddos/noddos.conf-base $CONFFILE
+    CONFFILE=/var/etc/noddos.yml
+    cp /etc/noddos/noddos.yml-base $CONFFILE
     if [ "$(uci get noddos.@noddos[0].rfc1918)" -eq "1" ]; then
-        echo '    "ReportTrafficToRfc1918": true,' >>$CONFFILE
+        echo 'ReportTrafficToRfc1918: true' >>$CONFFILE
     else
-        echo '    "ReportTrafficToRfc1918": false,' >>$CONFFILE
+        echo 'ReportTrafficToRfc1918: false' >>$CONFFILE
     fi
     if [ $(uci get noddos.@noddos[0].upload) -eq "1" ]; then
-        echo '    "TrafficReportInterval": 3600,' >>$CONFFILE
-        echo '    "DeviceReportInterval": 14400,' >>$CONFFILE
+        echo 'TrafficReportInterval: 3600,' >>$CONFFILE
+    	echo '' >>$CONFFILE
+        echo 'DeviceReportInterval: 14400,' >>$CONFFILE
+    	echo '' >>$CONFFILE
     else
-        echo '    "TrafficReportInterval": 0,' >>$CONFFILE
-        echo '    "DeviceReportInterval": 0,' >>$CONFFILE
+        echo 'TrafficReportInterval: 0,' >>$CONFFILE
+    	echo '' >>$CONFFILE
+        echo 'DeviceReportInterval: 0,' >>$CONFFILE
+    	echo '' >>$CONFFILE
     fi
-    echo '    "WhitelistedIpv4Addresses": [' >> $CONFFILE
-    firstentry=0
-    whitelist=$(uci get noddos.@noddos[0].whitelistipv4 | tr -d "'")
+
+	whitelist=$(uci get noddos.@noddos[0].whitelistipv4 | tr -d "'")
+    echo 'WhitelistedIpv4Addresses: ' >> $CONFFILE
     for ipv4 in $whitelist; do
-        if [ "$firstentry" -eq "0" ]; then
-            firstentry=1
-        else
-            echo ',' >>$CONFFILE
-        fi
-        echo -n '        "'$ipv4'"' >>$CONFFILE
+        echo "  - $(ipv4)" >>$CONFFILE
     done
     echo '' >>$CONFFILE
-    echo '    ],' >>$CONFFILE
 
-    echo '    "WhitelistedIpv6Addresses": [' >> $CONFFILE
-    firstentry=0
+    echo 'WhitelistedIpv6Addresses: ' >> $CONFFILE
     whitelist=$(uci get noddos.@noddos[0].whitelistipv6 | tr -d "'")
     for ipv6 in $whitelist; do
-        if [ "$firstentry" -eq "0" ]; then
-            firstentry=1
-        else
-            echo ',' >>$CONFFILE
-        fi
-
-       echo -n '        "'$ipv6'"' >>$CONFFILE
+       echo "  - $(ipv6)" >>$CONFFILE
     done
     echo '' >>$CONFFILE
-    echo '    ],' >>$CONFFILE
 
-    echo '    "WhitelistedMacAddresses": [' >> $CONFFILE
-    firstentry=0
+    echo 'WhitelistedMacAddresses: ' >> $CONFFILE
     whitelist=$(uci get noddos.@noddos[0].whitelistmac | tr -d "'")
     for mac in $whitelist; do
-        if [ "$firstentry" -eq "0" ]; then
-            firstentry=1
-        else
-            echo ',' >>$CONFFILE
-        fi
-        echo -n '        "'$mac'"' >>$CONFFILE
+        echo " - $(mac)" >>$CONFFILE
     done
-    echo '' >>$CONFFILE
-    echo '    ]' >>$CONFFILE
-    echo '}' >>$CONFFILE
 
     procd_open_instance
     procd_set_param command /usr/sbin/noddos -n -c $CONFFILE
