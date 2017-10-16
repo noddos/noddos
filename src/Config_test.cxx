@@ -28,6 +28,6 @@
 
 int main () {
 	openlog("Config_test", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
-	Config c("tests/noddos.conf");
+	Config c("tests/noddos.yml");
 	exit(0);
 }

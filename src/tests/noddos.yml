@@ -1,0 +1,41 @@
+DeviceProfilesFile: "/var/lib/noddos/DeviceProfiles.json"
+MatchFile: "/var/lib/noddos/DeviceMatches.json"
+DumpFile: "/var/lib/noddos/DeviceDump.json"
+ClientCertFile: "/etc/noddos/noddosapiclient.pem"
+ClientKeyFile: "/etc/noddos/noddosapiclient.key"
+SignatureCertFile: "/etc/noddos/noddosconfig.pem"
+FirewallRulesFile: "/var/lib/noddos/iptables.rules"
+FirewallBlockTraffic: false
+PidFile: "/var/lib/noddos/noddos.pid"
+UseAfPacket: true
+WhitelistedIpv4Addresses: 
+ - "127.0.0.1"
+ - "192.168.1.1"
+ - "172.16.0.16"
+ - "192.168.1.11"
+ - "192.168.1.232"
+ - "192.168.1.98"
+WhitelistedIpv6Addresses: 
+WhitelistedMacAddresses: 
+ - "18:22:7e:d2:7b:00"
+ - "ec:9b:f3:e4:23:e5"
+ReportTrafficToRfc1918: false
+ListenIpAddresses: 
+ListenInterfaces: 
+LanInterfaces: 
+ - enp3s0
+WanInterfaces: 
+ - enp2s0
+WsDiscoveryProbeInterval: 3600
+TrafficReportInterval: 3600
+DeviceReportInterval: 14400
+PruneInterval: 300
+ExpireDnsQuery: 86400
+ExpireHost: 604800
+UploadMode: Anonymous
+DebugHostCache: true
+DebugFlowTrack: false
+DebugSsdp: false
+DebugWsDiscovery: false
+DebugMdns: false
+DebugPacketSnoop: false
