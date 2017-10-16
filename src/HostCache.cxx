@@ -471,6 +471,7 @@ MacAddress HostCache::MacLookup (const std::string inIpAddress, const std::strin
 		if (Debug == true) {
 		    syslog (LOG_DEBUG, "HostCache: ARP lookup failure for %s on interface %s", inIpAddress.c_str(), inInterface.c_str());
 		}
+		close (s);
 		return Mac;
 	}
     close (s);

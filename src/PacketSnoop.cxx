@@ -769,8 +769,6 @@ bool PacketSnoop::parseDhcpv4UdpPacket(unsigned char *payload, size_t size) {
         }
     } catch (...) {}
 
-
-
     if (msgType != 1 && msgType != 3 && msgType != 5 && msgType != 8) {
         if (Debug == true) {
             syslog (LOG_DEBUG, "Ignoring DHCPv4 packets if they are not DISCOVER, REQUEST, ACK or INFORM");
