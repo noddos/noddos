@@ -57,7 +57,7 @@ bool WsDiscovery::Probe () {
         syslog(LOG_ERR, "WsDiscovery: probe sendto");
         throw std::system_error(errno, std::system_category());
     }
-    return true;
+        return true;
 }
 
 bool WsDiscovery::ParseWsDiscoveryMessage (std::shared_ptr<WsDiscoveryHost> host, const unsigned char * msgbuf, const int nbytes) {
@@ -143,6 +143,8 @@ int WsDiscovery::Open (std::string input, uint32_t inExpiration) {
     int yes = 1;
     if (setsockopt(socket_fd,SOL_SOCKET,SO_REUSEADDR,&yes,sizeof(yes)) < 0) {
         syslog(LOG_ERR, "WsDiscovery: Reusing ADDR failed");
+        close (socket_fd);
+        socket_fd = -1;
         throw std::system_error(errno, std::system_category());
     }
     struct sockaddr_in addr;
@@ -152,6 +154,8 @@ int WsDiscovery::Open (std::string input, uint32_t inExpiration) {
     addr.sin_port=htons(0);
     if (bind(socket_fd,(struct sockaddr *) &addr,sizeof(addr)) < 0) {
         syslog(LOG_CRIT, "WsDiscovery: bind");
+        close (socket_fd);
+        socket_fd = -1;
         throw std::system_error(errno, std::system_category());
     }
     return socket_fd;

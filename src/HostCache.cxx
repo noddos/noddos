@@ -435,53 +435,53 @@ MacAddress HostCache::MacLookup (const std::string inIpAddress) {
 }
 
 MacAddress HostCache::MacLookup (const std::string inIpAddress, const std::string inInterface) {
-	int domain;
-	struct arpreq areq;
-	memset(&areq, 0, sizeof(areq));
-	void *addr_ptr;
+    int domain;
+    struct arpreq areq;
+    memset(&areq, 0, sizeof(areq));
+    void *addr_ptr;
 
-	MacAddress Mac("00:00:00:00:00:00");
-	if (inIpAddress.find(":") == std::string::npos ) {
-		struct sockaddr_in *sin = (struct sockaddr_in *) &areq.arp_pa;
-	    sin->sin_family = domain = AF_INET;
-	    addr_ptr = &(sin->sin_addr);
-	} else {
-		struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *) &areq.arp_pa;
-		sin6->sin6_family = domain = AF_INET6;
-	    addr_ptr = &(sin6->sin6_addr);
-	}
+    MacAddress Mac("00:00:00:00:00:00");
+    if (inIpAddress.find(":") == std::string::npos ) {
+        struct sockaddr_in *sin = (struct sockaddr_in *) &areq.arp_pa;
+        sin->sin_family = domain = AF_INET;
+        addr_ptr = &(sin->sin_addr);
+    } else {
+        struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *) &areq.arp_pa;
+        sin6->sin6_family = domain = AF_INET6;
+        addr_ptr = &(sin6->sin6_addr);
+    }
     if (not inet_pton(domain, inIpAddress.c_str(), addr_ptr)) {
-		syslog (LOG_ERR, "HostCache: inet_pton failed for %s", inIpAddress.c_str());
-		return Mac;
-	}
+        syslog (LOG_ERR, "HostCache: inet_pton failed for %s", inIpAddress.c_str());
+        return Mac;
+    }
 
-	struct sockaddr_in *sin = (struct sockaddr_in *) &areq.arp_ha;
+    struct sockaddr_in *sin = (struct sockaddr_in *) &areq.arp_ha;
     sin->sin_family = ARPHRD_ETHER;
     strncpy(areq.arp_dev, inInterface.c_str(), 15);
 
     /* Get an internet domain socket. */
     int s;
-	if ((s = socket(domain, SOCK_DGRAM, 0)) == -1) {
+    if ((s = socket(domain, SOCK_DGRAM, 0)) == -1) {
         syslog(LOG_ERR, "HostCache: Can't open socket for ARP table lookup for IP %s, domain %d on interface %s",
-			inIpAddress.c_str(), domain, inInterface.c_str());
+                inIpAddress.c_str(), domain, inInterface.c_str());
         return Mac;
     }
 
     if (-1 == ioctl(s, SIOCGARP , (caddr_t) &areq)) {
-		if (Debug == true) {
-		    syslog (LOG_DEBUG, "HostCache: ARP lookup failure for %s on interface %s", inIpAddress.c_str(), inInterface.c_str());
-		}
-		close (s);
-		return Mac;
-	}
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "HostCache: ARP lookup failure for %s on interface %s", inIpAddress.c_str(), inInterface.c_str());
+        }
+        close (s);
+        return Mac;
+    }
     close (s);
-	char mA[18];
-	unsigned char *ptr = (unsigned char *) areq.arp_ha.sa_data;
-	sprintf(mA, "%02X:%02X:%02X:%02X:%02X:%02X",
-	        (ptr[0] & 0xff), (ptr[1] & 0xff), (ptr[2] & 0xff),
-	        (ptr[3] & 0xff), (ptr[4] & 0xff), (ptr[5] & 0xff));
-	Mac.set(mA);
-	return Mac;
+    char mA[18];
+    unsigned char *ptr = (unsigned char *) areq.arp_ha.sa_data;
+    sprintf(mA, "%02X:%02X:%02X:%02X:%02X:%02X",
+            (ptr[0] & 0xff), (ptr[1] & 0xff), (ptr[2] & 0xff),
+            (ptr[3] & 0xff), (ptr[4] & 0xff), (ptr[5] & 0xff));
+    Mac.set(mA);
+    return Mac;
 }
 
 // TODO: We should consolidate this in the IfMap data structure
@@ -509,19 +509,18 @@ uint32_t HostCache::getInterfaceIpAddresses() {
 
         // Display interface name and family (including symbolic
         //   form of the latter for the common families)
-
         if (Debug == true) {
-        	syslog(LOG_DEBUG, "HostCache: Interface %-8s %s (%d)", ifa->ifa_name,
-               (family == AF_PACKET) ? "AF_PACKET" :
-               (family == AF_INET) ? "AF_INET" :
-               (family == AF_INET6) ? "AF_INET6" : "???", family);
+            syslog(LOG_DEBUG, "HostCache: Interface %-8s %s (%d)", ifa->ifa_name,
+                    (family == AF_PACKET) ? "AF_PACKET" :
+                            (family == AF_INET) ? "AF_INET" :
+                                    (family == AF_INET6) ? "AF_INET6" : "???", family);
         }
         LocalInterfaces.insert(ifa->ifa_name);
 
         if (family == AF_INET || family == AF_INET6) {
             s = getnameinfo(ifa->ifa_addr,
-                (family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6),
-                host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+                    (family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6),
+                            host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
             if (s != 0) {
                 syslog(LOG_ERR, "HostCache: getnameinfo() failed: %s\n", gai_strerror(s));
                 freeifaddrs(ifaddr);
@@ -529,52 +528,17 @@ uint32_t HostCache::getInterfaceIpAddresses() {
             }
 
             if(Debug == true) {
-            	syslog (LOG_DEBUG, "HostCache: Interface %s with IP address: %s", ifa->ifa_name, host);
+                syslog (LOG_DEBUG, "HostCache: Interface %s with IP address: %s", ifa->ifa_name, host);
             }
             LocalIpAddresses.insert(host);
         }
     }
 
     freeifaddrs(ifaddr);
-	return 0;
+    return 0;
 }
 
 
-bool HostCache::SendUdpPing (const std::string DstIpAddress, const uint16_t DstPort) {
-	//Structure for address of server
-	struct sockaddr_in myaddr;
-	int sock;
-
-	//Construct the server sockaddr_ structure
-	memset(&myaddr, 0, sizeof(myaddr));
-	myaddr.sin_family=AF_INET;
-	myaddr.sin_addr.s_addr=htonl(INADDR_ANY);
-	myaddr.sin_port=htons(0);
-
-	//Create the socket
-	if((sock=socket(AF_INET, SOCK_DGRAM, 0))<0) {
-		syslog(LOG_ERR, "HostCache: Failed to create socket");
-		return false;
-	}
-
-	if(bind(sock,( struct sockaddr *) &myaddr, sizeof(myaddr))<0) {
-		syslog(LOG_ERR, "HostCache: bind failed");
-	    return false;
-	}
-	inet_pton(AF_INET,DstIpAddress.c_str(),&myaddr.sin_addr.s_addr);
-	myaddr.sin_port=htons(1900);
-
-	std::string s("12345678910:5/15:300.00:Visa");
-
-	//send the message to server
-	if(sendto(sock, s.c_str(), s.size(), 0, (struct sockaddr *)&myaddr, sizeof(myaddr))!=s.size()) {
-		syslog(LOG_ERR, "HostCache: Mismatch in number of bytes sent");
-		close (sock);
-	    return false;
-	}
-	close (sock);
-	return true;
-}
 
 
 bool HostCache::ExportDeviceProfileMatches(const std::string filename, bool detailed) {

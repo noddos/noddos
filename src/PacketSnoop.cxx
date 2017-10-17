@@ -754,10 +754,11 @@ bool PacketSnoop::parseDhcpv4UdpPacket(unsigned char *payload, size_t size) {
     Tins::BootP::chaddr_type chaddr = d->chaddr();
     MacAddress mac (chaddr.to_string());
 
-    std::string hostname = "";
+    std::string hostname;
     try {
         hostname = d->hostname();
     } catch (...) {
+        hostname =  "";
     }
 
     std::string vendor = "";
@@ -773,6 +774,7 @@ bool PacketSnoop::parseDhcpv4UdpPacket(unsigned char *payload, size_t size) {
         if (Debug == true) {
             syslog (LOG_DEBUG, "Ignoring DHCPv4 packets if they are not DISCOVER, REQUEST, ACK or INFORM");
         }
+        delete d;
         return false;
     }
 
