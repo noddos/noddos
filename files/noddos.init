@@ -50,6 +50,22 @@ start_service() {
 
     CONFFILE=/var/etc/noddos.yml
     cp /etc/noddos/noddos.yml-base $CONFFILE
+
+	LANINT=$(uci get network.lan.ifname)
+	LANBRIDGE=$(uci get network.lan.type)
+	echo 'LanInterfaces:' >> $CONFFILE
+	if [ "${LANBRIDGE}" -eq "bridge" ]; then
+		echo " - br-lan"
+    fi
+    echo "  - ${LANINT}" >> $CONFFILE
+	echo '' >>$CONFFILE
+
+	WANINT=$(uci get network.wan.ifname)
+	echo 'WanInterfaces:' >> $CONFFILE
+    echo "  - ${WANINT}" >> $CONFFILE
+	echo '' >>$CONFFILE
+
+
     if [ "$(uci get noddos.@noddos[0].rfc1918)" -eq "1" ]; then
         echo 'ReportTrafficToRfc1918: true' >>$CONFFILE
     else

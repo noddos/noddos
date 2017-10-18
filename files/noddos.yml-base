@@ -54,18 +54,6 @@ ListenIpAddresses: []
 #
 ListenInterfaces: []
 
-# Interfaces on which Noddos should listen for DNS messages without
-# answers. Noddos only performs ARP requests on these interfaces.
-# Currently unimplemented but planned: Noddos will only listen
-# to SSDP/mDNS/WS-Discovery multicast on these interfaces 
-LanInterfaces:
-    - eth0
-    - br-lan
-
-# Interfaces on which it accepts unicast DNS packets with answers
-WanInterfaces:
-    - eth1
-
 # Hosts last seen more than this many seconds will be deleted from the
 # database.
 ExpireHost: 604800
