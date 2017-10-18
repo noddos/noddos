@@ -158,8 +158,8 @@ public:
 
 	InterfaceMap * getInterfaceMap() { return ifMap; }
 	MacAddress MacLookup (const std::string inIpAddress);
-	MacAddress MacLookup (const std::string inIpAddress, const std::string inInterface);
-	bool SendUdpPing (const std::string DstIpAddress, const uint16_t DstPort);
+	MacAddress MacLookup (const std::string inIpAddress, const std::string inInterface, bool Retry = false);
+	bool sendUdpPing (const std::string DstIpAddress, const uint16_t DstPort);
 	uint32_t getInterfaceIpAddresses();
 	std::set<std::string> getLocalIpAddresses() { return LocalIpAddresses; }
 

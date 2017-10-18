@@ -417,7 +417,7 @@ MacAddress HostCache::MacLookup (const std::string inIpAddress) {
         syslog (LOG_DEBUG, "HostCache: MacLookup of %s", inIpAddress.c_str());
     }
     for (auto lanInterface: ifMap->getLanInterfaces()) {
-        Mac = MacLookup(inIpAddress, lanInterface);
+        Mac = MacLookup(inIpAddress, lanInterface, true);
         if (Mac.isValid() == true) {
             if (Debug == true) {
                 syslog (LOG_DEBUG, "HostCache: Found MAC entry %s on interface %s", Mac.c_str(), lanInterface.c_str());
@@ -434,7 +434,7 @@ MacAddress HostCache::MacLookup (const std::string inIpAddress) {
     return Mac;
 }
 
-MacAddress HostCache::MacLookup (const std::string inIpAddress, const std::string inInterface) {
+MacAddress HostCache::MacLookup (const std::string inIpAddress, const std::string inInterface, bool Retry) {
     int domain;
     struct arpreq areq;
     memset(&areq, 0, sizeof(areq));
@@ -468,10 +468,14 @@ MacAddress HostCache::MacLookup (const std::string inIpAddress, const std::strin
     }
 
     if (-1 == ioctl(s, SIOCGARP , (caddr_t) &areq)) {
+        close (s);
+        if (Retry == true) {
+            sendUdpPing (inIpAddress, 1900);
+            MacLookup (inIpAddress, inInterface, false);
+        }
         if (Debug == true) {
             syslog (LOG_DEBUG, "HostCache: ARP lookup failure for %s on interface %s", inIpAddress.c_str(), inInterface.c_str());
         }
-        close (s);
         return Mac;
     }
     close (s);
@@ -482,6 +486,44 @@ MacAddress HostCache::MacLookup (const std::string inIpAddress, const std::strin
             (ptr[3] & 0xff), (ptr[4] & 0xff), (ptr[5] & 0xff));
     Mac.set(mA);
     return Mac;
+}
+
+bool HostCache::sendUdpPing (const std::string DstIpAddress, const uint16_t DstPort) {
+       //Structure for address of server
+       struct sockaddr_in myaddr;
+       int sock;
+
+       //Construct the server sockaddr_ structure
+       memset(&myaddr, 0, sizeof(myaddr));
+       myaddr.sin_family=AF_INET;
+       myaddr.sin_addr.s_addr=htonl(INADDR_ANY);
+       myaddr.sin_port=htons(0);
+
+       //Create the socket
+       if((sock=socket(AF_INET, SOCK_DGRAM, 0))<0) {
+           syslog(LOG_ERR, "HostCache: Failed to create socket");
+           return false;
+       }
+
+       if(bind(sock,( struct sockaddr *) &myaddr, sizeof(myaddr))<0) {
+           syslog(LOG_ERR, "HostCache: bind failed");
+           close (sock);
+           return false;
+       }
+       inet_pton(AF_INET,DstIpAddress.c_str(),&myaddr.sin_addr.s_addr);
+       myaddr.sin_port=htons(DstPort);
+
+       std::string s("12345678910:5/15:300.00:Visa");
+
+       //send the message to server
+       if(sendto(sock, s.c_str(), s.size(), 0, (struct sockaddr *)&myaddr, sizeof(myaddr))!=s.size()) {
+           syslog(LOG_ERR, "HostCache: Mismatch in number of bytes sent");
+           close (sock);
+           return false;
+       }
+       usleep (1500);
+       close (sock);
+       return true;
 }
 
 // TODO: We should consolidate this in the IfMap data structure
