@@ -50,9 +50,8 @@ define Package/noddos/install
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/tools/makenoddoscert.sh $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/noddos.init $(1)/etc/init.d/noddos
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/files/noddos.uciconfig $(1)/etc/config/noddos
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/noddos.conf-base $(1)/etc/noddos
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/noddos.yml-base $(1)/etc/noddos
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/noddosconfig.pem $(1)/etc/noddos
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/files/noddos.conf-base $(1)/etc/noddos
 endef
 
 define Package/noddos/prerm
@@ -72,8 +71,8 @@ define Package/noddos/postrm
 	if [ -z "$${IPKG_INSTROOT}" ]; then
 		echo "Removing noddos data directory"
 		rm -rf /var/lib/noddos
-		if [ -f /var/etc/noddos.conf ]; then
-			rm /var/etc/noddos.conf
+		if [ -f /var/etc/noddos.yml ]; then
+			rm /var/etc/noddos.yml
 		fi
 	fi
 	exit 0
