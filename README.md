@@ -25,7 +25,7 @@ Compilation instructions are available for Home Gateways and regular Linux syste
 * [Compile and install for Linux systems](https://github.com/noddos/noddos/wiki/Compile-&-Install-Noddos-for-generic-Linux-routers-or-firewalls)
 
 ## Configuration file
-* [Configuring](https://github.com/noddos/noddos/wiki/Configuring-the-Noddos-firewall) Noddos through the noddos.conf file
+* [Configuring](https://github.com/noddos/noddos/wiki/Configuring-the-Noddos-firewall) Noddos through the noddos.yml file
 
 ## Command line options
 The following command line options are supported by the Noddos client:

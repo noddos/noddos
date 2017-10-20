@@ -45,7 +45,7 @@ include_directories("${PROJECT_BINARY_DIR}")
 add_executable(noddos noddos.cxx Host.cxx Mdns.cxx
     HostCache.cxx SsdpServer.cxx SsdpLocation.cxx FlowTrack.cxx Config.cxx
     opensslfingerprint.cxx PacketSnoop.cxx Ipset.cxx DeviceProfile.cxx WsDiscovery.cxx)
-target_link_libraries(noddos libnetfilter_conntrack.so ssl crypto curl tins ipset pthread)
+target_link_libraries(noddos libnetfilter_conntrack.so ssl crypto curl tins ipset pthread yaml-cpp)
 
 enable_testing()
 
@@ -67,7 +67,7 @@ add_executable(DeviceProfile_test DeviceProfile_test.cxx
 	DeviceProfile.cxx
 	FlowTrack.cxx Config.cxx HostCache.cxx Host.cxx SsdpServer.cxx
 	SsdpLocation.cxx opensslfingerprint.cxx Ipset.cxx)
-target_link_libraries(DeviceProfile_test tins curl ssl crypto netfilter_conntrack ipset pthread)
+target_link_libraries(DeviceProfile_test tins curl ssl crypto netfilter_conntrack ipset pthread yaml-cpp)
 
 add_test (Identifier Identifier_test)
 add_executable(Identifier_test Identifier_test.cxx
@@ -76,7 +76,7 @@ target_link_libraries(Identifier_test tins ipset)
 
 add_test (Config Config_test)
 add_executable(Config_test Config_test.cxx opensslfingerprint.cxx)
-target_link_libraries(Config_test curl ssl crypto)
+target_link_libraries(Config_test curl ssl crypto yaml-cpp)
 
 add_test (Ipset Ipset_test)
 add_executable(Ipset_test Ipset_test.cxx Ipset.cxx)
@@ -114,7 +114,7 @@ target_link_libraries(Curl_test curl ssl crypto)
 add_executable (PacketSnoop_test PacketSnoop_test.cxx PacketSnoop.cxx 
 	HostCache.cxx Host.cxx SsdpServer.cxx SsdpLocation.cxx
     opensslfingerprint.cxx DeviceProfile.cxx Ipset.cxx)
-target_link_libraries(PacketSnoop_test curl ssl crypto tins ipset pthread)
+target_link_libraries(PacketSnoop_test curl ssl crypto tins ipset pthread yaml-cpp)
 
 add_test (Noddos noddos_test)
 add_executable(noddos_test noddos_test.cxx)

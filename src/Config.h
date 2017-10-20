@@ -32,6 +32,7 @@
 
 #include <syslog.h>
 
+#include <yaml-cpp/yaml.h>
 #include <json.hpp>
 using nlohmann::json;
 
@@ -73,7 +74,14 @@ public:
 	    DebugWsDiscovery, DebugMdns, DebugPacketSnoop, DebugTcpSnoop;
 	static const std::string ApiFqdn;
 
-	Config(std::string inConfigFile = "/etc/noddos/noddos.conf", bool inDebug = false): Debug{inDebug} {
+    Config(bool inDebug = false): Debug{inDebug} {
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "Config: constructing instance");
+        }
+        DebugHostCache = DebugHost = DebugFlowTrack = DebugDhcp = DebugDns = DebugSsdp =
+                DebugWsDiscovery = DebugMdns = DebugPacketSnoop = DebugTcpSnoop = false;
+    }
+    Config(std::string inConfigFile, bool inDebug = false): Debug{inDebug} {
 		if (Debug == true) {
 		    syslog (LOG_DEBUG, "Config: constructing instance");
 		}
@@ -92,11 +100,8 @@ public:
 		}
 		bool configfailure=false;
 
-		std::ifstream ifs(inConfigFile);
-		if (!ifs.is_open()) {
-			syslog(LOG_CRIT, "Config: Couldn't open %s", inConfigFile.c_str());
-			configfailure = true;
-		}
+		YAML::Node config  = YAML::LoadFile(inConfigFile);
+
 		std::string newDeviceProfilesFile = DeviceProfilesFile;
 		std::string newMatchFile = DeviceProfilesFile;
 		std::string newDumpFile = DumpFile;
@@ -131,114 +136,119 @@ public:
 		bool newDebugPacketSnoop = DebugPacketSnoop;
 
 		json j;
-	    try {
-	        ifs >> j;
-	    } catch (...) {
-	        syslog (LOG_ERR, "HostCache: failed to parse Config json data from %s", inConfigFile.c_str());
-	    }
-		ifs.close();
+
 		try {
-			if (j.count("DeviceProfilesFile")) {
-				newDeviceProfilesFile = j["DeviceProfilesFile"].get<std::string>();
+			if (config["DeviceProfilesFile"]) {
+				newDeviceProfilesFile = config["DeviceProfilesFile"].as<std::string>();
 			}
-			if (j.count("MatchFile")) {
-				newMatchFile = j["MatchFile"].get<std::string>();
+			if (config["MatchFile"]) {
+				newMatchFile = config["MatchFile"].as<std::string>();
 			}
-			if (j.count("DumpFile")) {
-				newDumpFile = j["DumpFile"].get<std::string>();
+			if (config["DumpFile"]) {
+				newDumpFile = config["DumpFile"].as<std::string>();
 			}
-            if (j.count("DnsCacheFile")) {
-                newDnsCacheFile = j["DnsCacheFile"].get<std::string>();
+            if (config["DnsCacheFile"]) {
+                newDnsCacheFile = config["DnsCacheFile"].as<std::string>();
             }
-			if (j.count("ClientApiCertFile")) {
-				newClientApiCertFile = j["ClientApiCertFile"].get<std::string>();
+			if (config["ClientApiCertFile"]) {
+				newClientApiCertFile = config["ClientApiCertFile"].as<std::string>();
 			}
-			if (j.count("ClientApiKeyFile")) {
-				newClientApiKeyFile = j["ClientApiKeyFile"].get<std::string>();
+			if (config["ClientApiKeyFile"]) {
+				newClientApiKeyFile = config["ClientApiKeyFile"].as<std::string>();
 			}
-			if (j.count("SignatureCertFile")) {
-				newSignatureCertFile = j["SignatureCertFile"].get<std::string>();
+			if (config["SignatureCertFile"]) {
+				newSignatureCertFile = config["SignatureCertFile"].as<std::string>();
 			}
-            if (j.count("FirewallRulesFile")) {
-                newFirewallRulesFile = j["FirewallRulesFile"].get<std::string>();
+            if (config["FirewallRulesFile"]) {
+                newFirewallRulesFile = config["FirewallRulesFile"].as<std::string>();
             }
-            if (j.count("FirewallBlockTraffic")) {
-                 newFirewallBlockTraffic = j["FirewallBlockTraffic"].get<bool>();
+            if (config["FirewallBlockTraffic"]) {
+                 newFirewallBlockTraffic = config["FirewallBlockTraffic"].as<bool>();
             }
-            if (j.count("PidFile")) {
-				newPidFile = j["PidFile"].get<std::string>();
+            if (config["PidFile"]) {
+				newPidFile = config["PidFile"].as<std::string>();
 			}
-			if (j.count("UseNfConntrack")) {
-				newUseNfConntrack = j["UseNfConntrack"].get<bool>();
+			if (config["UseNfConntrack"]) {
+				newUseNfConntrack = config["UseNfConntrack"].as<bool>();
 			}
-			if (j.count("User")) {
-				newUser = j["User"].get<std::string>();
+			if (config["User"]) {
+				newUser = config["User"].as<std::string>();
 			}
-			if (j.count("Group")) {
-				newGroup = j["Group"].get<std::string>();
+			if (config["Group"]) {
+				newGroup = config["Group"].as<std::string>();
 			}
-			if (j.count("WhitelistedIpv4Addresses")) {
-				newWhitelistedIpv4Addresses = j["WhitelistedIpv4Addresses"].get<std::unordered_set<std::string>>();
+			if (config["WhitelistedIpv4Addresses"].IsSequence()) {
+			    for (YAML::const_iterator it=config["WhitelistedIpv4Addresses"].begin();it!=config["WhitelistedIpv4Addresses"].end();++it) {
+			        newWhitelistedIpv4Addresses.emplace(it->as<std::string>());
+			    }
 			}
 			if (j.count("WhitelistedIpv6Addresses")) {
-				newWhitelistedIpv6Addresses = j["WhitelistedIpv6Addresses"].get<std::unordered_set<std::string>>();
+                for (YAML::const_iterator it=config["WhitelistedIpv6Addresses"].begin();it!=config["WhitelistedIpv6Addresses"].end();++it) {
+                    newWhitelistedIpv6Addresses.emplace(it->as<std::string>());
+                }
 			}
 			if (j.count("WhitelistedMacAddresses")) {
-				newWhitelistedMacAddresses = j["WhitelistedMacAddresses"].get<std::unordered_set<std::string>>();
+                for (YAML::const_iterator it=config["WhitelistedMacAddresses"].begin();it!=config["WhitelistedMacAddresses"].end();++it) {
+                    newWhitelistedMacAddresses.emplace(it->as<std::string>());
+                }
 			}
 			if (j.count("LanInterfaces")) {
-				newLanInterfaces = j["LanInterfaces"].get<std::unordered_set<std::string>>();
+                for (YAML::const_iterator it=config["LanInterfaces"].begin();it!=config["LanInterfaces"].end();++it) {
+                    newLanInterfaces.emplace(it->as<std::string>());
+                }
 			}
 			if (j.count("WanInterfaces")) {
-				newWanInterfaces = j["WanInterfaces"].get<std::unordered_set<std::string>>();
+                for (YAML::const_iterator it=config["WanInterfaces"].begin();it!=config["WanInterfaces"].end();++it) {
+                    newWanInterfaces.emplace(it->as<std::string>());
+                }
 			}
             if (j.count("WsDiscoveryProbeInterval")) {
-                newWsDiscoveryProbeInterval = j["WsDiscoveryProbeInterval"].get<uint32_t>();
+                newWsDiscoveryProbeInterval = config["WsDiscoveryProbeInterval"].as<uint32_t>();
             }
-			if (j.count("TrafficReportInterval")) {
-				newTrafficReportInterval = j["TrafficReportInterval"].get<uint32_t>();
+			if (config["TrafficReportInterval"]) {
+				newTrafficReportInterval = config["TrafficReportInterval"].as<uint32_t>();
 			}
-			if (j.count("DeviceReportInterval")) {
-				newDeviceReportInterval = j["DeviceReportInterval"].get<uint32_t>();
+			if (config["DeviceReportInterval"]) {
+				newDeviceReportInterval = config["DeviceReportInterval"].as<uint32_t>();
 			}
-			if (j.count("ReportTrafficToRfc1918")) {
-				newReportTrafficToRfc1918 = j["ReportTrafficToRfc1918"].get<bool>();
+			if (config["ReportTrafficToRfc1918"]) {
+				newReportTrafficToRfc1918 = config["ReportTrafficToRfc1918"].as<bool>();
 			}
-			if (j.count("PruneInterval")) {
-				newPruneInterval = j["PruneInterval"].get<uint32_t>();
+			if (config["PruneInterval"]) {
+				newPruneInterval = config["PruneInterval"].as<uint32_t>();
 			}
-			if (j.count("MatchInterval")) {
-				newMatchInterval = j["MatchInterval"].get<uint32_t>();
+			if (config["MatchInterval"]) {
+				newMatchInterval = config["MatchInterval"].as<uint32_t>();
 			}
-			if (j.count("ExpireHost")) {
-				newExpireHost = j["ExpireHost"].get<uint32_t>();
+			if (config["ExpireHost"]) {
+				newExpireHost = config["ExpireHost"].as<uint32_t>();
 			}
 			// FIXME: upload mode not currently implemented
-			if (j.count("UploadMode")) {
-				auto v = j["UploadMode"].get<std::string>();
+			if (config["UploadMode"]) {
+				auto v = config["UploadMode"].as<std::string>();
 				if (v == "Account") {
 					newuMode = Account;
 				} else if (v == "Anonymous") {
 					newuMode = Anonymous;
 				}
 			}
-            if (j.count("DebugHostCache")) {
-                newDebugHostCache = j["DebugHostCache"].get<bool>();
+            if (config["DebugHostCache"]) {
+                newDebugHostCache = config["DebugHostCache"].as<bool>();
             }
-            if (j.count("DebugFlowTrack")) {
-                newDebugFlowTrack = j["DebugFlowTrack"].get<bool>();
+            if (config["DebugFlowTrack"]) {
+                newDebugFlowTrack = config["DebugFlowTrack"].as<bool>();
             }
-            if (j.count("DebugSsdp")) {
-                newDebugSsdp = j["DebugSsdp"].get<bool>();
+            if (config["DebugSsdp"]) {
+                newDebugSsdp = config["DebugSsdp"].as<bool>();
             }
-            if (j.count("DebugWsDiscovery")) {
-                newDebugWsDiscovery = j["DebugWsDiscovery"].get<bool>();
+            if (config["DebugWsDiscovery"]) {
+                newDebugWsDiscovery = config["DebugWsDiscovery"].as<bool>();
             }
-            if (j.count("DebugMdns")) {
-                newDebugMdns = j["DebugMdns"].get<bool>();
+            if (config["DebugMdns"]) {
+                newDebugMdns = config["DebugMdns"].as<bool>();
             }
-            if (j.count("DebugPacketSnoop")) {
-                newDebugPacketSnoop = j["DebugPacketSnoop"].get<bool>();
+            if (config["DebugPacketSnoop"]) {
+                newDebugPacketSnoop = config["DebugPacketSnoop"].as<bool>();
             }
 		}
 		catch (...) {

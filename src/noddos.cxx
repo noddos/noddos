@@ -72,7 +72,7 @@ void parse_commandline(int argc, char** argv, bool& debug, std::string& configfi
 
 int main(int argc, char** argv) {
     bool debug = false;
-	std::string configfile = "/etc/noddos/noddos.conf";
+	std::string configfile = "/etc/noddos/noddos.yml";
 	bool daemon = true;
 
 	//
@@ -89,7 +89,14 @@ int main(int argc, char** argv) {
 	} else {
 		openlog(argv[0], LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
 	}
-	Config config(configfile, debug);
+	Config config(debug);
+	try {
+	    config.Load(configfile);
+	} catch (std::exception& e) {
+        syslog (LOG_ERR, "Config: couldn't open, read or parse config file %s: %s", configfile.c_str(), e.what());
+        std::cout << "Couldn't open, read or parse config file " << configfile << ": " << e.what() << std::endl;
+        exit (1);
+    }
 	InterfaceMap ifMap(config.LanInterfaces,config.WanInterfaces, config.Debug);
 
 	if (daemon) {
@@ -195,6 +202,11 @@ int main(int argc, char** argv) {
         syslog(LOG_DEBUG, "Noddos: FlowTrack file handle %d", ft.getFileHandle());
     }
 
+    //
+    // If User is defined in noddos config files and we drop privs then
+    // we can't re-open nf_conntrack if necessary and
+    // we can't manage IPsets
+    //
     if (config.User != "" && config.Group != "") {
     	drop_process_privileges(config);
     }
@@ -270,7 +282,12 @@ int main(int argc, char** argv) {
 						goto exitprog;
 					} else if (si.ssi_signo == SIGHUP) {
 						syslog(LOG_INFO, "Noddos: Processing signal event SIGHUP");
-						config.Load(configfile);
+						try {
+						    config.Load(configfile);
+						} catch (std::exception& e) {
+				            syslog (LOG_ERR, "Config: couldn't open, read or parse config file %s: %s", configfile.c_str(), e.what());
+				        }
+
 						hC.loadDeviceProfiles(config.DeviceProfilesFile);
 					} else if (si.ssi_signo == SIGUSR1) {
 						syslog(LOG_INFO, "Noddos: Processing signal event SIGUSR1");
