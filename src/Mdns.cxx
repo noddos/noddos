@@ -107,16 +107,26 @@ bool Mdns::parseMessage (std::shared_ptr<MdnsHost> host, const unsigned char * m
                 if (Debug == true) {
                     syslog(LOG_DEBUG, "Mdns: PTR record: %s", dnsdata.c_str());
                 }
+                // We give preference to FQDN in TXT record
+                if (host->Hostname == "") {
+                    host->Hostname = it.dname();
+                }
                 break;
             case Tins::DNS::QueryType::TXT:
                 if (Debug == true) {
                     syslog(LOG_DEBUG, "Mdns: TXT record: %s", dnsdata.c_str());
                 }
+                // We give preference to FQDN in TXT record
+                host->Hostname = it.dname();
                 parseTxtRr(host, dnsdata);
                 break;
             case Tins::DNS::QueryType::SRV:
                 if (Debug == true) {
                     syslog(LOG_DEBUG, "Mdns: SRV record: %s", dnsdata.c_str());
+                }
+                // We give preference to FQDN in TXT record
+                if (host->Hostname == "") {
+                    host->Hostname = it.dname();
                 }
                 break;
             default:

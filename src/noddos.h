@@ -46,6 +46,7 @@ struct WsDiscoveryHost {
 };
 
 struct MdnsHost {
+    std::string Hostname;
     std::string IpAddress;
     // PTR RRs can be send by mDNS caches so do not reflect the source IP address of the mDNS packet
     // std::set<std::string> PtrRrs;

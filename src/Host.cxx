@@ -161,6 +161,8 @@ bool Host::Match(const MatchCondition& mc) {
 	    value = Wsd.wsdXAddrs;
 	} else if (mc.Key == "WsDiscoveryTypes") {
 	    value = Wsd.wsdTypes;
+    } else if (mc.Key == "MdnsHostname") {
+        value = Mdns.Hostname;
 	} else if (mc.Key == "MdnsOs") {
 	    value = Mdns.Os;
 	} else if (mc.Key == "MdnsHw") {
@@ -245,6 +247,7 @@ bool Host::DeviceStats(json& j, const uint32_t time_interval, bool force, bool d
 	j["SsdpServer"] = Ssdp.Server;
     j["WsDiscoveryXaddrs"] = Wsd.wsdXAddrs;
     j["WsDiscoveryTypes"] = Wsd.wsdTypes;
+    j["MdnsHostname"] = Mdns.Hostname;
     j["MdnsOs"] = Mdns.Os;
     j["MdnsHw"] = Mdns.Hw;
     j["MdnsDeviceUrl"] = Mdns.DeviceUrl;
