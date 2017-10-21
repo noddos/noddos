@@ -29,7 +29,7 @@
 #include <set>
 #include "syslog.h"
 
-#include <json.hpp>
+#include "json.hpp"
 using nlohmann::json;
 
 #include "DeviceProfile.h"

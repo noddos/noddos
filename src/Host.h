@@ -33,7 +33,7 @@
 #include <tins/ip_address.h>
 #include <tins/ipv6_address.h>
 
-#include <json.hpp>
+#include "json.hpp"
 using json = nlohmann::json;
 
 #include "noddos.h"

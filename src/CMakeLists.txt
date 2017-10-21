@@ -42,6 +42,8 @@ configure_file (
 # so that we will find TutorialConfig.h
 include_directories("${PROJECT_BINARY_DIR}")
  
+#add_library(yaml-cpp STATIC)
+
 add_executable(noddos noddos.cxx Host.cxx Mdns.cxx
     HostCache.cxx SsdpServer.cxx SsdpLocation.cxx FlowTrack.cxx Config.cxx
     opensslfingerprint.cxx PacketSnoop.cxx Ipset.cxx DeviceProfile.cxx WsDiscovery.cxx)

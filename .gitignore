@@ -12,6 +12,8 @@ CMakeCache.txt
 Testing/
 bin/
 log.txt
+Debug/
+Release/
 
 .gdbinit
 

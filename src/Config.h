@@ -33,8 +33,8 @@
 #include <syslog.h>
 
 #include <yaml-cpp/yaml.h>
-#include <json.hpp>
-using nlohmann::json;
+// #include <json.hpp>
+// using nlohmann::json;
 
 // From opensslfingerprint.cxx (valgrind claims there is a memory leak)
 // std::string getCertFingerprint(const std::string certfile, const bool Debug = false);
@@ -135,7 +135,7 @@ public:
 		bool newDebugMdns = DebugMdns;
 		bool newDebugPacketSnoop = DebugPacketSnoop;
 
-		json j;
+		// json j;
 
 		try {
 			if (config["DeviceProfilesFile"]) {
@@ -182,27 +182,27 @@ public:
 			        newWhitelistedIpv4Addresses.emplace(it->as<std::string>());
 			    }
 			}
-			if (j.count("WhitelistedIpv6Addresses")) {
+			if (config["WhitelistedIpv6Addresses"].IsSequence()) {
                 for (YAML::const_iterator it=config["WhitelistedIpv6Addresses"].begin();it!=config["WhitelistedIpv6Addresses"].end();++it) {
                     newWhitelistedIpv6Addresses.emplace(it->as<std::string>());
                 }
 			}
-			if (j.count("WhitelistedMacAddresses")) {
+			if (config["WhitelistedMacAddresses"].IsSequence()) {
                 for (YAML::const_iterator it=config["WhitelistedMacAddresses"].begin();it!=config["WhitelistedMacAddresses"].end();++it) {
                     newWhitelistedMacAddresses.emplace(it->as<std::string>());
                 }
 			}
-			if (j.count("LanInterfaces")) {
+			if (config["LanInterfaces"].IsSequence()) {
                 for (YAML::const_iterator it=config["LanInterfaces"].begin();it!=config["LanInterfaces"].end();++it) {
                     newLanInterfaces.emplace(it->as<std::string>());
                 }
 			}
-			if (j.count("WanInterfaces")) {
+			if (config["WanInterfaces"].IsSequence()) {
                 for (YAML::const_iterator it=config["WanInterfaces"].begin();it!=config["WanInterfaces"].end();++it) {
                     newWanInterfaces.emplace(it->as<std::string>());
                 }
 			}
-            if (j.count("WsDiscoveryProbeInterval")) {
+            if (config["WsDiscoveryProbeInterval"]) {
                 newWsDiscoveryProbeInterval = config["WsDiscoveryProbeInterval"].as<uint32_t>();
             }
 			if (config["TrafficReportInterval"]) {
@@ -252,7 +252,7 @@ public:
             }
 		}
 		catch (...) {
-			syslog (LOG_ERR, "Config: Failure to parse json data from Config file, ignoring its contents: %s", inConfigFile.c_str());
+			syslog (LOG_ERR, "Config: Failure to parse yaml data from Config file, ignoring its contents: %s", inConfigFile.c_str());
 			return configfailure;
 		}
 		DeviceProfilesFile = newDeviceProfilesFile;

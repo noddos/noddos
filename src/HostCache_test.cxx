@@ -26,7 +26,7 @@
 
 #include <syslog.h>
 
-#include <json.hpp>
+#include "json.hpp"
 using json = nlohmann::json;
 
 #include "noddos.h"
