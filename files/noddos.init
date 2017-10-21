@@ -54,8 +54,8 @@ start_service() {
 	LANINT=$(uci get network.lan.ifname)
 	LANBRIDGE=$(uci get network.lan.type)
 	echo 'LanInterfaces:' >> $CONFFILE
-	if [ "${LANBRIDGE}" -eq "bridge" ]; then
-		echo " - br-lan"
+	if [ "${LANBRIDGE}" == "bridge" ]; then
+		echo " - br-lan" >> $CONFFILE
     fi
     echo "  - ${LANINT}" >> $CONFFILE
 	echo '' >>$CONFFILE
@@ -86,21 +86,21 @@ start_service() {
 	whitelist=$(uci get noddos.@noddos[0].whitelistipv4 | tr -d "'")
     echo 'WhitelistedIpv4Addresses: ' >> $CONFFILE
     for ipv4 in $whitelist; do
-        echo "  - $(ipv4)" >>$CONFFILE
+        echo "  - ${ipv4}" >>$CONFFILE
     done
     echo '' >>$CONFFILE
 
     echo 'WhitelistedIpv6Addresses: ' >> $CONFFILE
     whitelist=$(uci get noddos.@noddos[0].whitelistipv6 | tr -d "'")
     for ipv6 in $whitelist; do
-       echo "  - $(ipv6)" >>$CONFFILE
+       echo "  - ${ipv6}" >>$CONFFILE
     done
     echo '' >>$CONFFILE
 
     echo 'WhitelistedMacAddresses: ' >> $CONFFILE
     whitelist=$(uci get noddos.@noddos[0].whitelistmac | tr -d "'")
     for mac in $whitelist; do
-        echo " - $(mac)" >>$CONFFILE
+        echo " - ${mac}" >>$CONFFILE
     done
 
     procd_open_instance
