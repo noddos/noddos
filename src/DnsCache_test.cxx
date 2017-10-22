@@ -40,7 +40,7 @@ int main () {
     DnsCnameCache c(true);
     DnsIpCache <Tins::IPv4Address> i(true);
     DnsIpCache <Tins::IPv6Address> isix(true);
-    std::string filename = "tests/DnsCache.json";
+    std::string filename = "../tests/DnsCache.json";
     std::ifstream ifs(filename);
     if (not ifs.is_open()) {
         syslog(LOG_WARNING, "Couldn't open %s", filename.c_str());
@@ -51,20 +51,20 @@ int main () {
     size_t importedRecords = i.importJson(k, fdpMap);
     if (importedRecords != 564) {
         testfailed = true;
-        syslog(LOG_WARNING, "Imported A records %lu", importedRecords);
+        syslog(LOG_WARNING, "Imported A records %zu", importedRecords);
 
     }
 
     importedRecords = isix.importJson(k, fdpMap);
     if (importedRecords != 7) {
         testfailed = true;
-        syslog(LOG_WARNING, "Imported AAAA records %lu", importedRecords);
+        syslog(LOG_WARNING, "Imported AAAA records %zu", importedRecords);
 
     }
     importedRecords = c.importJson(k,fdpMap);
     if (importedRecords != 85) {
         testfailed = true;
-        syslog(LOG_WARNING, "Imported CNAME records %lu", importedRecords);
+        syslog(LOG_WARNING, "Imported CNAME records %zu", importedRecords);
 
     }
     ifs.close();
@@ -91,12 +91,12 @@ int main () {
     auto exportRecords = i.exportJson(j);
     if (exportRecords != 74) {
         testfailed = true;
-        syslog(LOG_WARNING, "Exported A/AAAA records %lu", exportRecords);
+        syslog(LOG_WARNING, "Exported A/AAAA records %zu", exportRecords);
     }
     exportRecords = c.exportJson(j);
     if (exportRecords != 85) {
         testfailed = true;
-        syslog(LOG_WARNING, "Exported CNAME records %lu", exportRecords);
+        syslog(LOG_WARNING, "Exported CNAME records %zu", exportRecords);
     }
 
     ofs << std::setw(4) << j << std::endl;
@@ -106,13 +106,13 @@ int main () {
     std::set<std::string> PrunedCnames = c.pruneCnames(true);
     size_t pruned = PrunedCnames.size();
     if (pruned != 130) {
-        syslog (LOG_DEBUG, "Pruned %lu DNS cnames", pruned);
+        syslog (LOG_DEBUG, "Pruned %zu DNS cnames", pruned);
         testfailed = 1;
     }
     std::set<std::string> PrunedFqdns =i.pruneResourceRecords(true);
     pruned = PrunedFqdns.size();
     if (pruned != 74) {
-        syslog (LOG_DEBUG, "Pruned %lu DNS IP records", pruned);
+        syslog (LOG_DEBUG, "Pruned %zu DNS IP records", pruned);
         testfailed = 1;
     }
     return testfailed;

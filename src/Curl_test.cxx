@@ -40,23 +40,23 @@ int main () {
 }
 
 bool do_uploadstats() {
-	std::string filename = "tests/v1-uploadstats-20170515-021413";
+	std::string filename = "../tests/v1-uploadstats-20170515-021413";
 	std::ifstream ifs(filename);
 	json j;
 	ifs >> j;
 	ifs.close();
-	auto r = RestApiCall ("v1/uploadstats", j, "tests/noddosapiclient.pem", "tests/noddosapiclient.key");
+	auto r = RestApiCall ("v1/uploadstats", j, "../tests/noddosapiclient.pem", "../tests/noddosapiclient.key");
 	std::cout << "Curl result: " << r << std::endl;
 	return r == 201;
 }
 
 bool do_uploaddevices() {
-	std::string filename = "tests/v1-uploaddevices-20170514-222118";
+	std::string filename = "../tests/v1-uploaddevices-20170514-222118";
 	std::ifstream ifs(filename);
 	json j;
 	ifs >> j;
 	ifs.close();
-	auto r = RestApiCall ("v1/uploaddevices", j, "tests/noddosapiclient.pem", "tests/noddosapiclient.key");
+	auto r = RestApiCall ("v1/uploaddevices", j, "../tests/noddosapiclient.pem", "../tests/noddosapiclient.key");
 	std::cout << "Curl result: " << r << std::endl;
 	return r == 201;
 }

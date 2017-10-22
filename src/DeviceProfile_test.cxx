@@ -32,7 +32,7 @@ using nlohmann::json;
 #include "DeviceProfile.h"
 #include "HostCache.h"
 
-static std::string deviceprofilesfile = "tests/DeviceProfiles.json";
+static std::string deviceprofilesfile = "../tests/DeviceProfiles.json";
 
 bool test_match (std::string inIp, std::string inDpUuid, HostCache &hc);
 

@@ -56,7 +56,7 @@ public:
         Debug = inDebug;
     }
 
-    void addorupdateCname (const std::string inFqdn, const std::string inCname, FqdnDeviceProfileMap &fdpMap, const time_t inTtl=604800) {
+    void addorupdateCname (const std::string inFqdn, const std::string inCname, FqdnDeviceProfileMap &fdpMap, const time_t inExpiration) {
         std::string fqdn = inFqdn;
         std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
 
@@ -73,14 +73,15 @@ public:
             }
             fdpMap[cname].insert(it->second.begin(), it->second.end());
         }
-        addorupdateCname(fqdn, cname, inTtl);
+        addorupdateCname(fqdn, cname, inExpiration);
     }
 
-    void addorupdateCname (const std::string inFqdn, const std::string inCname, const time_t inTtl=604800) {
-        time_t Ttl = inTtl;
+    void addorupdateCname (const std::string inFqdn, const std::string inCname, const time_t inExpiration) {
+        time_t Expiration = inExpiration;
+        auto now = time(nullptr);
         // We need to keep DNS records at least 4 hours as that is our maximum matching interval
-        if (Ttl < 4 * 3600) {
-            Ttl = 4 * 3600;
+        if (Expiration < (now + 4 * 3600)) {
+            Expiration = now + 4 * 3600;
         }
         std::string fqdn = inFqdn;
         std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
@@ -88,12 +89,11 @@ public:
         std::string cname = inCname;
         std::transform(cname.begin(), cname.end(), cname.begin(), ::tolower);
 
-        auto now = time(nullptr);
         if (Debug == true) {
-            syslog (LOG_DEBUG, "DnsCnameCache: Setting %s to CNAME %s with TTL %lu", fqdn.c_str(), cname.c_str(), Ttl);
+            syslog (LOG_DEBUG, "DnsCnameCache: Setting %s to CNAME %s with TTL %lu", fqdn.c_str(), cname.c_str(), Expiration);
         }
-        DnsRevCache[cname] = std::make_pair(fqdn, now + Ttl);
-        DnsFwdCache[fqdn] = std::make_pair(cname, now + Ttl);
+        DnsRevCache[cname] = std::make_pair(fqdn, Expiration);
+        DnsFwdCache[fqdn] = std::make_pair(cname, Expiration);
     }
 
     std::string getFqdn (const std::string inCname, const uint8_t recdepth = 0) const {
@@ -156,12 +156,12 @@ public:
                 for (json::iterator c_it = it->begin(); c_it != it->end(); ++c_it) {
                     dnsRecords++;
                     std::string cname = c_it.key();
-                    time_t ttl = c_it.value();
+                    time_t expiration = c_it.value();
                     auto fdp_it = fdpMap.find(fqdn);
                     if (fdp_it != fdpMap.end()) {
-                        addorupdateCname (fqdn, cname, fdpMap, ttl);
+                        addorupdateCname (fqdn, cname, fdpMap, expiration);
                     } else {
-                        addorupdateCname (fqdn, cname, ttl);
+                        addorupdateCname (fqdn, cname, expiration);
                     }
                 }
             }
@@ -264,7 +264,7 @@ public:
         }
     }
 
-    void addorupdateResourceRecord (const std::string inFqdn, const T inIpAddress, FqdnDeviceProfileMap::iterator &fdp_it, const time_t inTtl = 604800) {
+    void addorupdateResourceRecord (const std::string inFqdn, const T inIpAddress, FqdnDeviceProfileMap::iterator &fdp_it, const time_t inExpiration) {
         std::string fqdn = inFqdn;
         std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
 
@@ -273,28 +273,28 @@ public:
                 syslog (LOG_DEBUG, "DnsIpCache: Found FqdnDeviceProfileMap entry with UUID %s for %s with IP %s",
                         DeviceProfile_sharedpointer_it->getUuid().c_str(), inFqdn.c_str(), inIpAddress.to_string().c_str());
             }
-            DeviceProfile_sharedpointer_it->addDestination(inIpAddress, inTtl);
+            DeviceProfile_sharedpointer_it->addDestination(inIpAddress, inExpiration);
         }
-        addorupdateResourceRecord (fqdn, inIpAddress, inTtl);
+        addorupdateResourceRecord (fqdn, inIpAddress, inExpiration);
     }
 
-	void addorupdateResourceRecord (const std::string inFqdn, const T inIpAddress, const time_t inTtl = 604800) {
-		time_t Ttl = inTtl;
+	void addorupdateResourceRecord (const std::string inFqdn, const T inIpAddress, const time_t inExpiration) {
+		time_t Expiration = inExpiration;
         // We need to keep DNS records at least 4 hours as that is our maximum matching interval
-		if (Ttl < 4 * 3600) {
-			Ttl = 4 * 3600;
+		auto now = time(nullptr);
+		if (Expiration < (now + 4 * 3600)) {
+			Expiration = now + 4 * 3600;
 		}
 
 		std::string fqdn = inFqdn;
         std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
 
-        auto now = time(nullptr);
-		std::string ipstring = inIpAddress.to_string();
+        std::string ipstring = inIpAddress.to_string();
 		if (Debug == true) {
-			syslog (LOG_DEBUG, "DnsIpCache: Setting %s to %s with TTL %lu", inFqdn.c_str(), ipstring.c_str(), Ttl);
+			syslog (LOG_DEBUG, "DnsIpCache: Setting %s to %s with TTL %lu", inFqdn.c_str(), ipstring.c_str(), Expiration);
 		}
-		DnsFwdCache[inFqdn].insert(std::make_pair(inIpAddress, now + Ttl));
-		DnsRevCache[inIpAddress].insert(std::make_pair(inFqdn, now + Ttl));
+		DnsFwdCache[inFqdn].insert(std::make_pair(inIpAddress, Expiration));
+		DnsRevCache[inIpAddress].insert(std::make_pair(inFqdn, Expiration));
 	}
 
 	void setDebug (bool inDebug) {
@@ -322,11 +322,11 @@ public:
                     T IpAddress = T(ip_it.key());
                     dnsRecords++;
 
-                    time_t ttl = ip_it.value();
+                    time_t expiration = ip_it.value();
                     if (fdp_it != fdpMap.end()) {
-                        addorupdateResourceRecord (fqdn, IpAddress, fdp_it, ttl);
+                        addorupdateResourceRecord (fqdn, IpAddress, fdp_it, expiration);
                     } else {
-                        addorupdateResourceRecord (fqdn, IpAddress, ttl);
+                        addorupdateResourceRecord (fqdn, IpAddress, expiration);
                     }
                 } catch (...) {
                     // Must be either IPv4 address while IPv6 template or vice versa

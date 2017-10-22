@@ -29,7 +29,7 @@
 #include "HostCache.h"
 #include "Host.h"
 
-static std::string deviceprofilesfile = "tests/DeviceProfiles.json";
+static std::string deviceprofilesfile = "../tests/DeviceProfiles.json";
 
 int main () {
 	bool testfailed = false;

@@ -35,8 +35,6 @@ using json = nlohmann::json;
 #include "Host.h"
 #include "InterfaceMap.h"
 
-// static std::string deviceprofilesfile = "tests/DeviceProfiles.json";
-
 bool do_dpimport_test();
 
 int main () {
@@ -89,8 +87,8 @@ int main () {
 bool do_dpimport_test() {
 	InterfaceMap ifMap;
 	HostCache hC(ifMap, "", 0, "", false, true);
-	hC.loadDeviceProfiles("tests/DeviceProfiles.json");
-	auto  matches = hC.ImportDeviceProfileMatches("tests/DeviceMatches.json");
+	hC.loadDeviceProfiles("../tests/DeviceProfiles.json");
+	auto  matches = hC.ImportDeviceProfileMatches("../tests/DeviceMatches.json");
 	if (matches != 9) {
 		std::cout << "Test failure: Expected 9 imported device profiles but got " << matches << std::endl;
 		return false;
