@@ -25,7 +25,6 @@
 #include <memory>
 #include "SsdpServer.h"
 #include "HostCache.h"
-#include "SsdpHost.h"
 #include "SsdpLocation.h"
 #include "InterfaceMap.h"
 

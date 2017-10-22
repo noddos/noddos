@@ -40,7 +40,6 @@ using json = nlohmann::json;
 #include "DhcpRequest.h"
 #include "FlowEntry.h"
 #include "iCache.h"
-#include "SsdpHost.h"
 #include "DeviceProfile.h"
 #include "MatchCondition.h"
 #include "MacAddress.h"

@@ -41,7 +41,6 @@ using json = nlohmann::json;
 #include "DhcpRequest.h"
 #include "SsdpLocation.h"
 #include "FlowEntry.h"
-#include "SsdpHost.h"
 #include "DeviceProfile.h"
 
 bool Host::Match(const DeviceProfileMap& dpMap) {
@@ -144,6 +143,8 @@ bool Host::Match(const MatchCondition& mc) {
 		value = Ssdp.FriendlyName;
 	} else if (mc.Key == "SsdpManufacturer") {
 		value = Ssdp.Manufacturer;
+    } else if (mc.Key == "SsdpDeviceType") {
+        value = Ssdp.DeviceType;
 	} else if (mc.Key == "SsdpManufacturerUrl") {
 		value = Ssdp.ManufacturerUrl;
 	} else if (mc.Key == "SsdpModelName") {
@@ -243,6 +244,7 @@ bool Host::DeviceStats(json& j, const uint32_t time_interval, bool force, bool d
 	j["SsdpManufacturerUrl"] = Ssdp.ManufacturerUrl;
 	j["SsdpModelName"] = Ssdp.ModelName;
 	j["SsdpModelUrl"] = Ssdp.ModelUrl;
+	j["SsdpDeviceType"] = Ssdp.DeviceType;
 	j["SsdpSerialNumber"] = Ssdp.SerialNumber;
 	j["SsdpUserAgent"] = Ssdp.UserAgent;
 	j["SsdpServer"] = Ssdp.Server;

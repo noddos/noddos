@@ -26,12 +26,10 @@
 #include <regex>
 #include <syslog.h>
 #include <iostream>
-// #include "cpr/cpr.h"
+
 #include <curl/curl.h>
 
-
 #include "noddos.h"
-#include "SsdpHost.h"
 
 
 class SsdpLocation {
@@ -51,6 +49,8 @@ public:
 				std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
 		auto serialnumber_rx = std::regex(R"delim(\<serialnumber\>(.*?)\<\/serialnumber\>)delim",
 				std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
+        auto devicetype_rx = std::regex(R"delim(\<devicetype\>(.*?)\<\/devicetype\>)delim",
+                std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
 
 		// auto response = cpr::Get(cpr::Url{s.Location},cpr::Timeout{timeout});
 
@@ -93,18 +93,27 @@ public:
 		}
 
 		std::smatch m;
-		if (std::regex_search(response_string, m, friendlyname_rx))
+		if (std::regex_search(response_string, m, friendlyname_rx)) {
 			s.FriendlyName = m.str(1);
-		if (std::regex_search(response_string, m, manufacturer_rx))
+		}
+		if (std::regex_search(response_string, m, manufacturer_rx)) {
 			s.Manufacturer = m.str(1);
-		if (std::regex_search(response_string, m, manufacturerurl_rx))
+		}
+		if (std::regex_search(response_string, m, manufacturerurl_rx)) {
 			s.ManufacturerUrl = m.str(1);
-		if (std::regex_search(response_string, m, modelname_rx))
+		}
+		if (std::regex_search(response_string, m, modelname_rx)) {
 			s.ModelName = m.str(1);
-		if (std::regex_search(response_string, m, modelurl_rx))
+		}
+		if (std::regex_search(response_string, m, modelurl_rx)) {
 			s.ModelUrl = m.str(1);
-		if (std::regex_search(response_string, m, serialnumber_rx))
+		}
+        if (std::regex_search(response_string, m, devicetype_rx)) {
+            s.DeviceType = m.str(1);
+        }
+		if (std::regex_search(response_string, m, serialnumber_rx)) {
 			s.SerialNumber = m.str(1);
+		}
 		return true;
 	}
 };

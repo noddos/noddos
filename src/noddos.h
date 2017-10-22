@@ -65,6 +65,34 @@ struct MdnsHost {
     }
 };
 
+struct SsdpHost {
+    std::string IpAddress;
+    std::string FriendlyName;
+    std::string Manufacturer;
+    std::string ManufacturerUrl;
+    std::string ModelName;
+    std::string ModelUrl;
+    std::string DeviceType;
+    std::string SerialNumber;
+    std::string UserAgent;
+    std::string Server;
+    std::string Location;
+
+    //! SsdpHost comparison only compares info from the SSDP multicast messages, not the host info.
+    bool operator == (const SsdpHost &rhs) const {
+        return IpAddress == rhs.IpAddress &&
+                UserAgent == rhs.UserAgent &&
+                Server == rhs.Server &&
+                Location == rhs.Location &&
+                FriendlyName == rhs.FriendlyName &&
+                Manufacturer == rhs.Manufacturer &&
+                ManufacturerUrl == rhs.ManufacturerUrl &&
+                ModelName == rhs.ModelName &&
+                ModelUrl == rhs.ModelUrl &&
+                SerialNumber == rhs.SerialNumber;
+    }
+};
+
 size_t curlwriteFunction(void *ptr, size_t size, size_t nmemb, std::string* data);
 
 
