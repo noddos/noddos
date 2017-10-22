@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
     	syslog(LOG_ERR, "Noddos: Setting up signal fd");
     	throw std::system_error(errno, std::system_category());
     } else {
-    	if (config.Debug == true) {
+    	if (config.DebugEvents == true) {
     	    syslog(LOG_DEBUG, "Noddos: Signal FD is: %d", sfd);
     	}
         struct epoll_event event;
@@ -154,7 +154,7 @@ int main(int argc, char** argv) {
         	syslog(LOG_ERR, "Noddos: Can't add signal file handle to epoll");
         	throw std::system_error(errno, std::system_category());
         } else {
-        	if (config.Debug) {
+        	if (config.DebugEvents == true) {
         		syslog(LOG_DEBUG, "Noddos: Signal file handle %d", sfd);
         	}
         }
@@ -170,7 +170,7 @@ int main(int argc, char** argv) {
         PacketSnoop *p = new PacketSnoop(hC, 64, config.Debug && config.DebugPacketSnoop);
         p->Open(iface, 64);
         add_epoll_filehandle(epfd, epollmap, *p);
-        if (config.Debug) {
+        if (config.DebugEvents == true) {
             syslog(LOG_DEBUG, "Noddos: PacketSnoop for interface %s file handle %d", iface.c_str(), p->getFileHandle());
         }
         pInstances.insert(p);
@@ -178,19 +178,19 @@ int main(int argc, char** argv) {
 
     SsdpServer s(hC, 86400, "", config.Debug && config.DebugSsdp);
     add_epoll_filehandle(epfd, epollmap, s);
-    if (config.Debug) {
+    if (config.DebugEvents == true) {
         syslog(LOG_DEBUG, "Noddos: SSDP file handle %d", s.getFileHandle());
     }
 
     WsDiscovery w(hC, 86400, "", config.Debug && config.DebugWsDiscovery);
     add_epoll_filehandle(epfd, epollmap, w);
-    if (config.Debug) {
+    if (config.DebugEvents == true) {
         syslog(LOG_DEBUG, "Noddos: WS-Discovery file handle %d", w.getFileHandle());
     }
 
     Mdns m(hC, 86400, "", config.Debug && config.DebugMdns);
     add_epoll_filehandle(epfd, epollmap, m);
-    if (config.Debug) {
+    if (config.DebugEvents == true) {
         syslog(LOG_DEBUG, "Noddos: mDNS file handle %d", m.getFileHandle());
     }
 
@@ -198,7 +198,7 @@ int main(int argc, char** argv) {
     FlowTrack ft(hC, config, localIpAddresses) ;
     ft.Open();
    	add_epoll_filehandle(epfd, epollmap, ft);
-    if (config.Debug) {
+    if (config.DebugEvents == true) {
         syslog(LOG_DEBUG, "Noddos: FlowTrack file handle %d", ft.getFileHandle());
     }
 
@@ -226,14 +226,14 @@ int main(int argc, char** argv) {
 	// main program loop waiting for events
 	//
 	while (true) {
-    	if (config.Debug) {
+    	if (config.DebugEvents == true) {
     		syslog(LOG_DEBUG, "Noddos: Starting epoll event wait");
     	}
 		int eCnt = epoll_wait(epfd, epoll_events, MAXEPOLLEVENTS, 60000);
     	if (eCnt < 0) {
     		syslog(LOG_ERR, "Noddos: Epoll event wait error");
     	}
-    	if (config.Debug) {
+    	if (config.DebugEvents == true) {
     		syslog(LOG_DEBUG, "Noddos: Received %d events", eCnt);
     	}
 		int ev;
@@ -259,14 +259,14 @@ int main(int argc, char** argv) {
 			    //
 			    // epoll event processing
 			    //
-				if (config.Debug) {
+				if (config.DebugEvents == true) {
 					syslog(LOG_DEBUG, "Noddos: Handling event for FD %d", epoll_events[ev].data.fd);
 				}
 				if (epoll_events[ev].data.fd == sfd) {
 					//
 				    // Signal processing
 				    //
-					if (config.Debug) {
+					if (config.DebugEvents == true) {
 						syslog(LOG_DEBUG, "Processing signal event");
 					}
 					struct signalfd_siginfo si;
@@ -329,7 +329,7 @@ int main(int argc, char** argv) {
 					NextDeviceUpload = t + config.DeviceReportInterval;
 				}
 				if (t > NextTrafficUpload && config.TrafficReportInterval > 0) {
-				    if (config.Debug) {
+				    if (config.DebugEvents == true) {
 						syslog(LOG_DEBUG, "Noddos: Starting traffic upload");
 					}
 					hC.UploadTrafficStats(futures, config.TrafficReportInterval, config.ReportTrafficToRfc1918, config.ClientApiCertFile,
@@ -337,7 +337,7 @@ int main(int argc, char** argv) {
 					NextTrafficUpload = t + config.TrafficReportInterval;
 				}
 				if (t > NextPrune) {
-					if (config.Debug == true) {
+					if (config.DebugEvents == true) {
 						syslog(LOG_DEBUG, "Noddos: Starting prune");
 					}
 					hC.Prune();
@@ -347,7 +347,7 @@ int main(int argc, char** argv) {
 					NextPrune = t + config.PruneInterval;
 				}
 				if (t > NextWsDiscoveryProbe && config.WsDiscoveryProbeInterval > 0) {
-				    if (config.Debug == true) {
+				    if (config.DebugEvents == true) {
 				        syslog(LOG_DEBUG, "Noddos: Starting WS-Discovery Probe");
 				    }
 				    w.Probe();
@@ -362,7 +362,7 @@ int main(int argc, char** argv) {
 			    for (auto future_it = futures.begin(); future_it != futures.end();) {
 			        if (future_it->valid()) {
 			            if (future_it->wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
-		                    if (config.Debug == true) {
+		                    if (config.DebugHostCache == true) {
 		                        syslog(LOG_DEBUG, "Noddos: Upload of data returned HTTP status %u", future_it->get());
 		                    }
 			                future_it = futures.erase(future_it);

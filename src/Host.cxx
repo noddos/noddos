@@ -192,6 +192,9 @@ bool Host::Match(const MatchCondition& mc) {
 		mcvalue = mcvalue.substr(0,mcvaluelength-1);
 		startpos = 0;
 	}
+	if (Debug == true) {
+	    syslog(LOG_DEBUG, "Host: comparing %s with %s, start position %zu, length %zu", value.c_str(), mcvalue.c_str(), startpos, mcvalue.length()-startpos);
+	}
 	if (value.compare(startpos, mcvalue.length() - startpos, mcvalue) == 0) {
 		if(Debug) {
 			syslog(LOG_DEBUG, "Host: Host %s matched MustMatch condition", Mac.c_str());

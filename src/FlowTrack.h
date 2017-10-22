@@ -69,12 +69,12 @@ private:
 public:
 	FlowTrack(HostCache & inhC, Config &inConfig,std::set<std::string> & inlocalIpAddresses):
 	        hC{inhC}, config{inConfig}, Debug{inConfig.Debug && inConfig.DebugFlowTrack}, localIpAddresses{inlocalIpAddresses} {
-        if (Debug) {
+        if (Debug == true) {
             syslog (LOG_DEBUG, "FlowTrack: constructing instance");
         }
 	}
 	virtual int Open (std::string input = "", uint32_t inExpiration = 0) {
-        if (Debug) {
+        if (Debug == true) {
             syslog (LOG_DEBUG, "FlowTrack: open");
         }
 		// We don't care about Open parameters in this Class derived from iDeviceInfoSource
@@ -101,7 +101,7 @@ public:
 			}
 		}
 		useNfct = true;
-		if (config.Debug) {
+		if (Debug == true) {
 			syslog (LOG_DEBUG, "FlowTrack: Opening NFCT");
 		}
 
@@ -188,7 +188,7 @@ public:
         }
 
         nfct_callback_register(h, NFCT_T_ALL, netfilter_cb, &hC);
-        if (Debug) {
+        if (Debug == true) {
             syslog (LOG_DEBUG, "FlowTrack: open competed succesfully");
         }
 
@@ -208,7 +208,7 @@ public:
 				syslog(LOG_WARNING, "FlowTrack: Closing closed conntrack file pointer");
 				return false;
 			}
-			if (config.Debug == true) {
+			if (config.DebugFlowTrack == true) {
 			    syslog(LOG_DEBUG, "FlowTrack: Closing conntrack file pointer");
 			}
 			return fclose(ctFilePointer);
@@ -218,7 +218,7 @@ public:
 			syslog(LOG_WARNING, "FlowTrack: Closing closed conntrack handler");
 			return false;
 		}
-		if (config.Debug == true) {
+		if (config.DebugFlowTrack == true) {
 			syslog(LOG_DEBUG, "FlowTrack: Closing conntrack handler");
 		}
 		// valgrind thinks nfct_close is buggy
@@ -245,7 +245,7 @@ public:
 			if (rt < 0) {
 				syslog(LOG_ERR, "nfct_catch: %s ", strerror(errno));
 			}
-			if (config.Debug) {
+			if (config.DebugFlowTrack) {
 				syslog(LOG_DEBUG, "Conntrack event read at %s with status %d", buf, rt);
 			}
 		} else {

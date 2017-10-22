@@ -70,23 +70,23 @@ public:
 	std::time_t PruneInterval = 3600;
 	std::time_t ExpireHost = 7776000;
 	UploadMode uMode = Anonymous;
-	bool Debug, DebugHostCache, DebugHost, DebugFlowTrack, DebugDhcp, DebugDns, DebugSsdp,
-	    DebugWsDiscovery, DebugMdns, DebugPacketSnoop, DebugTcpSnoop;
+	bool Debug, DebugHostCache, DebugFlowTrack, DebugDhcp, DebugDns, DebugSsdp,
+	    DebugWsDiscovery, DebugMdns, DebugPacketSnoop, DebugTcpSnoop, DebugEvents;
 	static const std::string ApiFqdn;
 
     Config(bool inDebug = false): Debug{inDebug} {
         if (Debug == true) {
             syslog (LOG_DEBUG, "Config: constructing instance");
         }
-        DebugHostCache = DebugHost = DebugFlowTrack = DebugDhcp = DebugDns = DebugSsdp =
-                DebugWsDiscovery = DebugMdns = DebugPacketSnoop = DebugTcpSnoop = false;
+        DebugHostCache = DebugFlowTrack = DebugDhcp = DebugDns = DebugSsdp =
+                DebugWsDiscovery = DebugMdns = DebugPacketSnoop = DebugTcpSnoop = DebugEvents = false;
     }
     Config(std::string inConfigFile, bool inDebug = false): Debug{inDebug} {
 		if (Debug == true) {
 		    syslog (LOG_DEBUG, "Config: constructing instance");
 		}
-		DebugHostCache = DebugHost = DebugFlowTrack = DebugDhcp = DebugDns = DebugSsdp =
-		        DebugWsDiscovery = DebugMdns = DebugPacketSnoop = DebugTcpSnoop = false;
+		DebugHostCache = DebugFlowTrack = DebugDhcp = DebugDns = DebugSsdp =
+		        DebugWsDiscovery = DebugMdns = DebugPacketSnoop = DebugTcpSnoop = DebugEvents = false;
 	    Load(inConfigFile);
 	}
 	~Config() {
@@ -134,6 +134,7 @@ public:
 		bool newDebugWsDiscovery = DebugWsDiscovery;
 		bool newDebugMdns = DebugMdns;
 		bool newDebugPacketSnoop = DebugPacketSnoop;
+		bool newDebugEvents = DebugEvents;
 
 		// json j;
 
@@ -250,6 +251,9 @@ public:
             if (config["DebugPacketSnoop"]) {
                 newDebugPacketSnoop = config["DebugPacketSnoop"].as<bool>();
             }
+            if (config["DebugEvents"]) {
+                newDebugPacketSnoop = config["DebugEvents"].as<bool>();
+            }
 		}
 		catch (...) {
 			syslog (LOG_ERR, "Config: Failure to parse yaml data from Config file, ignoring its contents: %s", inConfigFile.c_str());
@@ -286,6 +290,7 @@ public:
         DebugWsDiscovery = newDebugWsDiscovery;
         DebugMdns = newDebugMdns;
         DebugPacketSnoop = newDebugPacketSnoop;
+        DebugEvents = newDebugPacketSnoop;
 		return configfailure;
 	}
 
