@@ -97,7 +97,7 @@ int main(int argc, char** argv) {
         std::cout << "Couldn't open, read or parse config file " << configfile << ": " << e.what() << std::endl;
         exit (1);
     }
-	InterfaceMap ifMap(config.LanInterfaces,config.WanInterfaces, config.Debug);
+	InterfaceMap ifMap(config.LanInterfaces,config.WanInterfaces, config.DebugHostCache);
 
 	if (daemon) {
 		daemonize(config);
@@ -340,7 +340,7 @@ int main(int argc, char** argv) {
 					if (config.DebugEvents == true) {
 						syslog(LOG_DEBUG, "Noddos: Starting prune");
 					}
-					hC.Prune();
+					hC.Prune(false);
 					for (auto p: pInstances) {
 					    p->pruneTcpSnoopInstances();
 					}

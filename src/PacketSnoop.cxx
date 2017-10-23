@@ -663,6 +663,9 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
         // This is an outgoing query or an response to client without answers
         // Store the Query ID in a short-term cache so that incoming answers
         // can be confirmed to come in response to the query
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "PacketSnoop: Adding query with ID %d to DnsQueryCache", q->id());
+        }
         hC->addorupdateDnsQueryCache(q->id());
     } else if (ifMap->isWanInterface(ifIndex) && q->answers_count() > 0) {
         // Only accept an answer if for each question there is a matching outgoing query from the DNS server

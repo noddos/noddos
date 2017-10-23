@@ -69,7 +69,9 @@ public:
                 syslog (LOG_DEBUG, "DnsCnameCache: Found FqdnDeviceProfileMap entry for %s with CNAME %s",
                         inFqdn.c_str(), inCname.c_str());
             } else {
-                syslog (LOG_DEBUG, "DnsCnameCache: Didn't find FqdnDeviceProfileMap entry for %s with CNAME %s", inFqdn.c_str(), inCname.c_str() );
+                if (Debug == true) {
+                    syslog (LOG_DEBUG, "DnsCnameCache: Didn't find FqdnDeviceProfileMap entry for %s with CNAME %s", inFqdn.c_str(), inCname.c_str() );
+                }
             }
             fdpMap[cname].insert(it->second.begin(), it->second.end());
         }

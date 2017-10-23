@@ -156,7 +156,9 @@ std::shared_ptr<Host> HostCache::FindOrCreateHostByIp (const std::string inIp, c
 	if ( it == Ip2MacMap.end()) {
 		Mac = MacLookup(inIp);
 		if (Mac.isValid() == false) {
-			syslog(LOG_NOTICE, "HostCache: Got invalid ARP entry %s for %s", Mac.c_str(), inIp.c_str());
+			if (Debug == true) {
+			    syslog(LOG_DEBUG, "HostCache: Did not find ARP entry for %s", inIp.c_str());
+			}
 			return nullptr;
 		}
 		Ip2MacMap[inIp] = Mac.get();
@@ -373,7 +375,11 @@ bool HostCache::AddMdnsInfo (const std::shared_ptr<MdnsHost> inmdnsHost) {
 
 // These functions are for DnsQueryCache
 void HostCache::addorupdateDnsQueryCache (uint16_t id) {
-	DnsQueryCache[id] = time(nullptr) + 15;
+	time_t Expiration = time(nullptr) + 60;
+    if (Debug == true) {
+	    syslog (LOG_DEBUG, "HostCache: setting DnsQueryCache for %u to %zu", id, Expiration);
+	}
+    DnsQueryCache[id] = time(nullptr) + 60;
 }
 
 bool HostCache::inDnsQueryCache (uint16_t id) {
@@ -392,9 +398,9 @@ uint32_t HostCache::pruneDnsQueryCache (bool Force) {
 	time_t now = time(nullptr);
 	auto i = DnsQueryCache.begin();
 	while (i != DnsQueryCache.end()) {
-		if (Force || i->second > now) {
+		if (Force || now > i->second) {
 			if (Debug == true) {
-				syslog (LOG_DEBUG, "HostCache: Deleting %u from DnsQueryCache as %lu is later than %lu", i->first, i->second, now);
+				syslog (LOG_DEBUG, "HostCache: Deleting %u from DnsQueryCache as %lu is later than %lu", i->first, now, i->second);
 			}
 			i = DnsQueryCache.erase(i);
 			deletecount++;
@@ -813,7 +819,9 @@ uint32_t HostCache::ImportDeviceProfileMatches(const std::string filename) {
 		   matches++;
 	   }
 	}
-	syslog(LOG_INFO, "HostCache: DeviceMatches read: %u", matches);
+	if (Debug == true) {
+	    syslog(LOG_DEBUG, "HostCache: DeviceMatches read: %u", matches);
+	}
 	updateDeviceProfileMatchesDnsData();
 	writeIptables();
 	return matches;

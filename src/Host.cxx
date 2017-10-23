@@ -72,7 +72,9 @@ bool Host::Match(const DeviceProfileMap& dpMap) {
 	}
 	if (bestmatch >= ConfidenceLevel::Low) {
 		Uuid = matcheduuid;
-		syslog(LOG_DEBUG, "Host: Host %s matched %s", Mac.c_str(), Uuid.c_str());
+		if (Debug == true) {
+		    syslog(LOG_DEBUG, "Host: Host %s matched %s", Mac.c_str(), Uuid.c_str());
+		}
 		return true;
 	}
 	return false;
@@ -176,8 +178,8 @@ bool Host::Match(const MatchCondition& mc) {
     } else if (mc.Key == "MdnsModelName") {
         value = Mdns.ModelName;
 	}
-	if (value == "") {
-		if(Debug) {
+	if (value == "" || std::all_of(value.begin(),value.end(),isspace)) {
+		if(Debug == true) {
 			syslog(LOG_DEBUG, "Host: Host %s has no value for MustMatch condition %s", Mac.c_str(), mc.Key.c_str());
 		}
 	}
@@ -192,6 +194,9 @@ bool Host::Match(const MatchCondition& mc) {
 		mcvalue = mcvalue.substr(0,mcvaluelength-1);
 		startpos = 0;
 	}
+    if (value.length() < mcvalue.length()) {
+        return false;
+    }
 	if (Debug == true) {
 	    syslog(LOG_DEBUG, "Host: comparing %s with %s, start position %zu, length %zu", value.c_str(), mcvalue.c_str(), startpos, mcvalue.length()-startpos);
 	}

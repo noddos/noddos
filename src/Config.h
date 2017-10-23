@@ -252,7 +252,7 @@ public:
                 newDebugPacketSnoop = config["DebugPacketSnoop"].as<bool>();
             }
             if (config["DebugEvents"]) {
-                newDebugPacketSnoop = config["DebugEvents"].as<bool>();
+                newDebugEvents = config["DebugEvents"].as<bool>();
             }
 		}
 		catch (...) {
@@ -290,7 +290,7 @@ public:
         DebugWsDiscovery = newDebugWsDiscovery;
         DebugMdns = newDebugMdns;
         DebugPacketSnoop = newDebugPacketSnoop;
-        DebugEvents = newDebugPacketSnoop;
+        DebugEvents = newDebugEvents;
 		return configfailure;
 	}
 
