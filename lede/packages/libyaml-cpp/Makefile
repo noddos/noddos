@@ -28,8 +28,8 @@ PKG_BUILD_PARALLEL:=1
 CMAKE_INSTALL:=1
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
-#CMAKE_OPTIONS += -DBUILD_SHARED_LIBS=ON
-CMAKE_OPTIONS += -DBUILD_SHARED_LIBS=OFF
+CMAKE_OPTIONS += -DBUILD_SHARED_LIBS=ON
+#CMAKE_OPTIONS += -DBUILD_SHARED_LIBS=OFF
 
 define Package/libyaml-cpp
 	SECTION:=development
@@ -44,8 +44,10 @@ yaml-cpp is a YAML parser and emitter in C++ matching the YAML 1.2 spec.
 endef
 
 define Package/libyaml-cpp/install
-#	$(INSTALL_DIR) $(1)/usr/lib
-#	$(INSTALL_DATA) $(PKG_BUILD_DIR)/libyaml-cpp.so.0.5.3 $(1)/usr/lib/
+	$(INSTALL_DIR) $(1)/usr/lib
+	#$(INSTALL_DATA) $(PKG_BUILD_DIR)/libyaml-cpp.so.0.5.3 $(1)/usr/lib/
+	#$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libyaml-cpp.so.0.5.3 $(1)/usr/lib/
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libyaml-cpp.so.0.5 $(1)/usr/lib/
 endef
 
 $(eval $(call BuildPackage,libyaml-cpp))

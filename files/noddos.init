@@ -55,7 +55,7 @@ start_service() {
 	LANBRIDGE=$(uci get network.lan.type)
 	echo 'LanInterfaces:' >> $CONFFILE
 	if [ "${LANBRIDGE}" == "bridge" ]; then
-		echo " - br-lan" >> $CONFFILE
+		echo "  - br-lan" >> $CONFFILE
     fi
     echo "  - ${LANINT}" >> $CONFFILE
 	echo '' >>$CONFFILE
@@ -72,14 +72,14 @@ start_service() {
         echo 'ReportTrafficToRfc1918: false' >>$CONFFILE
     fi
     if [ $(uci get noddos.@noddos[0].upload) -eq "1" ]; then
-        echo 'TrafficReportInterval: 3600,' >>$CONFFILE
+        echo 'TrafficReportInterval: 3600' >>$CONFFILE
     	echo '' >>$CONFFILE
-        echo 'DeviceReportInterval: 14400,' >>$CONFFILE
+        echo 'DeviceReportInterval: 14400' >>$CONFFILE
     	echo '' >>$CONFFILE
     else
-        echo 'TrafficReportInterval: 0,' >>$CONFFILE
+        echo 'TrafficReportInterval: 0' >>$CONFFILE
     	echo '' >>$CONFFILE
-        echo 'DeviceReportInterval: 0,' >>$CONFFILE
+        echo 'DeviceReportInterval: 0' >>$CONFFILE
     	echo '' >>$CONFFILE
     fi
 
