@@ -3,9 +3,9 @@ ___Noddos v0.5.5___ - 10/28/2017
 New features:
 * Use yaml for noddos.conf
 * Add support for SsdpDeviceType and MdnsHostname
-* (OpenWRT/LEDE) Automatic interface detection
 * Further reduce logging by making debug logging for main event loop optional (disabled by default)
-* Device Profile database is now at 43 devices that can be identified thanks to information learned from home-assistant SSDP/MDNS discovery information
+* (OpenWRT/LEDE) Automatic interface detection
+* (OpenWRT/LEDE) Automatic installation of cronjob
 
 Bug fixes:
 * [#39](https://github.com/noddos/noddos/issues/39) DnsQueryCache expired too soon
