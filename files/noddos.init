@@ -26,6 +26,20 @@ start_service() {
         /usr/bin/getnoddosdeviceprofiles
     fi
 
+    # Install cronjob if none exists
+    grep getnoddosdeviceprofiles /etc/crontabs/root 2>/dev/null
+    if [ "$?" -gt "0" ]; then
+        echo "Installing cronjob for noddos"
+		# Use awk to generate a random minute
+        MINUTE=$(awk -v min=0 -v max=59 'BEGIN{srand(); print int(min+rand()*(max-min+1))}')
+        echo "${MINUTE} */3 * * * /usr/bin/getnoddosdeviceprofiles; " 'if [ $? -gt 0 ]; then service noddos reload; fi' >> /etc/crontabs/root
+        killall -SIGHUP crond 2>/dev/null
+        if [ "$?" -gt "0" ]; then
+            /etc/init.d/cron start
+        fi
+    fi
+
+
     lines=$(/usr/sbin/iptables -S | grep -c NODDOS)
     if [ "$lines" -lt "2" ]; then
         echo "Creating iptables chain 'NODDOS'"
@@ -120,14 +134,29 @@ start_service() {
 }
 
 stop_service() {
-    echo "Deleting iptables chain 'NODDOS'"
-    iptables -t filter --delete FORWARD -j NODDOS
-    iptables --flush NODDOS
-    iptables --delete-chain NODDOS
-    echo "Deleting ip6tables chain 'NODDOS'"
-    ip6tables -t filter --delete FORWARD -j NODDOS
-    ip6tables --flush NODDOS
-    ip6tables --delete-chain NODDOS
+    /usr/sbin/iptables -S | grep NODDOS 2>/dev/null >/dev/null
+    if [ "$?" -eq "0" ]; then
+        echo "Deleting iptables chain 'NODDOS'"
+        /usr/sbin/iptables -t filter --delete FORWARD -j NODDOS
+        /usr/sbin/iptables --flush NODDOS
+        /usr/sbin/iptables --delete-chain NODDOS
+    fi
+
+    /usr/sbin/ip6tables -S | grep NODDOS 2>/dev/null >/dev/null
+    if [ "$?" -eq "0" ]; then
+        echo "Deleting ip6tables chain 'NODDOS'"
+        /usr/sbin/ip6tables -t filter --delete FORWARD -j NODDOS
+        /usr/sbin/ip6tables --flush NODDOS
+        /usr/sbin/ip6tables --delete-chain NODDOS
+    fi
+
+    grep getnoddosdeviceprofiles /etc/crontabs/root 2>/dev/null >/dev/null
+    if [ "$?" -eq "0" ]; then
+        echo "Deleting cronjob for noddos"
+        grep -v getnoddosdeviceprofiles /etc/crontabs/root >/etc/crontabs/root.tmp 2>/dev/null
+        mv /etc/crontabs/root.tmp /etc/crontabs/root
+        killall -SIGHUP crond 2>/dev/null
+    fi
 }
 
 savedata_service() {
