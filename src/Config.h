@@ -103,7 +103,7 @@ public:
 		YAML::Node config  = YAML::LoadFile(inConfigFile);
 
 		std::string newDeviceProfilesFile = DeviceProfilesFile;
-		std::string newMatchFile = DeviceProfilesFile;
+		std::string newMatchFile = MatchFile;
 		std::string newDumpFile = DumpFile;
         std::string newDnsCacheFile = DnsCacheFile;
 		std::string newClientApiCertFile = ClientApiCertFile;
