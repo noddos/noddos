@@ -88,7 +88,7 @@ public:
 	}
 	virtual ~Host() {
 	    if (Debug == true) {
-	        syslog (LOG_DEBUG, "Destroying Host instance: %s", Ipv4Address.c_str());
+	        syslog (LOG_DEBUG, "Host: Destroying Host instance: %s", Ipv4Address.c_str());
 	    }
 	};
 	bool Match(const DeviceProfileMap& dpMap);
@@ -110,7 +110,7 @@ public:
 	    std::string fqdn = inFqdn;
 	    std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
 	    if (Debug == true) {
-	    	syslog (LOG_DEBUG, "Host: Setting DnsQueryList for %s to now", fqdn.c_str());
+	    	syslog (LOG_DEBUG, "Host(%s): Setting DnsQueryList for %s to now", Ipv4Address.c_str(), fqdn.c_str());
 	    }
         DnsQueryList[fqdn] = time(nullptr);
 	}
@@ -119,7 +119,7 @@ public:
         std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
 	    if (DnsQueryList.find(fqdn) == DnsQueryList.end()) {
 		    if (Debug == true) {
-		    	syslog (LOG_DEBUG, "Host: %s not in DnsQueryList", fqdn.c_str());
+		    	syslog (LOG_DEBUG, "Host(%s): %s not in DnsQueryList", Ipv4Address.c_str(), fqdn.c_str());
 		    }
 		    return false;
 	    }
