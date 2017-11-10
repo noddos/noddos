@@ -109,13 +109,19 @@ public:
 	void addorupdateDnsQueryList (std::string inFqdn) {
 	    std::string fqdn = inFqdn;
 	    std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
+	    if (Debug == true) {
+	    	syslog (LOG_DEBUG, "Host: Setting DnsQueryList for %s to now", fqdn.c_str());
+	    }
         DnsQueryList[fqdn] = time(nullptr);
 	}
 	bool inDnsQueryList (std::string inFqdn) {
         std::string fqdn = inFqdn;
         std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
-	    if (DnsQueryList.find(inFqdn) == DnsQueryList.end()) {
-	        return false;
+	    if (DnsQueryList.find(fqdn) == DnsQueryList.end()) {
+		    if (Debug == true) {
+		    	syslog (LOG_DEBUG, "Host: %s not in DnsQueryList", fqdn.c_str());
+		    }
+		    return false;
 	    }
 	    return true;
 	}

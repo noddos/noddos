@@ -14,6 +14,7 @@ bin/
 log.txt
 Debug/
 Release/
+src/.externalToolBuilders/
 
 .gdbinit
 
