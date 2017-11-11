@@ -27,7 +27,7 @@ start_service() {
     fi
 
     # Install cronjob if none exists
-    grep getnoddosdeviceprofiles /etc/crontabs/root 2>/dev/null
+    grep getnoddosdeviceprofiles /etc/crontabs/root >/dev/null 2>/dev/null
     if [ "$?" -gt "0" ]; then
         echo "Installing cronjob for noddos"
 		# Use awk to generate a random minute

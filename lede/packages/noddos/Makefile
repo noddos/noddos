@@ -11,6 +11,7 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=noddos
 PKG_RELEASE:=1
 PKG_LICENSE:=GPLv3
+PKG_MAINTAINER:=Steven Hessing <steven.hessing@gmail.com>
 
 PKG_SOURCE_VERSION:=master
 PKG_SOURCE_PROTO:=git
@@ -32,7 +33,7 @@ define Package/noddos
 endef
 
 define Package/noddos/description
-Noddos discovers what devices you have in your network and tailors the firewall rules based on whitelisted flows for that device. Noddos downloads the firewall rules periodically from the cloud. In order to support creating these firewall rules, noddos can optionally upload anonimized traffic statistics for each device to the cloud.
+Noddos discovers what devices you have in your network and tailors the firewall rules based on whitelisted flows for that device. Noddos downloads the firewall rules periodically from the cloud. In order to support creating these firewall rules, noddos can, after opt-in, upload anonimized traffic statistics for each device to the cloud. The Luci interface is available in the luci-apps-noddos package. For information, visit https://www.noddos.io/
 endef
 
 define Package/noddos/conffiles

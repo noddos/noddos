@@ -81,7 +81,9 @@ public:
 		}
 	}
 	~DeviceProfile() {
-		syslog (LOG_DEBUG, "DeviceProfile: Deleting instance");
+		if (Debug == true) {
+			syslog (LOG_DEBUG, "DeviceProfile: Deleting instance");
+		}
 	}
     bool from_json(const json &j);
 	std::string getUuid () const { return DeviceProfileUuid; }
