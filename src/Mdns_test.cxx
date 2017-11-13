@@ -33,7 +33,7 @@ int main() {
     msg[340] = 41;
 
     InterfaceMap ifMap;
-    HostCache hC(ifMap, "", 0, "", false, true);
+    HostCache hC(ifMap, "", 0, 14400, "", false, true);
 
     auto Host = std::make_shared<MdnsHost>();
 

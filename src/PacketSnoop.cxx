@@ -30,6 +30,7 @@
 
 
 int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
+    // BPF filter, created with:
     // sudo tcpdump -dd '(ip or ip6) and ((tcp or udp) and port 53) or (udp and (port 67 or port 68))'
     struct sock_filter bpfcode[] = {
             { 0x28, 0, 0, 0x0000000c },
@@ -75,13 +76,13 @@ int PacketSnoop::Open(std::string input, uint32_t inExpiration) {
     };
     struct sock_fprog bpf = { .len = size(bpfcode), .filter = bpfcode, };
 
-    // ETH_P_ALL is required to also capture outgoing packets
-    // TPACKET_V3: https://gist.github.com/giannitedesco/5863705
-    // Kernel 3.19 required: http://www.spinics.net/lists/netdev/msg309630.html
     if (Debug == true) {
         syslog(LOG_DEBUG, "PacketSnoop: Opening AF_PACKET SOCK_RAW with ETH_P_ALL on interface %s",
             input.c_str());
     }
+    // ETH_P_ALL is required to also capture outgoing packets
+    // TPACKET_V3: https://gist.github.com/giannitedesco/5863705
+    // Kernel 3.19 required: http://www.spinics.net/lists/netdev/msg309630.html
     sock = socket( AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
     if (sock < 0) {
         syslog(LOG_CRIT, "PacketSnoop: Socket Error");
@@ -663,13 +664,14 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
         // This is an outgoing query or an response to client without answers
         // Store the Query ID in a short-term cache so that incoming answers
         // can be confirmed to come in response to the query
+        // FIXME: should additionally check whether source IP is from LAN or one of our own
         if (Debug == true) {
             syslog (LOG_DEBUG, "PacketSnoop: Adding query with ID %d to DnsQueryCache", q->id());
         }
         hC->addorupdateDnsQueryCache(q->id());
     } else if (ifMap->isWanInterface(ifIndex) && q->answers_count() > 0) {
         // Only accept an answer if for each question there is a matching outgoing query from the DNS server
-        // on which Noddos runs
+        // on which noddos runs
         if (hC->inDnsQueryCache(q->id()) == false) {
             syslog(LOG_WARNING, "PacketSnoop: No matching entry in DnsQueryCache for %u",
                     q->id());
@@ -678,6 +680,9 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
         }
 
         for (auto it : q->answers()) {
+            if (Debug == true) {
+                syslog(LOG_DEBUG, "PacketSnoop: Query type %d", it.query_type());
+            }
             uint16_t i = 0;
             char ipaddr[INET6_ADDRSTRLEN];
             if (it.query_type() != 41) { // OPT pseudo-RR
@@ -688,36 +693,38 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
                 }
                 std::string dnsdata = it.data();
                 switch (it.query_type()) {
-                case Tins::DNS::QueryType::A: {
+                  case Tins::DNS::QueryType::A: {
                     if (Debug == true) {
-                        syslog(LOG_DEBUG, "PacketSnoop: A record: %s",
-                                it.data().c_str());
+                        syslog(LOG_DEBUG, "PacketSnoop: %s has A record: %s",
+                                it.dname().c_str(), it.data().c_str());
                     }
                     Tins::IPv4Address ip(it.data());
                     hC->addorupdateDnsIpCache(it.dname(), ip);
                     break;
-                }
-                case Tins::DNS::QueryType::AAAA: {
+                  }
+                  case Tins::DNS::QueryType::AAAA: {
                     Tins::IPv6Address ip(it.data());
 
                     hC->addorupdateDnsIpCache(it.dname(), ip);
                     if (Debug == true) {
-                        syslog(LOG_DEBUG, "PacketSnoop: AAAA record: %s",
-                                ip.to_string().c_str());
+                        syslog(LOG_DEBUG, "PacketSnoop: %s has AAAA record: %s",
+                                it.dname().c_str(), ip.to_string().c_str());
                     }
                     break;
-                }
-                case Tins::DNS::QueryType::CNAME:
+                  }
+                  case Tins::DNS::QueryType::CNAME: {
                     hC->addorupdateDnsCnameCache(it.dname(), dnsdata);
                     if (Debug == true) {
-                        syslog(LOG_DEBUG, "PacketSnoop: CNAME record: %s", dnsdata.c_str());
+                        syslog(LOG_DEBUG, "PacketSnoop: %s has CNAME record: %s", it.dname().c_str(), dnsdata.c_str());
                     }
                     break;
-                default:
+                  }
+                  default: {
                     if (Debug == true) {
                         syslog(LOG_DEBUG, "PacketSnoop: unhandled resource record: %s", dnsdata.c_str());
                     }
                     break;
+                  }
                 }
             } else {
                 if (Debug == true) {

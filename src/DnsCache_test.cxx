@@ -32,6 +32,11 @@
 #include "DnsCache.h"
 #include "DeviceProfile.h"
 
+#include "MacAddress.h"
+#include "Host.h"
+
+bool do_cname_test();
+
 int main () {
     bool testfailed = false;
     openlog("DnsCache_test", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
@@ -115,10 +120,64 @@ int main () {
         syslog (LOG_DEBUG, "Pruned %zu DNS IP records", pruned);
         testfailed = 1;
     }
+    testfailed |= do_cname_test();
+
     return testfailed;
 }
 
 
+bool do_cname_test() {
+    MacAddress m("aa:bb:cc:dd:ee:ff");
+    Host h(m, true);
+
+    std::string fqdn = "ping.enphaseenergy.com";
+    std::string cname1 = "ping.enphaseenergy.com.s3.amazonaws.com";
+    std::string cname2 = "s3-1-w.amazonaws.com";
+    Tins::IPv4Address ip("54.231.72.163");
+    h.addorupdateDnsQueryList("ping.enphaseenergy.com");
+    if (! h.inDnsQueryList("ping.enphaseenergy.com")) {
+        syslog (LOG_DEBUG, "%s not in DnsQueryList", fqdn.c_str());
+        return true;
+    }
+    syslog (LOG_DEBUG, "Found ping.enphaseenergy.com in DnsQueryList");
+
+    DnsCnameCache c(true);
+    DnsIpCache <Tins::IPv4Address> i(true);
 
 
+    c.addorupdateCname(fqdn, cname1, 86400);
+    if (c.getCname(fqdn) != cname1) {
+        syslog (LOG_DEBUG, "%s does not have CNAME %s", fqdn.c_str(), cname1.c_str());
+        return true;
+    }
+    syslog (LOG_DEBUG, "%s has CNAME %s", fqdn.c_str(), cname1.c_str());
 
+    if (c.getFqdn(cname1) != fqdn) {
+        syslog (LOG_DEBUG, "%s does not have FQDN %s", cname1.c_str(), fqdn.c_str());
+        return true;
+    }
+    syslog (LOG_DEBUG, "%s has FQDN %s", cname1.c_str(), fqdn.c_str());
+
+    c.addorupdateCname(cname1, cname2, 86400);
+    if (c.getCname(cname1) != cname2) {
+        syslog (LOG_DEBUG, "%s does not have CNAME %s", cname1.c_str(), cname2.c_str());
+        return true;
+    }
+    syslog (LOG_DEBUG, "%s has CNAME %s", cname1.c_str(), cname2.c_str());
+
+    if (c.getFqdn(cname2) != fqdn) {
+        syslog (LOG_DEBUG, "%s does not have indirect FQDN %s", cname2.c_str(), fqdn.c_str());
+        return true;
+    }
+    syslog (LOG_DEBUG, "%s has indirect FQDN %s", cname2.c_str(), fqdn.c_str());
+
+    i.addorupdateResourceRecord(cname2, ip, 86400);
+    std::vector<std::string> fqdns = i.getAllFqdns(ip);
+    if (fqdns.size() > 1 || fqdns[0] != cname2) {
+        syslog(LOG_DEBUG, "%s does not reverse in to FQDN %s", ip.to_string().c_str(), cname2.c_str());
+        return true;
+    }
+    syslog(LOG_DEBUG, "%s reverses to FQDN %s", ip.to_string().c_str(), cname2.c_str());
+
+    return false;
+}

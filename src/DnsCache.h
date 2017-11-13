@@ -39,9 +39,11 @@ private:
     // FIXME: there may be multiple CNAMEs for an FQDN
     std::map<std::string,std::pair<std::string,time_t>> DnsFwdCache;
     std::map<std::string,std::pair<std::string,time_t>> DnsRevCache;
+    time_t MinTtl;
     bool Debug;
+
 public:
-    DnsCnameCache(const bool inDebug=false): Debug{inDebug} {
+    DnsCnameCache(const time_t inMinTtl = 14400, const bool inDebug=false): MinTtl{inMinTtl}, Debug{inDebug} {
         if (Debug == true) {
             syslog (LOG_DEBUG, "DnsCnameCache: constructing instance");
         }
@@ -55,8 +57,11 @@ public:
     void setDebug (bool inDebug) {
         Debug = inDebug;
     }
+    void setMinTtl (bool inMinTtl = 14400) {
+        MinTtl = inMinTtl;
+    }
 
-    void addorupdateCname (const std::string inFqdn, const std::string inCname, FqdnDeviceProfileMap &fdpMap, const time_t inExpiration) {
+    void addorupdateCname (const std::string inFqdn, const std::string inCname, FqdnDeviceProfileMap &fdpMap, const time_t inTtl) {
         std::string fqdn = inFqdn;
         std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
 
@@ -75,16 +80,16 @@ public:
             }
             fdpMap[cname].insert(it->second.begin(), it->second.end());
         }
-        addorupdateCname(fqdn, cname, inExpiration);
+        addorupdateCname(fqdn, cname, inTtl);
     }
 
-    void addorupdateCname (const std::string inFqdn, const std::string inCname, const time_t inExpiration) {
-        time_t Expiration = inExpiration;
+    void addorupdateCname (const std::string inFqdn, const std::string inCname,  time_t inTtl) {
         auto now = time(nullptr);
-        // We need to keep DNS records at least 4 hours as that is our maximum matching interval
-        if (Expiration < (now + 4 * 3600)) {
-            Expiration = now + 4 * 3600;
+        if (inTtl < MinTtl) {
+            inTtl = MinTtl;
         }
+        time_t Expiration = now + inTtl;
+
         std::string fqdn = inFqdn;
         std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
 
@@ -92,14 +97,18 @@ public:
         std::transform(cname.begin(), cname.end(), cname.begin(), ::tolower);
 
         if (Debug == true) {
-            syslog (LOG_DEBUG, "DnsCnameCache: Setting %s to CNAME %s with TTL %lu", fqdn.c_str(), cname.c_str(), Expiration);
+            syslog (LOG_DEBUG, "DnsCnameCache: Setting %s to CNAME %s with expiration %lu", fqdn.c_str(), cname.c_str(), Expiration);
         }
         DnsRevCache[cname] = std::make_pair(fqdn, Expiration);
         DnsFwdCache[fqdn] = std::make_pair(cname, Expiration);
     }
 
+    // Finds the FQDN for a CNAME record, that doesn't have a CNAME record pointing to it
     std::string getFqdn (const std::string inCname, const uint8_t recdepth = 0) const {
         if (recdepth > 5) {
+            if (Debug == true) {
+                syslog (LOG_DEBUG, "DnsCnameCache: Reached max recursion depth for %s", inCname.c_str());
+            }
             return inCname;
         }
         if (Debug == true) {
@@ -119,10 +128,8 @@ public:
         }
     }
 
+    // Find the CNAME for an FQDN
     std::string getCname (const std::string inFqdn, const uint8_t recdepth = 0) {
-        if (recdepth > 5) {
-            return inFqdn;
-        }
         if (Debug == true) {
             syslog (LOG_DEBUG, "DnsCnameCache: Looking up CNAME for %s", inFqdn.c_str());
         }
@@ -227,9 +234,10 @@ private:
 	std::map<std::string, std::map<T,time_t>> DnsFwdCache;
     std::map<T, std::map<std::string,time_t>> DnsRevCache;
     bool Debug;
+    time_t MinTtl;
 
 public:
-	DnsIpCache(const bool inDebug=false): Debug{inDebug} {
+	DnsIpCache(const time_t inMinTtl = 14400, const bool inDebug=false): MinTtl{inMinTtl}, Debug{inDebug} {
         if (Debug == true) {
             syslog (LOG_DEBUG, "DnsIpCache: constructing instance");
         }
@@ -257,6 +265,9 @@ public:
 
         auto fdp_it = fdpMap.find(fqdn);
         if (fdp_it != fdpMap.end()) {
+            if (Debug == true) {
+                syslog (LOG_DEBUG, "DnsIpCache: Updating resource record with FqdnDeviceProfileMap entry for %s", inFqdn.c_str());
+            }
             addorupdateResourceRecord (fqdn, inIpAddress, fdp_it, inTtl);
         } else {
             if (Debug == true) {
@@ -266,7 +277,7 @@ public:
         }
     }
 
-    void addorupdateResourceRecord (const std::string inFqdn, const T inIpAddress, FqdnDeviceProfileMap::iterator &fdp_it, const time_t inExpiration) {
+    void addorupdateResourceRecord (const std::string inFqdn, const T inIpAddress, FqdnDeviceProfileMap::iterator &fdp_it, const time_t inTtl) {
         std::string fqdn = inFqdn;
         std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
 
@@ -275,18 +286,18 @@ public:
                 syslog (LOG_DEBUG, "DnsIpCache: Found FqdnDeviceProfileMap entry with UUID %s for %s with IP %s",
                         DeviceProfile_sharedpointer_it->getUuid().c_str(), inFqdn.c_str(), inIpAddress.to_string().c_str());
             }
-            DeviceProfile_sharedpointer_it->addDestination(inIpAddress, inExpiration);
+            DeviceProfile_sharedpointer_it->addDestination(inIpAddress, inTtl);
         }
-        addorupdateResourceRecord (fqdn, inIpAddress, inExpiration);
+        addorupdateResourceRecord (fqdn, inIpAddress, inTtl);
     }
 
-	void addorupdateResourceRecord (const std::string inFqdn, const T inIpAddress, const time_t inExpiration) {
-		time_t Expiration = inExpiration;
+	void addorupdateResourceRecord (const std::string inFqdn, const T inIpAddress, time_t inTtl) {
         // We need to keep DNS records at least 4 hours as that is our maximum matching interval
 		auto now = time(nullptr);
-		if (Expiration < (now + 4 * 3600)) {
-			Expiration = now + 4 * 3600;
+		if (inTtl < MinTtl) {
+		    inTtl = MinTtl;
 		}
+        time_t Expiration = now + inTtl;
 
 		std::string fqdn = inFqdn;
         std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
@@ -302,6 +313,9 @@ public:
 	void setDebug (bool inDebug) {
 		Debug = inDebug;
 	}
+    void setMinTtl (bool inMinTtl = 14400) {
+        MinTtl = inMinTtl;
+    }
 
     size_t importJson (json &j, FqdnDeviceProfileMap &fdpMap) {
         if (Debug == true) {
@@ -378,6 +392,7 @@ public:
 		}
 		return fqdns;
 	}
+
 	std::set<std::string> pruneResourceRecords (const bool Force = false) {
 		std::set<std::string> PrunedFqdns;
 		auto now = time(nullptr);

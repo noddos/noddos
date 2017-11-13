@@ -62,17 +62,18 @@ private:
 	bool Debug;
 	std::set<std::string> LocalInterfaces;
 	std::set<std::string> LocalIpAddresses;
-	uint32_t FlowExpiration;
-	bool FirewallBlockTraffic;
-	std::string FirewallRulesFile;
+	time_t MinFlowTtl; //!< Minimum TTL for flows
+	time_t MinDnsTtl; //!< Minimum TTL for DNS records.
+	bool FirewallBlockTraffic; //!< Should the firewall just log or block traffic
+	std::string FirewallRulesFile; //!< location to store the temporary rules file that will be read by ip(6)tables
 
     void writeIptables();
 
 public:
-	HostCache(InterfaceMap &inifMap, const std::string inDnsCacheFilename,
-	        const uint32_t inFlowExpiration, std::string inFirewallRulesFile,
+	HostCache(InterfaceMap &inifMap, const std::string inDnsCacheFilename, const time_t inMinFlowTtl,
+	        const time_t inMinDnsTtl, std::string inFirewallRulesFile,
 	        const bool inFirewallBlockTraffic, const bool inDebug = false):
-			ifMap{&inifMap}, FlowExpiration{inFlowExpiration}, Debug{inDebug},
+			ifMap{&inifMap}, MinFlowTtl{inMinFlowTtl}, MinDnsTtl{inMinDnsTtl}, Debug{inDebug},
 			FirewallRulesFile{inFirewallRulesFile},
 			FirewallBlockTraffic{inFirewallBlockTraffic} {
 		if (Debug == true) {
@@ -81,8 +82,12 @@ public:
 
 		getInterfaceIpAddresses();
 		dCipv4.setDebug(Debug);
+        dCipv4.setMinTtl(MinDnsTtl);
         dCipv6.setDebug(Debug);
+        dCipv6.setMinTtl(MinDnsTtl);
 		dCcname.setDebug(Debug);
+        dCcname.setMinTtl(MinDnsTtl);
+
 		if (inDnsCacheFilename != "") {
 		    importDnsCache(inDnsCacheFilename);
 		}

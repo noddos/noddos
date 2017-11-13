@@ -14,7 +14,7 @@ int main () {
     bool testfailure = false;
 
     InterfaceMap ifMap;
-    HostCache hC(ifMap, "", 0, "", false, true);
+    HostCache hC(ifMap, "", 0, 1400, "", false, true);
 
     auto Host = std::make_shared<WsDiscoveryHost>();
 

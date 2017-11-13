@@ -53,10 +53,13 @@ typedef std::list<std::shared_ptr<FlowEntry>> FlowEntryList;
 
 class Host : public iCache {
 private:
+    // All DNS queries performed by the host
     std::map<std::string,time_t> DnsQueryList;
 
+    // IPv4 & IPv6 flows of the host
  	std::map<Tins::IPv4Address, std::shared_ptr<FlowEntryList>> FlowCacheIpv4;
    	std::map<Tins::IPv6Address, std::shared_ptr<FlowEntryList>> FlowCacheIpv6;
+
    	std::string Ipv4Address;
    	std::string Ipv6Address;
    	MacAddress Mac;
@@ -105,7 +108,7 @@ public:
 	bool setWsDiscoveryInfo(const std::shared_ptr<WsDiscoveryHost> inwsdHost);
     bool setMdnsInfo(const std::shared_ptr<MdnsHost> inmdnsHost);
 
-	// This manipulates the DnsQueryCache
+    // Keep track of DNS queries performed by a host
 	void addorupdateDnsQueryList (std::string inFqdn) {
 	    std::string fqdn = inFqdn;
 	    std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
@@ -123,6 +126,9 @@ public:
 		    }
 		    return false;
 	    }
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "Host(%s): %s is in DnsQueryList", Ipv4Address.c_str(), fqdn.c_str());
+        }
 	    return true;
 	}
 	uint32_t pruneDnsQueryList (time_t Expired = 14400, bool Force = false);

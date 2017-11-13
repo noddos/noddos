@@ -47,7 +47,7 @@ int main () {
 		testfailure = true;
 	}
 	InterfaceMap ifMap(true);
-	HostCache hC(ifMap, "", 0, "", false, true);
+	HostCache hC(ifMap, "", 0, 0, "", false, true);
 	// hC.DeviceProfiles_load(deviceprofilesfile);
 	MacAddress Mactest ("00:00:00:00:00:03");
 	hC.AddByMac (Mactest, "192.168.1.99");
@@ -86,7 +86,7 @@ int main () {
 
 bool do_dpimport_test() {
 	InterfaceMap ifMap;
-	HostCache hC(ifMap, "", 0, "", false, true);
+	HostCache hC(ifMap, "", 0, 0, "", false, true);
 	hC.loadDeviceProfiles("../tests/DeviceProfiles.json");
 	auto  matches = hC.ImportDeviceProfileMatches("../tests/DeviceMatches.json");
 	if (matches != 9) {

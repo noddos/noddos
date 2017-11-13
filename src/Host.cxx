@@ -58,7 +58,8 @@ bool Host::Match(const DeviceProfileMap& dpMap) {
 	std::string matcheduuid = "";
 	for (auto &kv : dpMap) {
 		if(Debug == true) {
-			syslog(LOG_DEBUG, "Host: Evaluating host %s against device profile %s", Mac.c_str(), kv.first.c_str());
+			syslog(LOG_DEBUG, "Host(%s): Evaluating host %s against device profile %s", 
+                    Ipv4Address.c_str(), Mac.c_str(), kv.first.c_str());
 		}
 		auto &dp = *(kv.second);
 		auto match = Match(dp);
@@ -73,7 +74,7 @@ bool Host::Match(const DeviceProfileMap& dpMap) {
 	if (bestmatch >= ConfidenceLevel::Low) {
 		Uuid = matcheduuid;
 		if (Debug == true) {
-		    syslog(LOG_DEBUG, "Host: Host %s matched %s", Mac.c_str(), Uuid.c_str());
+		    syslog(LOG_DEBUG, "Host(%s): Host %s matched %s", Ipv4Address.c_str(), Mac.c_str(), Uuid.c_str());
 		}
 		return true;
 	}
@@ -85,12 +86,12 @@ ConfidenceLevel Host::Match(const DeviceProfile& dp) {
 	auto v = dp.getIdentifiers();
 	for (auto& i : v) {
 		if(Debug) {
-			syslog (LOG_DEBUG, "Host: Testing identifier");
+			syslog (LOG_DEBUG, "Host(%s): Testing identifier", Ipv4Address.c_str());
 		}
 		auto match = Match(*i);
 		if (match >= ConfidenceLevel::High) {
 			if(Debug) {
-				syslog(LOG_DEBUG, "Host: Host %s matched with high confidence", Mac.c_str());
+				syslog(LOG_DEBUG, "Host(%s): Host %s matched with high confidence", Ipv4Address.c_str(), Mac.c_str());
 			}
 			return match;
         }
@@ -99,7 +100,7 @@ ConfidenceLevel Host::Match(const DeviceProfile& dp) {
         }
 	}
 	if(Debug) {
-		syslog(LOG_DEBUG, "Host: Host %s match level %d", Mac.c_str(), static_cast<int>(bestmatch));
+		syslog(LOG_DEBUG, "Host(%s): Host %s match level %d", Ipv4Address.c_str(), Mac.c_str(), static_cast<int>(bestmatch));
 	}
 	return bestmatch;
 }
@@ -111,7 +112,7 @@ ConfidenceLevel Host::Match(const Identifier& i) {
 		}
 		if(not Match (*mc)) {
 			if(Debug) {
-				syslog (LOG_DEBUG, "Host: Host %s did not match condition %s", Mac.c_str(), (*mc).Key.c_str());
+				syslog (LOG_DEBUG, "Host(%s): Host %s did not match condition %s", Ipv4Address.c_str(), Mac.c_str(), (*mc).Key.c_str());
 			}
 			return ConfidenceLevel::None;
 		}
@@ -122,13 +123,13 @@ ConfidenceLevel Host::Match(const Identifier& i) {
 		}
 		if(not Match (*cc)) {
 			if(Debug) {
-				syslog (LOG_DEBUG, "Host: Host %s did not contain condition %s", Mac.c_str(), (*cc).Key.c_str());
+				syslog (LOG_DEBUG, "Host(%s): Host %s did not contain condition %s", Ipv4Address.c_str(), Mac.c_str(), (*cc).Key.c_str());
 			}
 			return ConfidenceLevel::None;
 		}
 	}
 	if(Debug) {
-		syslog(LOG_DEBUG, "Host: Host %s matched MustMatch and/or MustContain conditions", Mac.c_str());
+		syslog(LOG_DEBUG, "Host(%s): Host %s matched MustMatch and/or MustContain conditions", Ipv4Address.c_str(), Mac.c_str());
 	}
 	return i.IdentifyConfidenceLevel_get();
 }
@@ -180,7 +181,8 @@ bool Host::Match(const MatchCondition& mc) {
 	}
 	if (value == "" || std::all_of(value.begin(),value.end(),isspace)) {
 		if(Debug == true) {
-			syslog(LOG_DEBUG, "Host: Host %s has no value for MustMatch condition %s", Mac.c_str(), mc.Key.c_str());
+			syslog(LOG_DEBUG, "Host(%s): Host %s has no value for MustMatch condition %s",
+                    Ipv4Address.c_str(), Mac.c_str(), mc.Key.c_str());
 		}
 	}
 	size_t startpos = 0;
@@ -198,7 +200,8 @@ bool Host::Match(const MatchCondition& mc) {
         return false;
     }
 	if (Debug == true) {
-	    syslog(LOG_DEBUG, "Host: comparing %s with %s, start position %zu, length %zu", value.c_str(), mcvalue.c_str(), startpos, mcvalue.length()-startpos);
+	    syslog(LOG_DEBUG, "Host(%s): comparing %s with %s, start position %zu, length %zu",
+                Ipv4Address.c_str(), value.c_str(), mcvalue.c_str(), startpos, mcvalue.length()-startpos);
 	}
 	if (value.compare(startpos, mcvalue.length() - startpos, mcvalue) == 0) {
 		if(Debug) {
@@ -207,7 +210,8 @@ bool Host::Match(const MatchCondition& mc) {
 		return true;
     }
 	if(Debug) {
-		syslog (LOG_DEBUG, "Host: Host %s did not match condition %s with value %s from position %zu", value.c_str(), mc.Key.c_str(), mcvalue.c_str(), startpos);
+		syslog (LOG_DEBUG, "Host(%s): Host %s did not match condition %s with value %s from position %zu", 
+                Ipv4Address.c_str(), value.c_str(), mc.Key.c_str(), mcvalue.c_str(), startpos);
 	}
 	return false;
 }
@@ -217,23 +221,25 @@ bool Host::Match(const ContainCondition& cc) {
 		for (auto fqdn: cc.Values) {
 		    if (DnsQueryList.find(fqdn) != DnsQueryList.end()) {
 				if(Debug) {
-					syslog(LOG_DEBUG, "Host: Found DnsQuery for %s from host %s", fqdn.c_str(), Mac.c_str());
+					syslog(LOG_DEBUG, "Host(%s): Found DnsQuery for %s from host %s", 
+                            Ipv4Address.c_str(), fqdn.c_str(), Mac.c_str());
 				}
 			} else {
 				if(Debug) {
-					syslog(LOG_DEBUG, "Host: Didn't find DnsQuery for %s from host %s", fqdn.c_str(), Mac.c_str());
+					syslog(LOG_DEBUG, "Host(%s): Didn't find DnsQuery for %s from host %s",
+                            Ipv4Address.c_str(), fqdn.c_str(), Mac.c_str());
 				}
 				return false;
 			}
 		}
 	} else {
 		if(Debug) {
-			syslog(LOG_DEBUG, "Host: Unsupported MustContain key %s", cc.Key.c_str());
+			syslog(LOG_DEBUG, "Host(%s): Unsupported MustContain key %s", Ipv4Address.c_str(), cc.Key.c_str());
 		}
 		return false;
 	}
 	if(Debug) {
-		syslog(LOG_DEBUG, "Host: Host %s matched MustContain condition", Mac.c_str());
+		syslog(LOG_DEBUG, "Host(%s): Host %s matched MustContain condition", Ipv4Address.c_str(), Mac.c_str());
 	}
 	return true;
 }
@@ -291,12 +297,12 @@ bool Host::DeviceStats(json& j, const uint32_t time_interval, bool force, bool d
 
 	std::string fqdns = "";
 	if (Debug == true) {
-		syslog (LOG_DEBUG, "Host: Adding items from DnsQueryList to list of fqdns");
+		syslog (LOG_DEBUG, "Host(%s): Adding items from DnsQueryList to list of fqdns", Ipv4Address.c_str());
 	}
 	for (auto &dq: DnsQueryList) {
 		if (detailed == false) {
 			if (Debug == true) {
-				syslog (LOG_DEBUG, "Host: Adding FQDN %s from DnsQueryList to list of fqdns", dq.first.c_str());
+				syslog (LOG_DEBUG, "Host(%s): Adding FQDN %s from DnsQueryList to list of fqdns", Ipv4Address.c_str(), dq.first.c_str());
 			}
 			fqdns += dq.first + " ";
 		}
@@ -318,71 +324,90 @@ bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportPriva
 	if (not force && LastSeen < (time(nullptr) - interval)) {
 		return false;
 	}
-	// This holds reverse lookup table from an IP address to one or more FQDNs.
-	std::map<std::string,std::shared_ptr<std::unordered_set<std::string>>> allIps;
 
+	// List of endpoints (fqdns & IPv4/v6's) that the host communicated with
 	std::unordered_set<std::string> endpoints;
 	{
+	    std::unordered_set<Tins::IPv4Address> allIps;
 	    for (auto &fc: FlowCacheIpv4) {
 	        bool foundFqdn = false;
 	        Tins::IPv4Address  ip(fc.first);
-	        if (ReportPrivateAddresses == true || not ip.is_private()) {
-	            auto it = allIps.find(ip.to_string());
-	            if (it != allIps.end()) {
-	                for (auto &fqdn: *(it->second)) {
-	                    endpoints.insert(fqdn);
-	                    foundFqdn = true;
-	                }
-	            }
+
+	        if (ReportPrivateAddresses == false && ip.is_private()) {
+	            continue;
+	        }
+	        // Did we already process a FlowCache entry with the same destination,
+	        // ie. with different destination port?
+	        auto it = allIps.find(ip);
+	        if (it != allIps.end()) {
+	            foundFqdn = true;
+	        } else {
 	            if (Debug == true) {
-	                syslog (LOG_DEBUG, "Host: Getting all DNS lookups for %s", ip.to_string().c_str());
+	                syslog (LOG_DEBUG, "Host(%s): Getting all DNS lookups for %s", Ipv4Address.c_str(), ip.to_string().c_str());
 	            }
 	            std::vector<std::string> fqdns = dCipv4.getAllFqdns(ip);
 	            for (auto &itf : fqdns) {
 	                std::string fqdn = dCcname.getFqdn(itf);
 	                if (Debug) {
-	                    syslog (LOG_DEBUG, "Host: Reverse resolved %s to %s, might have CNAME %s", ip.to_string().c_str(), itf.c_str(), fqdn.c_str());
+	                    if (itf != fqdn) {
+	                        syslog (LOG_DEBUG, "Host(%s): Reverse resolved %s to %s, might have CNAME %s",
+	                            Ipv4Address.c_str(), ip.to_string().c_str(), itf.c_str(), fqdn.c_str());
+	                    } else {
+                            syslog (LOG_DEBUG, "Host(%s): Reverse resolved %s to %s, with no CNAME",
+                                Ipv4Address.c_str(), ip.to_string().c_str(), fqdn.c_str());
+	                    }
 	                }
 	                if (inDnsQueryList(fqdn)) {
 	                    endpoints.insert(fqdn);
 	                    foundFqdn = true;
 	                }
 	            }
-	            if (foundFqdn) {
+	            if (foundFqdn == false) {
+	                if (Debug) {
+	                    syslog (LOG_DEBUG, "Host(%s): No FQDN found for %s", 
+	                            Ipv4Address.c_str(), ip.to_string().c_str());
+	                }
 	                endpoints.insert(ip.to_string());
 	            }
+	            allIps.insert(ip);
 	        }
 	    }
 	}
     {
+        std::unordered_set<Tins::IPv6Address> allIps;
         for (auto &fc: FlowCacheIpv6) {
             bool foundFqdn = false;
-            const Tins::IPv6Address  &ip = fc.first;
-            auto it = allIps.find(ip.to_string());
+            const Tins::IPv6Address ip(fc.first);
+            // Did we already process a FlowCache entry with the same destination,
+            // ie. with different destination port?
+            auto it = allIps.find(ip);
             if (it != allIps.end()) {
-                for (auto &fqdn: *(it->second)) {
-                    endpoints.insert(fqdn);
-                    foundFqdn = true;
+                foundFqdn = true;
+            } else {
+                if (Debug == true) {
+                    syslog (LOG_DEBUG, "Host(%s): Getting all DNS lookups for %s", Ipv4Address.c_str(), ip.to_string().c_str());
                 }
-            }
-            if (Debug == true) {
-                syslog (LOG_DEBUG, "Host(%s): Getting all DNS lookups for %s", Ipv4Address.c_str(), ip.to_string().c_str());
-            }
-            std::vector<std::string> fqdns = dCipv6.getAllFqdns(ip);
-            for (auto &itf : fqdns) {
-                std::string fqdn = dCcname.getFqdn(itf);
-                if (Debug) {
-                    syslog (LOG_DEBUG, "Host(%s): Reverse resolved %s to %s, might have CNAME %s", Ipv4Address.c_str(), ip.to_string().c_str(), itf.c_str(), fqdn.c_str());
+                std::vector<std::string> fqdns = dCipv6.getAllFqdns(ip);
+                for (auto &itf : fqdns) {
+                    std::string fqdn = dCcname.getFqdn(itf);
+                    if (Debug) {
+                        if (itf != fqdn) {
+                            syslog (LOG_DEBUG, "Host(%s): Reverse resolved %s to %s, might have CNAME %s",
+                                Ipv4Address.c_str(), ip.to_string().c_str(), itf.c_str(), fqdn.c_str());
+                        } else {
+                            syslog (LOG_DEBUG, "Host(%s): Reverse resolved %s to %s, with no CNAME",
+                                Ipv4Address.c_str(), ip.to_string().c_str(), fqdn.c_str());
+                        }                    }
+                    if (inDnsQueryList(fqdn)) {
+                        endpoints.insert(fqdn);
+                        foundFqdn = true;
+                    }
                 }
-                if (inDnsQueryList(fqdn)) {
-                    endpoints.insert(fqdn);
-                    foundFqdn = true;
+                if (foundFqdn == false) {
+                    endpoints.insert(ip.to_string());
                 }
+                allIps.insert(ip);
             }
-            if (foundFqdn == true) {
-                endpoints.insert(ip.to_string());
-            }
-
         }
     }
 	if (endpoints.size() > 0) {

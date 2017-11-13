@@ -119,6 +119,7 @@ int main(int argc, char** argv) {
 	// Set up HostCache instance
 	//
 	HostCache hC(ifMap, config.DnsCacheFile, config.TrafficReportInterval,
+	        config.TrafficReportInterval > config.DeviceReportInterval ? config.TrafficReportInterval : config.DeviceReportInterval,
 	        config.FirewallRulesFile, config.FirewallBlockTraffic, config.Debug && config.DebugHostCache);
 	hC.loadDeviceProfiles(config.DeviceProfilesFile);
 	hC.ImportDeviceProfileMatches(config.MatchFile);
