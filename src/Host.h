@@ -108,30 +108,9 @@ public:
 	bool setWsDiscoveryInfo(const std::shared_ptr<WsDiscoveryHost> inwsdHost);
     bool setMdnsInfo(const std::shared_ptr<MdnsHost> inmdnsHost);
 
-    // Keep track of DNS queries performed by a host
-	void addorupdateDnsQueryList (std::string inFqdn) {
-	    std::string fqdn = inFqdn;
-	    std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
-	    if (Debug == true) {
-	    	syslog (LOG_DEBUG, "Host(%s): Setting DnsQueryList for %s to now", Ipv4Address.c_str(), fqdn.c_str());
-	    }
-        DnsQueryList[fqdn] = time(nullptr);
-	}
-	bool inDnsQueryList (std::string inFqdn) {
-        std::string fqdn = inFqdn;
-        std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
-	    if (DnsQueryList.find(fqdn) == DnsQueryList.end()) {
-		    if (Debug == true) {
-		    	syslog (LOG_DEBUG, "Host(%s): %s not in DnsQueryList", Ipv4Address.c_str(), fqdn.c_str());
-		    }
-		    return false;
-	    }
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "Host(%s): %s is in DnsQueryList", Ipv4Address.c_str(), fqdn.c_str());
-        }
-	    return true;
-	}
-	uint32_t pruneDnsQueryList (time_t Expired = 14400, bool Force = false);
+    void addorupdateDnsQueryList (std::string inFqdn);
+    bool inDnsQueryList (std::string inFqdn);
+  	uint32_t pruneDnsQueryList (time_t Expired = 14400, bool Force = false);
 
 	bool isMatched () { return Uuid != ""; }
 	bool UploadsEnabled ();
@@ -149,11 +128,8 @@ public:
 	bool inPrivateAddressRange(const std::string ip );
 
 	// iCache interface methods.
-	time_t setExpiration (time_t inExpiration = HOSTDEFAULTEXPIRATION) {
-	  	iCache::Expires = time(nullptr) + inExpiration;
-	   	return iCache::LastSeen + HOSTDEFAULTEXPIRATION;
-	}
-	time_t getExpiration () { return iCache::LastSeen + HOSTDEFAULTEXPIRATION; }
+    time_t setExpiration (time_t inExpiration = HOSTDEFAULTEXPIRATION);
+    time_t getExpiration () { return iCache::LastSeen + HOSTDEFAULTEXPIRATION; }
 	bool isExpired() { return time(nullptr) >= iCache::LastSeen + HOSTDEFAULTEXPIRATION; }
 	uint32_t Prune (bool Force = false);
 };

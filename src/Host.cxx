@@ -43,6 +43,36 @@ using json = nlohmann::json;
 #include "FlowEntry.h"
 #include "DeviceProfile.h"
 
+// Keep track of DNS queries performed by a host
+void Host::addorupdateDnsQueryList (std::string inFqdn) {
+    std::string fqdn = inFqdn;
+    std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
+    if (Debug == true) {
+        syslog (LOG_DEBUG, "Host(%s): Setting DnsQueryList for %s to now", Ipv4Address.c_str(), fqdn.c_str());
+    }
+    DnsQueryList[fqdn] = time(nullptr);
+}
+
+bool Host::inDnsQueryList (std::string inFqdn) {
+    std::string fqdn = inFqdn;
+    std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
+    if (DnsQueryList.find(fqdn) == DnsQueryList.end()) {
+        if (Debug == true) {
+            syslog (LOG_DEBUG, "Host(%s): %s not in DnsQueryList", Ipv4Address.c_str(), fqdn.c_str());
+        }
+        return false;
+    }
+    if (Debug == true) {
+        syslog (LOG_DEBUG, "Host(%s): %s is in DnsQueryList", Ipv4Address.c_str(), fqdn.c_str());
+    }
+    return true;
+}
+
+time_t Host::setExpiration (time_t inExpiration) {
+    iCache::Expires = time(nullptr) + inExpiration;
+    return iCache::LastSeen + HOSTDEFAULTEXPIRATION;
+}
+
 bool Host::Match(const DeviceProfileMap& dpMap) {
 	// If no newer version of the DeviceProfile it previously matched to is available then no need to try to
 	// match the device again
@@ -346,7 +376,10 @@ bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportPriva
 	                syslog (LOG_DEBUG, "Host(%s): Getting all DNS lookups for %s", Ipv4Address.c_str(), ip.to_string().c_str());
 	            }
 	            std::vector<std::string> fqdns = dCipv4.getAllFqdns(ip);
-	            for (auto &itf : fqdns) {
+                if (Debug == true) {
+                    syslog (LOG_DEBUG, "Host(%s): got %zu FQDNs for %s", Ipv4Address.c_str(), fqdns.size(), ip.to_string().c_str());
+                }
+	            for (auto itf : fqdns) {
 	                std::string fqdn = dCcname.getFqdn(itf);
 	                if (Debug) {
 	                    if (itf != fqdn) {

@@ -31,6 +31,8 @@
 #include <string>
 #include <map>
 
+#include "gtest/gtest.h"
+
 enum struct ConfidenceLevel : int { None, none, NONE, Low, low, LOW, Medium, medium, MEDIUM, High, high, HIGH };
 
 struct WsDiscoveryHost {
