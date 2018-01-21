@@ -176,7 +176,9 @@ size_t DnsCnameCache::exportJson (json &j) {
     for (auto it_resource: DnsFwdCache) {
         dnsRecords++;
         j["CnameRecords"][it_resource.first]= json::object();
-        j["CnameRecords"][it_resource.first][it_resource.second.first] = it_resource.second.second;
+        for (auto it_cname: it_resource.second) {
+            j["CnameRecords"][it_resource.first][it_cname.first] = it_cname.second;
+        }
     }
     return dnsRecords;
 }

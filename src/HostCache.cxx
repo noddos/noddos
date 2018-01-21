@@ -862,8 +862,9 @@ void HostCache::updateDeviceProfileMatchesDnsData () {
             }
             std::string cname = "";
             while (fqdn != cname) {
+                std::set<std::string> cnames;
                 try {
-                    cname = dCcname.getCname(fqdn);
+                    cnames = dCcname.getCnames(fqdn);
                 } catch (std::runtime_error &e) {
                     break;
                 }
@@ -966,18 +967,20 @@ bool HostCache::removeDeviceProfile(const std::string inUuid) {
     if (dp_it == dpMap.end()) {
         throw std::runtime_error ("Device Profile " + inUuid + " not found");
     }
-    std::set<std::string> dpFqdns = dp_it->second->getDestinations();
+
+    auto dp = dp_it->second;
+    std::set<std::string> dpFqdns = dp->getDestinations();
     for (auto Fqdn: dpFqdns) {
-        std::string cname = Fqdn;
-        try {
-            while (1) {
-                auto fdpmap_it = fdpMap.find(cname);
-                if (fdpmap_it != fdpMap.end()) {
-                    fdpmap_it->second.erase(dp_it->second);
-                }
-                cname = dCcname.getCname(cname);
+        std::set<std::string> fqdns;
+        fqdns.insert(Fqdn);
+        std::set<std::string> cnames = dCcname.getCnames(Fqdn);
+        fqdns.insert(cnames.begin(),cnames.end());
+        for (auto fqdn: fqdns) {
+            auto fdpmap_it = fdpMap.find(fqdn);
+            if (fdpmap_it != fdpMap.end()) {
+                fdpmap_it->second.erase(dp);
             }
-        } catch (std::runtime_error &error) {}
+        }
     }
     return false;
 }

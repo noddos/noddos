@@ -22,6 +22,7 @@
 #include <cstring>
 #include <ctime>
 #include <string>
+#include <set>
 #include <forward_list>
 #include <map>
 #include <unordered_set>
@@ -380,19 +381,21 @@ bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportPriva
                     syslog (LOG_DEBUG, "Host(%s): got %zu FQDNs for %s", Ipv4Address.c_str(), fqdns.size(), ip.to_string().c_str());
                 }
 	            for (auto itf : fqdns) {
-	                std::string fqdn = dCcname.getFqdn(itf);
-	                if (Debug) {
-	                    if (itf != fqdn) {
-	                        syslog (LOG_DEBUG, "Host(%s): Reverse resolved %s to %s, might have CNAME %s",
-	                            Ipv4Address.c_str(), ip.to_string().c_str(), itf.c_str(), fqdn.c_str());
-	                    } else {
-                            syslog (LOG_DEBUG, "Host(%s): Reverse resolved %s to %s, with no CNAME",
-                                Ipv4Address.c_str(), ip.to_string().c_str(), fqdn.c_str());
+	                std::set<std::string> cname_fqdns = dCcname.getFqdns(itf);
+	                for(auto fqdn: cname_fqdns) {
+	                    if (Debug) {
+	                        if (itf != fqdn) {
+	                            syslog (LOG_DEBUG, "Host(%s): Reverse resolved %s to %s, might have CNAME %s",
+	                                    Ipv4Address.c_str(), ip.to_string().c_str(), itf.c_str(), fqdn.c_str());
+	                        } else {
+	                            syslog (LOG_DEBUG, "Host(%s): Reverse resolved %s to %s, with no CNAME",
+	                                    Ipv4Address.c_str(), ip.to_string().c_str(), fqdn.c_str());
+	                        }
 	                    }
-	                }
-	                if (inDnsQueryList(fqdn)) {
-	                    endpoints.insert(fqdn);
-	                    foundFqdn = true;
+	                    if (inDnsQueryList(fqdn)) {
+	                        endpoints.insert(fqdn);
+	                        foundFqdn = true;
+	                    }
 	                }
 	            }
 	            if (foundFqdn == false) {
@@ -422,18 +425,20 @@ bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportPriva
                 }
                 std::vector<std::string> fqdns = dCipv6.getAllFqdns(ip);
                 for (auto &itf : fqdns) {
-                    std::string fqdn = dCcname.getFqdn(itf);
-                    if (Debug) {
-                        if (itf != fqdn) {
-                            syslog (LOG_DEBUG, "Host(%s): Reverse resolved %s to %s, might have CNAME %s",
-                                Ipv4Address.c_str(), ip.to_string().c_str(), itf.c_str(), fqdn.c_str());
-                        } else {
-                            syslog (LOG_DEBUG, "Host(%s): Reverse resolved %s to %s, with no CNAME",
-                                Ipv4Address.c_str(), ip.to_string().c_str(), fqdn.c_str());
-                        }                    }
-                    if (inDnsQueryList(fqdn)) {
-                        endpoints.insert(fqdn);
-                        foundFqdn = true;
+                    std::set<std::string> cname_fqdns = dCcname.getFqdns(itf);
+                    for(auto fqdn: cname_fqdns) {
+                        if (Debug) {
+                            if (itf != fqdn) {
+                                syslog (LOG_DEBUG, "Host(%s): Reverse resolved %s to %s, might have CNAME %s",
+                                        Ipv4Address.c_str(), ip.to_string().c_str(), itf.c_str(), fqdn.c_str());
+                            } else {
+                                syslog (LOG_DEBUG, "Host(%s): Reverse resolved %s to %s, with no CNAME",
+                                        Ipv4Address.c_str(), ip.to_string().c_str(), fqdn.c_str());
+                            }                    }
+                        if (inDnsQueryList(fqdn)) {
+                            endpoints.insert(fqdn);
+                            foundFqdn = true;
+                        }
                     }
                 }
                 if (foundFqdn == false) {

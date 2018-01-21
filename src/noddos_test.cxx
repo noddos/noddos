@@ -146,8 +146,8 @@ TEST(DnsCnameCacheTest, addCname) {
     DnsCnameCache c(true);
     c.addorupdateCname ("originalfqdn", "cnamefqdn", 3600);
 
-    ASSERT_EQ(c.getFqdn("cnamefqdn"), "originalfqdn");
-    ASSERT_EQ(c.getCname("originalfqdn"), "cnamefqdn");
+    ASSERT_NE(c.getFqdns("cnamefqdn").count("originalfqdn"),0);
+    ASSERT_NE(c.getCnames("originalfqdn").count("cnamefqdn"),0);
 }
 
 TEST(DnsCnameCacheTest, updateCname) {
@@ -155,8 +155,8 @@ TEST(DnsCnameCacheTest, updateCname) {
     c.addorupdateCname ("originalfqdn", "cnamefqdn", 3600);
     c.addorupdateCname ("originalfqdn", "newcnamefqdn", 3600);
 
-    ASSERT_EQ(c.getFqdn("newcnamefqdn"), "originalfqdn");
-    ASSERT_EQ(c.getFqdn("cnamefqdn"), "originalfqdn");
-    ASSERT_EQ(c.getCname("originalfqdn"), "newcnamefqdn");
-    ASSERT_EQ(c.getCname("originalfqdn"), "cnamefqdn");
+    ASSERT_NE(c.getFqdns("newcnamefqdn").count("originalfqdn"),0);
+    ASSERT_NE(c.getFqdns("cnamefqdn").count("originalfqdn"),0);
+    ASSERT_NE(c.getCnames("originalfqdn").count("newcnamefqdn"),0);
+    ASSERT_NE(c.getCnames("originalfqdn").count("cnamefqdn"),0);
 }

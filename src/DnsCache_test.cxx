@@ -80,13 +80,6 @@ int main () {
         testfailed = true;
     }
 
-    if (fqdns.size() > 0) {
-        std::string rootfqdn = c.getFqdn(fqdns[0]);
-        if (rootfqdn != "www.cisco.com") {
-            syslog(LOG_DEBUG, "Cname lookup failed %s", rootfqdn.c_str());
-            testfailed = true;
-        }
-    }
     std::ofstream ofs("/tmp/DnsCache.json");
     if (not ofs.is_open()) {
         syslog(LOG_WARNING, "Couldn't open %s", filename.c_str());
@@ -144,34 +137,7 @@ bool do_cname_test() {
     DnsCnameCache c(true);
     DnsIpCache <Tins::IPv4Address> i(true);
 
-
-    c.addorupdateCname(fqdn, cname1, 86400);
-    if (c.getCname(fqdn) != cname1) {
-        syslog (LOG_DEBUG, "%s does not have CNAME %s", fqdn.c_str(), cname1.c_str());
-        return true;
-    }
-    syslog (LOG_DEBUG, "%s has CNAME %s", fqdn.c_str(), cname1.c_str());
-
-    if (c.getFqdn(cname1) != fqdn) {
-        syslog (LOG_DEBUG, "%s does not have FQDN %s", cname1.c_str(), fqdn.c_str());
-        return true;
-    }
-    syslog (LOG_DEBUG, "%s has FQDN %s", cname1.c_str(), fqdn.c_str());
-
-    c.addorupdateCname(cname1, cname2, 86400);
-    if (c.getCname(cname1) != cname2) {
-        syslog (LOG_DEBUG, "%s does not have CNAME %s", cname1.c_str(), cname2.c_str());
-        return true;
-    }
-    syslog (LOG_DEBUG, "%s has CNAME %s", cname1.c_str(), cname2.c_str());
-
-    if (c.getFqdn(cname2) != fqdn) {
-        syslog (LOG_DEBUG, "%s does not have indirect FQDN %s", cname2.c_str(), fqdn.c_str());
-        return true;
-    }
-    syslog (LOG_DEBUG, "%s has indirect FQDN %s", cname2.c_str(), fqdn.c_str());
-
-    i.addorupdateResourceRecord(cname2, ip, 86400);
+     i.addorupdateResourceRecord(cname2, ip, 86400);
     std::vector<std::string> fqdns = i.getAllFqdns(ip);
     if (fqdns.size() > 1 || fqdns[0] != cname2) {
         syslog(LOG_DEBUG, "%s does not reverse in to FQDN %s", ip.to_string().c_str(), cname2.c_str());
