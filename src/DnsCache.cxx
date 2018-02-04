@@ -97,6 +97,7 @@ std::set<std::string> DnsCnameCache::getFqdns (const std::string inCname, const 
             syslog (LOG_DEBUG, "DnsCnameCache: Found one or more reverse CNAME for %s", cname.c_str());
         }
         for (auto fqdn_it: it->second) {
+            fqdns.insert(fqdn_it.first);
             std::set<std::string> additional_fqdns = getFqdns(fqdn_it.first, recdepth + 1);
             fqdns.insert(additional_fqdns.begin(),additional_fqdns.end());
         }
@@ -130,7 +131,14 @@ std::set<std::string> DnsCnameCache::getCnames (const std::string inFqdn, const 
     }
     std::set<std::string> cnames;
     for (auto cname_it: it->second) {
-            std::set<std::string> additional_cnames = getCnames(cname_it.first, recdepth + 1);
+            cnames.insert(cname_it.first);
+            std::set<std::string> additional_cnames;
+            try {
+                additional_cnames = getCnames(cname_it.first, recdepth + 1);
+            }
+            catch (const std::runtime_error &e) {
+
+            }
             cnames.insert(additional_cnames.begin(),additional_cnames.end());
     }
     return cnames;
@@ -209,13 +217,13 @@ std::set<std::string> DnsCnameCache::pruneCnames (const bool Force) {
                     RecordsKept = true;
                 }
             }
+            if (Pruned == true) {
+                PrunedFqdns.insert(it->first);
+            }
             if (RecordsKept == false) {
                 it = DnsFwdCache.erase(it);
             } else {
                 it++;
-            }
-            if (Pruned == true) {
-                PrunedFqdns.insert(it->first);
             }
         }
     }
@@ -239,13 +247,10 @@ std::set<std::string> DnsCnameCache::pruneCnames (const bool Force) {
                     RecordsKept = true;
                 }
             }
-            if (RecordsKept == false) {
-                it_rev = DnsRevCache.erase(it_rev);
-            } else {
-                it_rev++;
-            }
             if (Pruned == true) {
                 PrunedFqdns.insert(it_rev->first);
+            }
+            if (RecordsKept == false) {
                 it_rev = DnsRevCache.erase(it_rev);
             } else {
                 it_rev++;

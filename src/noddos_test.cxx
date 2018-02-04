@@ -21,15 +21,17 @@
 #include <iostream>
 #include <csignal>
 #include <map>
+#include <string>
+#include <memory>
 
 #include <sys/signalfd.h>
 #include <unistd.h>
 #include <sys/epoll.h>
 #include <stdlib.h>
+#include <getopt.h>
 
-#include <string>
-
-#include <memory>
+#include <tins/ip_address.h>
+#include <tins/ipv6_address.h>
 
 #include <gtest/gtest.h>
 
@@ -40,10 +42,39 @@
 #define MAXEPOLLEVENTS 64
 
 int main(int argc, char **argv) {
+    int debug_flag = 0;
+    while (1) {
+        static struct option long_options[] = {
+            {"debug",       no_argument,       &debug_flag, 1},
+            {0, 0, 0, 0}
+        };
+        /* getopt_long stores the option index here. */
+        int option_index = 0;
+        int c = getopt_long (argc, argv, "dnpfhc:", long_options, &option_index);
+
+        /* Detect the end of the options. */
+        if (c == -1) {
+            break;
+        }
+        switch (c) {
+            case 0:
+                break;
+            case 'd':
+                debug_flag = 1;
+                break;
+            case '?':
+            case 'h':
+            default:
+                printf ("noddos_test usage: -d/--debug\n");
+                exit (0);
+        }
+    }
+    if (debug_flag) {
+        openlog(argv[0], LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
+    }
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
-
 
 TEST(WsDiscoveryHostTest, Comparison) {
     struct WsDiscoveryHost h1, h2;
@@ -62,7 +93,7 @@ TEST(WsDiscoveryHostTest, Comparison) {
     ASSERT_TRUE(h1 == h2);
 }
 
-TEST(MdnsHostTest, Comparison) {
+TEST(   HostTest, Comparison) {
     struct MdnsHost h1, h2;
     ASSERT_TRUE(h1 == h2);
     h1.IpAddress = "192.168.1.1";
@@ -142,21 +173,150 @@ TEST(SsdpHostTest, Comparison) {
     ASSERT_TRUE(h1 == h2);
 }
 
+/*
+ * A FQDN with a CNAME record
+ */
 TEST(DnsCnameCacheTest, addCname) {
-    DnsCnameCache c(true);
+    DnsCnameCache c(14400, true);
     c.addorupdateCname ("originalfqdn", "cnamefqdn", 3600);
 
-    ASSERT_NE(c.getFqdns("cnamefqdn").count("originalfqdn"),0);
-    ASSERT_NE(c.getCnames("originalfqdn").count("cnamefqdn"),0);
+    ASSERT_EQ(c.getFqdns("cnamefqdn").count("originalfqdn"),1);
+    ASSERT_EQ(c.getCnames("originalfqdn").count("cnamefqdn"),1);
 }
 
-TEST(DnsCnameCacheTest, updateCname) {
-    DnsCnameCache c(true);
+/*
+ * An FQDN with a CNAME record that has a CNAME record
+ */
+TEST(DnsCnameCacheTest, addLinkedCname) {
+    DnsCnameCache c(14400, true);
+    c.addorupdateCname ("originalfqdn", "cnamefqdn", 3600);
+    c.addorupdateCname ("cnamefqdn", "anothercnamefqdn", 3600);
+
+    ASSERT_EQ(c.getFqdns("anothercnamefqdn").count("originalfqdn"),1);
+    ASSERT_EQ(c.getFqdns("anothercnamefqdn").count("cnamefqdn"),1);
+    ASSERT_EQ(c.getCnames("originalfqdn").count("anothercnamefqdn"),1);
+    ASSERT_EQ(c.getCnames("originalfqdn").count("cnamefqdn"),1);
+}
+
+/*
+ * One FQDN with two CNAME records
+ */
+TEST(DnsCnameCacheTest, twoCname) {
+    DnsCnameCache c(14400, true);
     c.addorupdateCname ("originalfqdn", "cnamefqdn", 3600);
     c.addorupdateCname ("originalfqdn", "newcnamefqdn", 3600);
 
-    ASSERT_NE(c.getFqdns("newcnamefqdn").count("originalfqdn"),0);
-    ASSERT_NE(c.getFqdns("cnamefqdn").count("originalfqdn"),0);
-    ASSERT_NE(c.getCnames("originalfqdn").count("newcnamefqdn"),0);
-    ASSERT_NE(c.getCnames("originalfqdn").count("cnamefqdn"),0);
+    ASSERT_EQ(c.getFqdns("newcnamefqdn").count("originalfqdn"),1);
+    ASSERT_EQ(c.getFqdns("cnamefqdn").count("originalfqdn"),1);
+    ASSERT_EQ(c.getCnames("originalfqdn").count("newcnamefqdn"),1);
+    ASSERT_EQ(c.getCnames("originalfqdn").count("cnamefqdn"),1);
+}
+
+/*
+ * Two FQDNs with the same CNAME record
+ */
+TEST(DnsCnameCacheTest, sameCname) {
+    DnsCnameCache c(14400, true);
+    c.addorupdateCname ("originalfqdn", "cnamefqdn", 3600);
+    c.addorupdateCname ("anotherfqdn", "cnamefqdn", 3600);
+
+    ASSERT_EQ(c.getFqdns("cnamefqdn").count("originalfqdn"),1);
+    ASSERT_EQ(c.getFqdns("cnamefqdn").count("anotherfqdn"),1);
+    ASSERT_EQ(c.getCnames("originalfqdn").count("cnamefqdn"),1);
+    ASSERT_EQ(c.getCnames("anotherfqdn").count("cnamefqdn"),1);
+}
+/*
+ * One FQDN with two CNAME records
+ */
+TEST(DnsCnameCacheTest, pruneRecords) {
+    DnsCnameCache c(1, true);
+    c.addorupdateCname ("originalfqdn", "cnamefqdn", 1);
+    c.addorupdateCname ("originalfqdn", "newcnamefqdn", 1);
+
+    ASSERT_EQ(c.getFqdns("newcnamefqdn").count("originalfqdn"),1);
+    ASSERT_EQ(c.getFqdns("cnamefqdn").count("originalfqdn"),1);
+    ASSERT_EQ(c.getCnames("originalfqdn").count("newcnamefqdn"),1);
+    ASSERT_EQ(c.getCnames("originalfqdn").count("cnamefqdn"),1);
+
+    c.pruneCnames(false);
+
+    ASSERT_EQ(c.getFqdns("newcnamefqdn").count("originalfqdn"),1);
+    ASSERT_EQ(c.getFqdns("cnamefqdn").count("originalfqdn"),1);
+    ASSERT_EQ(c.getCnames("originalfqdn").count("newcnamefqdn"),1);
+    ASSERT_EQ(c.getCnames("originalfqdn").count("cnamefqdn"),1);
+
+    sleep (2);
+    c.pruneCnames(false);
+
+   {
+        try {
+            std::set<std::string> fqdns = c.getFqdns("newcnamefqdn");
+            ASSERT_EQ(fqdns.find("originalfqdn") != fqdns.end() ? 1 : 0, 0);
+        }
+        catch (...) {}
+    }
+    {
+        try {
+            std::set<std::string> fqdns = c.getFqdns("cnamefqdn");
+            ASSERT_EQ(fqdns.find("originalfqdn") != fqdns.end() ? 1 : 0, 0);
+        }
+        catch (...) {}
+    }
+    {
+        try {
+            std::set<std::string> cnames = c.getCnames("originalfqdn");
+            ASSERT_EQ(cnames.find("newcnamefqdn") != cnames.end() ? 1 : 0, 0);
+            ASSERT_EQ(cnames.find("cnamefqdn") != cnames.end() ? 1 : 0, 0);
+        }
+        catch (...) {}
+    }
+}
+
+TEST(DnsCnameCacheTest, importRecords) {
+    FqdnDeviceProfileMap fdpMap;
+    DnsCnameCache c(true);
+    DnsIpCache <Tins::IPv4Address> i(true);
+    DnsIpCache <Tins::IPv6Address> isix(true);
+    std::string filename = "tests/DnsCache.json";
+    std::ifstream ifs(filename);
+    ASSERT_TRUE(ifs.is_open());
+
+    json k;
+    ifs >> k;
+    size_t importedRecords = i.importJson(k, fdpMap);
+    ASSERT_EQ(importedRecords, 564);
+
+    importedRecords = isix.importJson(k, fdpMap);
+    ASSERT_EQ(importedRecords, 7);
+
+    importedRecords = c.importJson(k,fdpMap);
+    ASSERT_EQ(importedRecords, 85);
+
+    ifs.close();
+    Tins::IPv4Address ip4("23.41.176.89");
+    std::vector<std::string> fqdns = i.getAllFqdns(ip4);
+    ASSERT_EQ(fqdns.size(), 1);
+
+    std::ofstream ofs("/tmp/DnsCache.json");
+    ASSERT_TRUE(ofs.is_open());
+
+    json j;
+    auto exportRecords = i.exportJson(j);
+    ASSERT_EQ(exportRecords, 74);
+
+    exportRecords = c.exportJson(j);
+    ASSERT_EQ(exportRecords, 85);
+
+    ofs << std::setw(4) << j << std::endl;
+    ofs.close();
+    unlink("/tmp/DnsCache.json");
+
+    std::set<std::string> PrunedCnames = c.pruneCnames(true);
+    size_t pruned = PrunedCnames.size();
+    ASSERT_EQ(pruned, 130);
+
+    std::set<std::string> PrunedFqdns = i.pruneResourceRecords(true);
+    size_t pruned_fqdns = PrunedFqdns.size();
+    ASSERT_EQ(pruned_fqdns, 74);
+
 }

@@ -100,11 +100,6 @@ target_link_libraries(Mdns_test tins curl ssl crypto ipset gtest pthread tins)
 add_test (MacAddress MacAddress_test)
 add_executable(MacAddress_test MacAddress_test.cxx)
 
-add_test (DnsCache DnsCache_test)
-add_executable(DnsCache_test DnsCache_test.cxx DeviceProfile.cxx Ipset.cxx DnsCache.cxx
-     Host.cxx SsdpLocation.cxx opensslfingerprint.cxx)
-target_link_libraries(DnsCache_test tins ipset gtest pthread curl ssl crypto)
-
 add_test (Curl Curl_test)
 add_executable(Curl_test Curl_test.cxx)
 target_link_libraries(Curl_test curl ssl crypto)
@@ -115,8 +110,12 @@ add_executable (PacketSnoop_test PacketSnoop_test.cxx PacketSnoop.cxx
 target_link_libraries(PacketSnoop_test curl ssl crypto tins ipset gtest pthread yaml-cpp)
 
 add_test (Noddos noddos_test)
-add_executable(noddos_test noddos_test.cxx DnsCache.cxx)
-target_link_libraries(noddos_test curl ssl crypto tins ipset yaml-cpp gtest pthread)
+add_executable(noddos_test noddos_test.cxx Host.cxx Mdns.cxx DnsCache.cxx
+    HostCache.cxx SsdpServer.cxx SsdpLocation.cxx FlowTrack.cxx Config.cxx
+    opensslfingerprint.cxx PacketSnoop.cxx Ipset.cxx DeviceProfile.cxx
+    WsDiscovery.cxx)
+target_link_libraries(noddos_test curl ssl crypto ipset tins yaml-cpp gtest
+    pthread libnetfilter_conntrack.so curl pthread yaml-cpp)
 
 install(TARGETS noddos RUNTIME DESTINATION usr/sbin)
 
