@@ -30,8 +30,8 @@
 
 #include "json.hpp"
 using nlohmann::json;
-
-void DnsCnameCache::addorupdateCname (const std::string inFqdn, const std::string inCname,  time_t inTtl) {
+/*
+void DnsCache::addorupdateCname (const std::string inFqdn, const std::string inCname,  time_t inTtl) {
     auto now = time(nullptr);
     if (inTtl < MinTtl) {
         inTtl = MinTtl;
@@ -263,3 +263,4 @@ std::set<std::string> DnsCnameCache::pruneCnames (const bool Force) {
 
 
 
+*/

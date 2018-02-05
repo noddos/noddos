@@ -347,8 +347,8 @@ bool Host::DeviceStats(json& j, const uint32_t time_interval, bool force, bool d
 }
 
 bool Host::TrafficStats(json& j, const uint32_t interval, const bool ReportPrivateAddresses, const std::set<std::string> &LocalIps,
-		const DnsIpCache <Tins::IPv4Address> &dCipv4, const DnsIpCache <Tins::IPv6Address> &dCipv6,
-		const DnsCnameCache &dCcname, bool force) {
+		const DnsCache <Tins::IPv4Address> &dCipv4, const DnsCache <Tins::IPv6Address> &dCipv6,
+		const DnsCache <std::string> &dCcname, bool force) {
 	if (not isMatched()) {
 		return false;
 	}

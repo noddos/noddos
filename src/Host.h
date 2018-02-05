@@ -122,9 +122,9 @@ public:
 	bool DeviceStats(json& j, const uint32_t interval, bool force = false, bool detailed = false);
 	bool TrafficStats(json& j, const uint32_t interval, const bool ReportRfc1918,
 	        const std::set<std::string> & LocalIps,
-	        const DnsIpCache <Tins::IPv4Address> &dCipv4,
-	        const DnsIpCache <Tins::IPv6Address> &dCipv6,
-	        const DnsCnameCache &dCcname, bool force = false);
+	        const DnsCache <Tins::IPv4Address> &dCipv4,
+	        const DnsCache <Tins::IPv6Address> &dCipv6,
+	        const DnsCache <std::string> &dCcname, bool force = false);
 	bool inPrivateAddressRange(const std::string ip );
 
 	// iCache interface methods.

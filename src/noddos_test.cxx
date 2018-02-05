@@ -176,8 +176,8 @@ TEST(SsdpHostTest, Comparison) {
 /*
  * A FQDN with a CNAME record
  */
-TEST(DnsCnameCacheTest, addCname) {
-    DnsCnameCache c(14400, true);
+TEST(DnsCacheTest, addCname) {
+    DnsCache <std::string> c(14400, true);
     c.addorupdateCname ("originalfqdn", "cnamefqdn", 3600);
 
     ASSERT_EQ(c.getFqdns("cnamefqdn").count("originalfqdn"),1);
@@ -187,8 +187,8 @@ TEST(DnsCnameCacheTest, addCname) {
 /*
  * An FQDN with a CNAME record that has a CNAME record
  */
-TEST(DnsCnameCacheTest, addLinkedCname) {
-    DnsCnameCache c(14400, true);
+TEST(DnsCacheTest, addLinkedCname) {
+    DnsCache <std::string> c(14400, true);
     c.addorupdateCname ("originalfqdn", "cnamefqdn", 3600);
     c.addorupdateCname ("cnamefqdn", "anothercnamefqdn", 3600);
 
@@ -201,8 +201,8 @@ TEST(DnsCnameCacheTest, addLinkedCname) {
 /*
  * One FQDN with two CNAME records
  */
-TEST(DnsCnameCacheTest, twoCname) {
-    DnsCnameCache c(14400, true);
+TEST(DnsCacheTest, twoCname) {
+    DnsCache <std::string> c(14400, true);
     c.addorupdateCname ("originalfqdn", "cnamefqdn", 3600);
     c.addorupdateCname ("originalfqdn", "newcnamefqdn", 3600);
 
@@ -215,8 +215,8 @@ TEST(DnsCnameCacheTest, twoCname) {
 /*
  * Two FQDNs with the same CNAME record
  */
-TEST(DnsCnameCacheTest, sameCname) {
-    DnsCnameCache c(14400, true);
+TEST(DnsCacheTest, sameCname) {
+    DnsCache <std::string> c(14400, true);
     c.addorupdateCname ("originalfqdn", "cnamefqdn", 3600);
     c.addorupdateCname ("anotherfqdn", "cnamefqdn", 3600);
 
@@ -228,8 +228,8 @@ TEST(DnsCnameCacheTest, sameCname) {
 /*
  * One FQDN with two CNAME records
  */
-TEST(DnsCnameCacheTest, pruneRecords) {
-    DnsCnameCache c(1, true);
+TEST(DnsCacheTest, pruneCnameRecords) {
+    DnsCache <std::string> c(1, true);
     c.addorupdateCname ("originalfqdn", "cnamefqdn", 1);
     c.addorupdateCname ("originalfqdn", "newcnamefqdn", 1);
 
@@ -272,27 +272,57 @@ TEST(DnsCnameCacheTest, pruneRecords) {
     }
 }
 
-TEST(DnsCnameCacheTest, importRecords) {
+TEST(DnsTest, importCnameRecords) {
     FqdnDeviceProfileMap fdpMap;
-    DnsCnameCache c(true);
-    DnsIpCache <Tins::IPv4Address> i(true);
-    DnsIpCache <Tins::IPv6Address> isix(true);
+    DnsCache <std::string> c(true);
+
     std::string filename = "tests/DnsCache.json";
     std::ifstream ifs(filename);
     ASSERT_TRUE(ifs.is_open());
 
     json k;
     ifs >> k;
+    ifs.close();
+
+    size_t importedRecords = c.importJson(k,fdpMap);
+    ASSERT_EQ(importedRecords, 85);
+
+    std::ofstream ofs("/tmp/DnsCache.json");
+    ASSERT_TRUE(ofs.is_open());
+
+    json j;
+
+    auto exportRecords = c.exportJson(j);
+    ASSERT_EQ(exportRecords, 85);
+
+    ofs << std::setw(4) << j << std::endl;
+    ofs.close();
+    unlink("/tmp/DnsCache.json");
+
+    std::set<std::string> PrunedCnames = c.pruneCnames(true);
+    size_t pruned = PrunedCnames.size();
+    ASSERT_EQ(pruned, 130);
+}
+
+TEST(DnsCacheTest, importARecords) {
+    FqdnDeviceProfileMap fdpMap;
+    DnsCache <Tins::IPv4Address> i(true);
+    DnsCache <Tins::IPv6Address> isix(true);
+
+    std::string filename = "tests/DnsCache.json";
+    std::ifstream ifs(filename);
+    ASSERT_TRUE(ifs.is_open());
+
+    json k;
+    ifs >> k;
+    ifs.close();
+
     size_t importedRecords = i.importJson(k, fdpMap);
     ASSERT_EQ(importedRecords, 564);
 
     importedRecords = isix.importJson(k, fdpMap);
     ASSERT_EQ(importedRecords, 7);
 
-    importedRecords = c.importJson(k,fdpMap);
-    ASSERT_EQ(importedRecords, 85);
-
-    ifs.close();
     Tins::IPv4Address ip4("23.41.176.89");
     std::vector<std::string> fqdns = i.getAllFqdns(ip4);
     ASSERT_EQ(fqdns.size(), 1);
@@ -303,20 +333,11 @@ TEST(DnsCnameCacheTest, importRecords) {
     json j;
     auto exportRecords = i.exportJson(j);
     ASSERT_EQ(exportRecords, 74);
-
-    exportRecords = c.exportJson(j);
-    ASSERT_EQ(exportRecords, 85);
-
     ofs << std::setw(4) << j << std::endl;
     ofs.close();
     unlink("/tmp/DnsCache.json");
 
-    std::set<std::string> PrunedCnames = c.pruneCnames(true);
-    size_t pruned = PrunedCnames.size();
-    ASSERT_EQ(pruned, 130);
-
     std::set<std::string> PrunedFqdns = i.pruneResourceRecords(true);
     size_t pruned_fqdns = PrunedFqdns.size();
     ASSERT_EQ(pruned_fqdns, 74);
-
 }

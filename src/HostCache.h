@@ -51,9 +51,9 @@ private:
 	// This map is used to validate that answers received correspond to queries sent out. They are pruned after 30 seconds
 	std::map<uint16_t, time_t> DnsQueryCache;
 	// These maps cache IPv4 & IPv6 addresses and CNAMEs for at least the TrafficReport interval
-	DnsIpCache <Tins::IPv4Address> dCipv4;
-	DnsIpCache <Tins::IPv6Address> dCipv6;
-	DnsCnameCache dCcname;
+	DnsCache <Tins::IPv4Address> dCipv4;
+	DnsCache <Tins::IPv6Address> dCipv6;
+	DnsCache <std::string> dCcname;
 	FqdnDeviceProfileMap fdpMap;
 
 	DeviceProfileMap dpMap;
