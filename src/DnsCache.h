@@ -34,9 +34,13 @@ using nlohmann::json;
 
 #include "DeviceProfile.h"
 
-template <class T, class U>
-std::set<std::string> pruneDnsCache (std::map<T, std::map<U, time_t>> &cache, bool Force = false, bool Debug = false) {
-    std::set<std::string> PrunedFqdns;
+/* This doesn't work because with the templating, we can't return the list of FQDNs that have been deleted
+ * and we need that in HostCache to update the Fqdn-to-DeviceProfile map
+ *
+
+template <class U, class V>
+size_t pruneDnsCache (std::map<U, std::map<V, time_t>> &cache, bool Force = false, bool Debug = false) {
+    size_t PrunedFqdns = 0;
     auto now = time(nullptr);
     auto it_resource = cache.begin();
     while (it_resource != cache.end()) {
@@ -44,8 +48,8 @@ std::set<std::string> pruneDnsCache (std::map<T, std::map<U, time_t>> &cache, bo
         while (it_record != it_resource->second.end()) {
             if (Force || now > (it_record->second + 1)) {
                 if (Debug == true) {
-                    syslog(LOG_DEBUG, "pruneDnsCache: pruning %s pointing to %s with expiration %lu while now is %lu",
-                            it_resource->first.c_str(), it_record->first.to_string().c_str(), it_record->second, now);
+                 //   syslog(LOG_DEBUG, "pruneDnsCache: pruning %s pointing to %s with expiration %lu while now is %lu",
+                 //           it_resource->first.to_str().c_str(), it_record->first.to_string().c_str(), it_record->second, now);
                 }
                 it_record = it_resource->second.erase(it_record);
             } else {
@@ -54,9 +58,9 @@ std::set<std::string> pruneDnsCache (std::map<T, std::map<U, time_t>> &cache, bo
         }
         if (Force || it_resource->second.empty()) {
             if (Debug == true) {
-                syslog(LOG_DEBUG, "pruneDnsCache: Removing record for %s as there is no data left", it_resource->first.c_str());
+                // syslog(LOG_DEBUG, "pruneDnsCache: Removing record for %s as there is no data left", it_resource->first.to_string.c_str());
             }
-            PrunedFqdns.insert(it_resource->first);
+            PrunedFqdns++;
             it_resource = cache.erase(it_resource);
             if (Debug == true) {
                 syslog(LOG_DEBUG, "pruneDnsCache: Deleted record");
@@ -65,7 +69,9 @@ std::set<std::string> pruneDnsCache (std::map<T, std::map<U, time_t>> &cache, bo
             it_resource++;
         }
     }
+    return PrunedFqdns;
 }
+ */
 
 template <class T>
 class DnsCache {
@@ -231,6 +237,14 @@ public:
         return fqdns;
     }
 
+    /*
+    size_t pruneResourceRecords (const bool Force) {
+        size_t PrunedFqdns = pruneDnsCache(DnsFwdCache, Force, Debug);
+        PrunedFqdns += pruneDnsCache(DnsRevCache, Force, Debug);
+        return PrunedFqdns;
+    }
+    */
+
     std::set<std::string> pruneResourceRecords (const bool Force) {
         std::set<std::string> PrunedFqdns;
         auto now = time(nullptr);
@@ -293,9 +307,6 @@ public:
         }
         return PrunedFqdns;
     }
-
-
-
 };
 
 template<>

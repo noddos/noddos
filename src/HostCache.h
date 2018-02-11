@@ -144,7 +144,7 @@ public:
 	bool exportDnsCache (const std::string filename);
     bool importDnsCache (const std::string filename);
 	uint32_t pruneDnsIpCache(bool Force = false) {
-		std::set<std::string> PrunedFqdns = dCipv4.pruneResourceRecords(Force);
+	    std::set<std::string> PrunedFqdns = dCipv4.pruneResourceRecords(Force);
         std::set<std::string> PrunedIpv6Fqdns = dCipv6.pruneResourceRecords(Force);
         PrunedFqdns.insert(PrunedIpv6Fqdns.begin(), PrunedIpv6Fqdns.end());
 		for(auto Fqdn: PrunedFqdns) {
