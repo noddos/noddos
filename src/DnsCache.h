@@ -32,6 +32,8 @@
 #include "json.hpp"
 using nlohmann::json;
 
+#include <glog/logging.h>
+
 #include "DeviceProfile.h"
 
 /* This doesn't work because with the templating, we can't return the list of FQDNs that have been deleted
@@ -73,33 +75,57 @@ size_t pruneDnsCache (std::map<U, std::map<V, time_t>> &cache, bool Force = fals
 }
  */
 
+/*! \tclass template of DnsCache
+ *  \brief Class of DNS records pointing to objects of type T
+ *
+ *  This class can store A, AAAA and CNAME records. A specialized class for <std::string> is available for the latter
+ *  A records use <Tins::IPv4Address>, AAAA records use <Tins::IPv6Address>. The cache maintains both forward and
+ *  reverse mappings so you can find both all IP addresses for an FQDN as well as all the FQDNs that have a specific
+ *  A record.
+ *  \tparam Tins::IPv4Address or Tins::IPv6Address
+ */
 template <class T>
 class DnsCache {
 private:
-    std::map<std::string, std::map<T,time_t>> DnsFwdCache;
-    std::map<T, std::map<std::string,time_t>> DnsRevCache;
-    bool Debug;
-    time_t MinTtl;
+    std::map<std::string, std::map<T,time_t>> DnsFwdCache; //!< Stores mappings from FQDN to object T
+    std::map<T, std::map<std::string,time_t>> DnsRevCache; //!< Stores mappings from object T to FQDN
+    bool Debug; //!< Debug logging enable?
+    time_t MinTtl; //!< Minimum time to keep DNS records in the cache
 
 public:
+    /*! \brief constructor for DnsCache
+     *
+     * DnsCache constructor
+     * \param inMinTtl a constant time_t specifying minimum time objects should stay in the cache
+     * \param inDebug a constant bool specifying whether to enable debug logging
+     */
     DnsCache(const time_t inMinTtl = 14400, const bool inDebug=false): MinTtl{inMinTtl}, Debug{inDebug} {
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "DnsIpCache: constructing instance");
-        }
+        DLOG_IF(INFO, Debug) << "DnsIpCache: constructing instance";
     };
     ~DnsCache() {
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "DnsIpCache: destructing instance");
-        }
+        DLOG_IF(INFO, Debug) << "DnsIpCache: destructing instance";
     };
 
-    void setDebug (bool inDebug) {
+    /*! \brief Set debug logging
+     * Set Debug level
+     * \param inDebug a bool specifying whether to enable debug logging
+     */
+    void setDebug (const bool inDebug) {
         Debug = inDebug;
     }
-    void setMinTtl (bool inMinTtl = 14400) {
+    /*! \brief Set minimum TTL for cached entries
+     * \param inMinTtl  a time_t constant specifying the minimum Time-To-Live in seconds
+     *
+     */
+    void setMinTtl (const bool inMinTtl = 14400) {
         MinTtl = inMinTtl;
     }
 
+    /*! \brief Look up resource record for an FQDN
+     * Find the resource record pointing to object T for the Fully Qualified Domain Name
+     * \param inFqdn a constant string specifying the Fully Qualified Domain Name to look up
+     * \return map with resource records and their TTL
+     */
     std::map<T, time_t> lookupResourceRecord (const std::string inFqdn) {
         std::string fqdn = inFqdn;
         std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
@@ -111,38 +137,56 @@ public:
         return it->second;
     }
 
+    /*! \brief Add or Update Resource Record including its potential entry in a Device Profile Map for FQDNs
+     * This function checks whether a Device Profile has the FQDN listed. If so, it adds/updates the Resource Record in the Device
+     * Profile Map entry. In any case, it adds/updates the DNS Cache entry for the FQDN
+     * \param [in] inFQDN a constant string of the Fully Qualified Domain Name for the cache entry
+     * \param [in] inIpAddress a constant IPv4 or IPv6 address for the cache entry
+     * \param fdpMap a reference to a FQDN Device Profile Map
+     * \param [in] inTtl a constant time_t specifying the Time To Live of the cache entry
+     */
     void addorupdateResourceRecord (const std::string inFqdn, const T inIpAddress, FqdnDeviceProfileMap &fdpMap, const time_t inTtl = 604800) {
         std::string fqdn = inFqdn;
         std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
 
         auto fdp_it = fdpMap.find(fqdn);
         if (fdp_it != fdpMap.end()) {
-            if (Debug == true) {
-                syslog (LOG_DEBUG, "DnsCache: Updating resource record with FqdnDeviceProfileMap entry for %s", inFqdn.c_str());
-            }
+            DLOG_IF(INFO, Debug) << "DnsCache: Updating resource record with FqdnDeviceProfileMap entry for " << inFqdn;
             addorupdateResourceRecord (fqdn, inIpAddress, fdp_it, inTtl);
         } else {
-            if (Debug == true) {
-                syslog (LOG_DEBUG, "DnsCache: Didn't find FqdnDeviceProfileMap entry for %s", inFqdn.c_str());
-            }
-            addorupdateResourceRecord (fqdn, inIpAddress, inTtl);
+            DLOG_IF(INFO, Debug) << "DnsCache: Didn't find FqdnDeviceProfileMap entry for " << inFqdn;
         }
+        addorupdateResourceRecord (fqdn, inIpAddress, inTtl);
     }
 
+    /*! \brief Add or Update Resource Record including its entry in a Device Profile Map for FQDNs
+     * This function updates the Resource Record in the Device Profile Map entry. It adds or updates the DNS Cache
+     * entry for the FQDN.
+     * \param [in] inFQDN a constant string of the Fully Qualified Domain Name for the cache entry
+     * \param [in] inIpAddress a constant IPv4 or IPv6 address for the cache entry
+     * \param fdpMap_iterator an iterator to a FQDN Device Profile Map entry
+     * \param [in] inTtl a constant time_t specifying the Time To Live of the cache entry
+     */
     void addorupdateResourceRecord (const std::string inFqdn, const T inIpAddress, FqdnDeviceProfileMap::iterator &fdp_it, const time_t inTtl) {
         std::string fqdn = inFqdn;
         std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
 
         for (auto DeviceProfile_sharedpointer_it: fdp_it->second) {
-            if (Debug == true) {
-                syslog (LOG_DEBUG, "DnsCache: Found FqdnDeviceProfileMap entry with UUID %s for %s with IP %s",
-                        DeviceProfile_sharedpointer_it->getUuid().c_str(), inFqdn.c_str(), inIpAddress.to_string().c_str());
-            }
+            DLOG_IF(INFO, Debug) << "DnsCache: Found FqdnDeviceProfileMap entry with UUID " <<
+                    DeviceProfile_sharedpointer_it->getUuid() << " for " << inFqdn <<
+                    " with IP " << inIpAddress;
             DeviceProfile_sharedpointer_it->addDestination(inIpAddress, inTtl);
         }
-        addorupdateResourceRecord (fqdn, inIpAddress, inTtl);
     }
 
+    /*! \brief Add or Update Resource Record including its entry in a Device Profile Map for FQDNs
+     * This function updates the Resource Record in the Device Profile Map entry. It adds or updates the DNS Cache
+     * entry for the FQDN.
+     * \param [in] inFQDN a constant string of the Fully Qualified Domain Name for the cache entry
+     * \param [in] inIpAddress a constant IPv4 or IPv6 address for the cache entry
+     * \param fdpMap_iterator an iterator to a FQDN Device Profile Map entry
+     * \param [in] inTtl a constant time_t specifying the Time To Live of the cache entry
+     */
     void addorupdateResourceRecord (const std::string inFqdn, const T inIpAddress, time_t inTtl) {
         // We need to keep DNS records at least 4 hours as that is our maximum matching interval
         auto now = time(nullptr);
@@ -154,14 +198,17 @@ public:
         std::string fqdn = inFqdn;
         std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
 
-        std::string ipstring = inIpAddress.to_string();
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "DnsCache: Setting %s to %s with TTL %lu", inFqdn.c_str(), ipstring.c_str(), Expiration);
-        }
+        DLOG_IF(INFO, Debug) << "DnsCache: Setting " << inFqdn << " to " << inIpAddress << " with TTL " << Expiration;
         DnsFwdCache[inFqdn].insert(std::make_pair(inIpAddress, Expiration));
         DnsRevCache[inIpAddress].insert(std::make_pair(inFqdn, Expiration));
     }
 
+    /*! \brief Imports DNS records from a JSON object as written by DnsCache::exportJson
+      * This function imports IP records from the JSON file as written by the DnsCache::exportJson method.
+      * \param [in] reference to json object with DNS records
+      * \param fdpMap reference to a FqdnDeviceProfileMap
+      * \return Number of DNS records imported
+      */
     size_t importJson (json &j, FqdnDeviceProfileMap &fdpMap) {
         if (Debug == true) {
             syslog (LOG_DEBUG, "DnsCache: importing json");
@@ -191,12 +238,19 @@ public:
                     }
                 } catch (...) {
                     // Must be either IPv4 address while IPv6 template or vice versa
+                    // Exceptions are expected here as value can also be a CNAME
+                    DLOG_IF(INFO, Debug) << "DnsCache: Record " << fqdn << " has value " << ip_it.key() << " which is neither an IPv4 or IPv6 address";
                 }
             }
         }
         return dnsRecords;
     }
 
+    /*! \brief Exports DNS records to a JSON object
+      * This function exports IPv4 and IPv6 records from the JSON object
+      * \param [out] reference to json object to store DNS records
+      * \return number of DNS records exported
+      */
     size_t exportJson(json &j) {
         if (Debug == true) {
             syslog (LOG_DEBUG, "DnsCache: export to json");
@@ -217,6 +271,11 @@ public:
         return dnsRecords;
     }
 
+    /*! \brief Gets all the FQDNs that have an A or AAAA record to the IP address,
+      * This function returns all the FQDNs that have an A or AAAA record to the IP address.
+      * \param [in] IPv4 or IPv6 address
+      * \return vector of strings with Fqdns
+      */
     std::vector<std::string> getAllFqdns  (T const inIpAddress) const {
         std::vector<std::string> fqdns;
         std::string ipstring = inIpAddress.to_string();
@@ -245,6 +304,11 @@ public:
     }
     */
 
+    /*! \brief Removes expired DNS A or AAAA records from the DNS cache
+      * This function removes all DNS A or AAAA records whose TTLs have expired.
+      * \param [in] boolean specifying whether expired or all records have to be pruned
+      * \return vector of strings with Fqdns that have been pruned
+      */
     std::set<std::string> pruneResourceRecords (const bool Force) {
         std::set<std::string> PrunedFqdns;
         auto now = time(nullptr);
@@ -254,24 +318,20 @@ public:
                 auto it_record = it_resource->second.begin();
                 while (it_record != it_resource->second.end()) {
                     if (Force || now > (it_record->second + 1)) {
-                        if (Debug == true) {
-                            syslog(LOG_DEBUG, "DnsCache: pruning %s pointing to %s with expiration %lu while now is %lu",
-                                    it_resource->first.c_str(), it_record->first.to_string().c_str(), it_record->second, now);
-                        }
+                        DLOG_IF(INFO, Debug) << "DnsCache: pruning " << it_resource->first <<
+                                " pointing to " << it_record->first << " with expiration " <<
+                                it_record->second << " while now is " << now;
                         it_record = it_resource->second.erase(it_record);
                     } else {
                         it_record++;
                     }
                 }
                 if (Force || it_resource->second.empty()) {
-                    if (Debug == true) {
-                        syslog(LOG_DEBUG, "DnsCache: Removing record for %s as there is no data left", it_resource->first.c_str());
-                    }
+                    DLOG_IF(INFO, Debug) << "DnsCache: Removing record for " << it_resource->first << " as there is no data left";
                     PrunedFqdns.insert(it_resource->first);
                     it_resource = DnsFwdCache.erase(it_resource);
-                    if (Debug == true) {
-                        syslog(LOG_DEBUG, "DnsCache: Deleted record");
-                    }
+                    DLOG_IF(INFO, Debug) << "DnsCache: Deleted record";
+
                 } else {
                     it_resource++;
                 }
@@ -283,23 +343,19 @@ public:
                 auto it_record = it_resource->second.begin();
                 while (it_record != it_resource->second.end()) {
                     if (Force || now > (it_record->second + 1)) {
-                        if (Debug == true) {
-                            syslog(LOG_DEBUG, "DnsCache: pruning entry %s pointing to %s  with expiration %lu while now is %lu",
-                                    it_resource->first.to_string().c_str(), it_record->first.c_str(), it_record->second, now);
-                        }
+                        DLOG_IF(INFO, Debug) << "DnsCache: pruning entry " << it_resource->first <<
+                                " pointing to " << it_record->first << " with expiration " <<
+                                it_record->second << " while now is " << now;
                         it_record = it_resource->second.erase(it_record);
                     } else {
                         it_record++;
                     }
                 }
                 if (Force || it_resource->second.empty()) {
-                    if (Debug == true) {
-                        syslog(LOG_DEBUG, "DnsCache: Removing record as there is no data left");
-                    }
+                    DLOG_IF(INFO, Debug) << "DnsCache: Removing record as there is no data left";
+
                     it_resource = DnsRevCache.erase(it_resource);
-                    if (Debug == true) {
-                        syslog(LOG_DEBUG, "DnsCache: Deleted record");
-                    }
+                    DLOG_IF(INFO, Debug) << "DnsCache: Deleted record";
                 } else {
                     it_resource++;
                 }
@@ -309,42 +365,54 @@ public:
     }
 };
 
+/*! \tclass specialization of class template DnsCache
+ *  \brief Class of DNS CNAMEs
+ *
+ *  This specialized class template can store  CNAME records. The cache maintains both forward and
+ *  reverse mappings so you can find both CNAMEs for an FQDN and all FQDNS that have a CNAME to a FQDN
+ */
 template<>
 class DnsCache <std::string> {
 private:
-    std::map<std::string,std::map<std::string,time_t>> DnsFwdCache;
-    std::map<std::string,std::map<std::string,time_t>> DnsRevCache;
-    time_t MinTtl;
-    bool Debug;
+    std::map<std::string,std::map<std::string,time_t>> DnsFwdCache; /// Stores CNAME mappings
+    std::map<std::string,std::map<std::string,time_t>> DnsRevCache; //// Stores mappings from the CNAME FQDN to the FQDN with the CNAME record
+    time_t MinTtl; /// Minimum TTL for any record
+    bool Debug; /// Whether to output Debug logging
 
 public:
-    DnsCache(const time_t inMinTtl = 14400, const bool inDebug=false): MinTtl{inMinTtl}, Debug{inDebug} {
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "DnsCnameCache: constructing instance");
-        }
+    /*! \brief constructor for DnsCache
+     *
+     * DnsCache constructor
+     * \param inMinTtl a constant time_t specifying minimum time objects should stay in the cache
+     * \param inDebug a constant bool specifying whether to enable debug logging
+     */    DnsCache(const time_t inMinTtl = 14400, const bool inDebug=false): MinTtl{inMinTtl}, Debug{inDebug} {
+        DLOG_IF(INFO, Debug) << "DnsCnameCache: constructing instance";
     };
     ~DnsCache() {
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "DnsCnameCache: deleting instance");
-        }
+        DLOG_IF(INFO, Debug) << "DnsCnameCache: deleting instance";
     };
 
+    /*! \brief Set debug logging
+     * Set Debug level
+     * \param inDebug a bool specifying whether to enable debug logging
+     */
     void setDebug (bool inDebug) {
         Debug = inDebug;
     }
+    /*! \brief Set minimum TTL for cached entries
+     * \param inMinTtl  a time_t constant specifying the minimum Time-To-Live in seconds
+     *
+     */
     void setMinTtl (bool inMinTtl = 14400) {
         MinTtl = inMinTtl;
     }
 
-    /*
-    void addorupdateCname (const std::string inFqdn, const std::string inCname, FqdnDeviceProfileMap &fdpMap, const time_t inTtl);
-    void addorupdateCname (const std::string inFqdn, const std::string inCname,  time_t inTtl);
-    std::set<std::string> getFqdns (const std::string inCname, const uint8_t recdepth = 0) const;
-    std::set<std::string> getCnames (const std::string inFqdn, const uint8_t recdepth = 0);
-    size_t importJson (json &j, FqdnDeviceProfileMap &fdpMap);
-    size_t exportJson (json &j);
-    std::set<std::string> pruneCnames (const bool Force = false);
-    */
+    /*! \brief Add or update CNAME
+     * Adds the CNAME record for an FQDN
+     * \param [in] inFqdn a constant string specifying the Fully Qualified Domain Name to add
+     * \param [in] inCname a constant string specifying the CNAME record
+     * \param [in] inTtl a time_t specifying the Time To Live for the DNS record
+     */
     void addorupdateCname (const std::string inFqdn, const std::string inCname,  time_t inTtl) {
         auto now = time(nullptr);
         if (inTtl < MinTtl) {
@@ -358,14 +426,19 @@ public:
         std::string cname = inCname;
         std::transform(cname.begin(), cname.end(), cname.begin(), ::tolower);
 
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "DnsCnameCache: Setting %s to CNAME %s with expiration %lu", fqdn.c_str(), cname.c_str(), Expiration);
-        }
+        DLOG_IF(INFO, Debug) << "DnsCnameCache: Setting " << fqdn << " to CNAME " << cname << " with expiration " << Expiration;
+
         DnsRevCache[cname][fqdn] = Expiration;
         DnsFwdCache[fqdn][cname] = Expiration;
     }
 
-
+    /*! \brief Add or update CNAME
+     * Adds the CNAME record for an FQDN
+     * \param [in] inFqdn a constant string specifying the Fully Qualified Domain Name to add
+     * \param [in] inCname a constant string specifying the CNAME record
+     * \param
+     * \param [in] inTtl a time_t specifying the Time To Live for the DNS record
+     */
     void addorupdateCname (const std::string inFqdn, const std::string inCname, FqdnDeviceProfileMap &fdpMap, const time_t inTtl) {
         std::string fqdn = inFqdn;
         std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
@@ -375,41 +448,36 @@ public:
 
         auto it = fdpMap.find(fqdn);
         if (it != fdpMap.end()) {
-            if (Debug == true) {
-                syslog (LOG_DEBUG, "DnsCnameCache: Found FqdnDeviceProfileMap entry for %s with CNAME %s",
-                        inFqdn.c_str(), inCname.c_str());
-            } else {
-                if (Debug == true) {
-                    syslog (LOG_DEBUG, "DnsCnameCache: Didn't find FqdnDeviceProfileMap entry for %s with CNAME %s", inFqdn.c_str(), inCname.c_str() );
-                }
-            }
+            DLOG_IF(INFO, Debug) << "DnsCnameCache: Found FqdnDeviceProfileMap entry for " << inFqdn << " with CNAME " << inCname;
+        } else {
+            DLOG_IF(INFO, Debug) << "DnsCnameCache: Didn't find FqdnDeviceProfileMap entry for " << inFqdn << " with CNAME " << inCname;
             fdpMap[cname].insert(it->second.begin(), it->second.end());
         }
         addorupdateCname(fqdn, cname, inTtl);
     }
 
 
-
-    // Finds the FQDN for a CNAME record, that doesn't have a CNAME record pointing to it
+    /*! \brief Find the FQDNs that have a CNAME record to the FQDN, either directly or indirectly
+     * Find the FQDNs that have a CNAME record to the FQDN, either directly or indirectly when a FQDN has a CNAME to an FQDN
+     * that has a CNAME to the FQDN. This is recursive to catch CNAMEs to CNAMEs to CNAMEs etc.
+     * \param [in] inCname a constant string specifying the Fully Qualified Domain Name for which to find FQDNs that have a CNAME to it
+     * \param [in] recdepth an optional constant uint8_t specifying the depth of the recursion. This is a safety valve against CNAMEs that
+     * directly or indirectly point back to the original FQDN
+     */
     std::set<std::string> getFqdns (const std::string inCname, const uint8_t recdepth = 0) const {
         if (recdepth > 5) {
-            if (Debug == true) {
-                syslog (LOG_DEBUG, "DnsCnameCache: Reached max recursion depth for CNAME %s", inCname.c_str());
-            }
+            DLOG_IF(INFO, Debug) << "DnsCnameCache: Reached max recursion depth for CNAME " << inCname;
             throw std::runtime_error("DNS reverse CNAME recursion depth reached for " + inCname);
         }
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "DnsCnameCache: Resolving CNAME %s ", inCname.c_str());
-        }
+        DLOG_IF(INFO, Debug) << "DnsCnameCache: Resolving CNAME " << inCname;
+
         std::string cname = inCname;
         std::transform(cname.begin(), cname.end(), cname.begin(), ::tolower);
 
         std::set<std::string> fqdns;
         auto it = DnsRevCache.find(cname);
         if (it != DnsRevCache.end()) {
-            if (Debug == true) {
-                syslog (LOG_DEBUG, "DnsCnameCache: Found one or more reverse CNAME for %s", cname.c_str());
-            }
+            DLOG_IF(INFO, Debug) << "DnsCnameCache: Found one or more reverse CNAME for " << cname;
             for (auto fqdn_it: it->second) {
                 fqdns.insert(fqdn_it.first);
                 std::set<std::string> additional_fqdns = getFqdns(fqdn_it.first, recdepth + 1);
@@ -419,30 +487,29 @@ public:
         return fqdns;
     }
 
-    // Find the CNAME for an FQDN
+    /*! \brief Find the FQDNs for which the provided FQDN has a CNAME record, either directly or indirectly
+     * Find the FQDNs for which the provided FQDN has a CNAME record, either directly or indirectly when the FQDN has a CNAME to an FQDN
+     * that also has a CNAME record. This is recursive to catch CNAMEs to CNAMEs to CNAMEs etc.
+     * \param [in] inFqdn a constant string specifying the Fully Qualified Domain Name for which to find the CNAME records
+     * \param [in] recdepth an optional constant uint8_t specifying the depth of the recursion. This is a safety valve against CNAMEs that directly or indirectly
+     * point back to the original FQDN
+     */
     std::set<std::string> getCnames (const std::string inFqdn, const uint8_t recdepth = 0) {
         if (recdepth > 5) {
-            if (Debug == true) {
-                syslog (LOG_DEBUG, "DnsCnameCache: Reached max recursion depth for FQDN %s", inFqdn.c_str());
-            }
+            DLOG_IF(INFO, Debug) << "DnsCnameCache: Reached max recursion depth for FQDN " << inFqdn;
             throw std::runtime_error("DNS CNAME recursion depth reached for " + inFqdn);
         }
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "DnsCnameCache: Looking up CNAMEs for %s", inFqdn.c_str());
-        }
+        DLOG_IF(INFO, Debug) << "DnsCnameCache: Looking up CNAMEs for " << inFqdn;
+
         std::string fqdn = inFqdn;
         std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
 
         auto it = DnsFwdCache.find(fqdn);
         if (it == DnsFwdCache.end()) {
-            if (Debug == true) {
-                syslog (LOG_DEBUG, "DnsCnameCache: %s does not have a CNAME", inFqdn.c_str());
-            }
+            DLOG_IF(INFO, Debug) << "DnsCnameCache: " << inFqdn << " does not have a CNAME";
             throw std::runtime_error("No CNAME found for " + inFqdn);
         }
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "DnsCnameCache: Found one or more CNAME for %s", fqdn.c_str());
-        }
+        DLOG_IF(INFO, Debug) << "DnsCnameCache: Found one or more CNAME for " << fqdn;
         std::set<std::string> cnames;
         for (auto cname_it: it->second) {
                 cnames.insert(cname_it.first);
@@ -458,10 +525,14 @@ public:
         return cnames;
     }
 
+    /*! \brief Imports DNS records from a JSON object as written by DnsCache::exportJson
+       * This function imports CNAME records from the JSON file as written by the DnsCache::exportJson method.
+       * \param [in] reference to json object with DNS records
+       * \param fdpMap reference to a FqdnDeviceProfileMap
+       * \return Number of DNS records imported
+       */
     size_t importJson (json &j, FqdnDeviceProfileMap &fdpMap) {
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "DnsCnameCache: importing json with cnames");
-        }
+        DLOG_IF(INFO, Debug) << "DnsCnameCache: importing json with cnames";
         size_t dnsRecords = 0;
         auto cj = j.find("CnameRecords");
         if (cj == j.end()) {
@@ -489,10 +560,14 @@ public:
         }
         return dnsRecords;
     }
+
+    /*! \brief Exports DNS records to a JSON object
+      * This function exports CNAME records to a JSON object
+      * \param [out] reference to json object to store DNS records
+      * \return number of DNS records exported
+      */
     size_t exportJson (json &j) {
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "DnsCnameCache: exporting cnames to json");
-        }
+        DLOG_IF(INFO, Debug) << "DnsCnameCache: exporting cnames to json";
         size_t dnsRecords = 0;
         j["CnameRecords"] = json::object();
         for (auto it_resource: DnsFwdCache) {
@@ -505,10 +580,13 @@ public:
         return dnsRecords;
     }
 
+    /*! \brief Removes expired DNS CNAME records from the DNS cache
+      * This function removes all DNS CNAME records whose TTLs have expired.
+      * \param [in] boolean specifying whether expired or all records have to be pruned
+      * \return vector of strings with Fqdns that have been pruned
+      */
     std::set<std::string> pruneCnames (const bool Force) {
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "DnsCnameCache: pruning cnames");
-        }
+        DLOG_IF(INFO, Debug) << "DnsCnameCache: pruning cnames";
         std::set<std::string> PrunedFqdns;
         auto now = time(nullptr);
         {
@@ -521,9 +599,8 @@ public:
                 auto cname_it = CnameMap.begin();
                 while(cname_it != CnameMap.end()) {
                     if (Force || now > cname_it->second) {
-                        if (Debug == true) {
-                            syslog (LOG_DEBUG, "Deleting CNAME for %s pointing to %s with TTL %lu", Fqdn.c_str(), cname_it->first.c_str(), cname_it->second);
-                        }
+                        DLOG_IF(INFO, Debug) << "Deleting CNAME for " << Fqdn << " pointing to " <<
+                                cname_it->first << " with TTL " << cname_it->second;
                         Pruned = true;
                         cname_it = CnameMap.erase(cname_it);
                     } else {
@@ -551,9 +628,8 @@ public:
                 auto fqdn_it = FqdnMap.begin();
                 while(fqdn_it != FqdnMap.end()) {
                     if (Force || now > fqdn_it->second) {
-                        if (Debug == true) {
-                            syslog (LOG_DEBUG, "Deleting reverse CNAME for %s pointing to %s with TTL %lu", Cname.c_str(), fqdn_it->first.c_str(), fqdn_it->second);
-                        }
+                        DLOG_IF(INFO, Debug) << "Deleting reverse CNAME for " << Cname << " pointing to " <<
+                                fqdn_it->first << " with TTL " << fqdn_it->second;
                         Pruned = true;
                         fqdn_it = FqdnMap.erase(fqdn_it);
                     } else {

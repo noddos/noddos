@@ -341,3 +341,13 @@ TEST(DnsCacheTest, importARecords) {
     size_t pruned_fqdns = PrunedFqdns.size();
     ASSERT_EQ(pruned_fqdns, 74);
 }
+
+TEST(DnsCacheTest, addARecord) {
+    DnsCache <Tins::IPv4Address> i(true);
+    Tins::IPv4Address t("10.0.0.1");
+
+    i.addorupdateResourceRecord("www.test.com", t, 2);
+    std::map<Tins::IPv4Address, time_t> rrs = i.lookupResourceRecord("www.test.com");
+    ASSERT_EQ(rrs.size(), 1);
+    ASSERT_EQ(rrs["www.test.com"], 1);
+}

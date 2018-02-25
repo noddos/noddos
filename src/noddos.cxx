@@ -47,6 +47,8 @@
 
 #include <curl/curl.h>
 
+#include <glog/logging.h>
+
 #include "noddosconfig.h"
 #include "HostCache.h"
 #include "SsdpServer.h"
@@ -70,6 +72,12 @@ bool daemonize(Config &inConfig);
 bool write_pidfile(std::string pidfile);
 void parse_commandline(int argc, char** argv, bool& debug, std::string& configfile, bool& daemon);
 
+/*! \brief Provides all initialization and the event loop
+ *
+ * Main parses command line arguments, daemonizes the process, loads the configuration file, writes the PID file,
+ * initializes all the listeners and starts the main process loop. Finally, it makes sure all outbound API calls
+ * complete, persists cached data to disk and exits the program.
+ */
 int main(int argc, char** argv) {
     bool debug = false;
 	std::string configfile = "/etc/noddos/noddos.yml";
@@ -86,15 +94,18 @@ int main(int argc, char** argv) {
 
 	if (daemon) {
 		openlog(argv[0], LOG_NOWAIT | LOG_PID, LOG_UUCP);
+		google::InitGoogleLogging(argv[0]);
+		FLAGS_stderrthreshold = google::FATAL;
 	} else {
 		openlog(argv[0], LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
+		google::InitGoogleLogging(argv[0]);
+		FLAGS_logtostderr= true;
 	}
 	Config config(debug);
 	try {
 	    config.Load(configfile);
 	} catch (std::exception& e) {
-        syslog (LOG_ERR, "Config: couldn't open, read or parse config file %s: %s", configfile.c_str(), e.what());
-        std::cout << "Couldn't open, read or parse config file " << configfile << ": " << e.what() << std::endl;
+        LOG (FATAL) << "Config: couldn't open, read or parse config file" << configfile << " :" << e.what();
         exit (1);
     }
 	InterfaceMap ifMap(config.LanInterfaces,config.WanInterfaces, config.DebugHostCache);
@@ -109,7 +120,7 @@ int main(int argc, char** argv) {
 	//
 	CURLcode cc = curl_global_init(CURL_GLOBAL_ALL);
 	if (cc != 0) {
-	    syslog (LOG_CRIT, "Noddos: Curl init failure: %d", cc);
+	    LOG(ERROR) << "Noddos: Curl init failure: " << cc;
 	}
 
 	// Vector containing threads for HTTPS API calls to Noddos cloud
@@ -132,7 +143,7 @@ int main(int argc, char** argv) {
 	std::map<int,iDeviceInfoSource *> epollmap;
     int epfd = epoll_create1(0);
     if (epfd < 0) {
-    	syslog(LOG_CRIT, "Noddos: Can't create epoll instance");
+    	LOG(FATAL) << "Noddos: Can't create epoll instance";
     	throw std::system_error(errno, std::system_category());;
     }
 
@@ -141,23 +152,19 @@ int main(int argc, char** argv) {
     //
     auto sfd = setup_signal_fd(-1);
     if (sfd < 0) {
-    	syslog(LOG_ERR, "Noddos: Setting up signal fd");
+    	LOG(ERROR) << "Noddos: Setting up signal fd";
     	throw std::system_error(errno, std::system_category());
     } else {
-    	if (config.DebugEvents == true) {
-    	    syslog(LOG_DEBUG, "Noddos: Signal FD is: %d", sfd);
-    	}
+    	DLOG_IF(INFO, config.DebugEvents == true) << "Noddos: Signal FD is: " << sfd;
         struct epoll_event event;
         memset (&event, 0, sizeof (event));
         event.data.fd = sfd;
         event.events = EPOLLIN | EPOLLET;
         if (epoll_ctl(epfd, EPOLL_CTL_ADD, event.data.fd, &event) < 0) {
-        	syslog(LOG_ERR, "Noddos: Can't add signal file handle to epoll");
+        	LOG(ERROR) << "Noddos: Can't add signal file handle to epoll";
         	throw std::system_error(errno, std::system_category());
         } else {
-        	if (config.DebugEvents == true) {
-        		syslog(LOG_DEBUG, "Noddos: Signal file handle %d", sfd);
-        	}
+        	DLOG_IF(INFO, config.DebugEvents == true) << "Noddos: Signal file handle " << sfd;
         }
     }
 
@@ -171,37 +178,28 @@ int main(int argc, char** argv) {
         PacketSnoop *p = new PacketSnoop(hC, 64, config.Debug && config.DebugPacketSnoop);
         p->Open(iface, 64);
         add_epoll_filehandle(epfd, epollmap, *p);
-        if (config.DebugEvents == true) {
-            syslog(LOG_DEBUG, "Noddos: PacketSnoop for interface %s file handle %d", iface.c_str(), p->getFileHandle());
-        }
+        DLOG_IF(INFO, config.DebugEvents == true) << "Noddos: PacketSnoop for interface " << iface << " file handle " << p->getFileHandle();
         pInstances.insert(p);
     }
 
     SsdpServer s(hC, 86400, "", config.Debug && config.DebugSsdp);
     add_epoll_filehandle(epfd, epollmap, s);
-    if (config.DebugEvents == true) {
-        syslog(LOG_DEBUG, "Noddos: SSDP file handle %d", s.getFileHandle());
-    }
+    DLOG_IF(INFO, config.DebugEvents == true) << "Noddos: SSDP file handle " << s.getFileHandle();
 
     WsDiscovery w(hC, 86400, "", config.Debug && config.DebugWsDiscovery);
     add_epoll_filehandle(epfd, epollmap, w);
-    if (config.DebugEvents == true) {
-        syslog(LOG_DEBUG, "Noddos: WS-Discovery file handle %d", w.getFileHandle());
-    }
+    DLOG_IF(INFO, config.DebugEvents == true) << "Noddos: WS-Discovery file handle ", w.getFileHandle();
 
     Mdns m(hC, 86400, "", config.Debug && config.DebugMdns);
     add_epoll_filehandle(epfd, epollmap, m);
-    if (config.DebugEvents == true) {
-        syslog(LOG_DEBUG, "Noddos: mDNS file handle %d", m.getFileHandle());
-    }
+    DLOG_IF(INFO, config.DebugEvents == true) << "Noddos: mDNS file handle " << m.getFileHandle();
 
     std::set<std::string> localIpAddresses = hC.getLocalIpAddresses();
     FlowTrack ft(hC, config, localIpAddresses) ;
     ft.Open();
    	add_epoll_filehandle(epfd, epollmap, ft);
-    if (config.DebugEvents == true) {
-        syslog(LOG_DEBUG, "Noddos: FlowTrack file handle %d", ft.getFileHandle());
-    }
+    DLOG_IF(INFO, config.DebugEvents == true) << "Noddos: FlowTrack file handle " << ft.getFileHandle();
+
 
     //
     // If User is defined in noddos config files and we drop privs then
@@ -210,6 +208,7 @@ int main(int argc, char** argv) {
     //
     if (config.User != "" && config.Group != "") {
     	drop_process_privileges(config);
+    	LOG(WARNING) << "Running as non-root, firewall capability disabled";
     }
     uint32_t NextMatch = time(nullptr) + config.MatchInterval + rand() % 15;
     uint32_t NextPrune = time(nullptr) + config.PruneInterval + rand() % 15;
@@ -227,16 +226,12 @@ int main(int argc, char** argv) {
 	// main program loop waiting for events
 	//
 	while (true) {
-    	if (config.DebugEvents == true) {
-    		syslog(LOG_DEBUG, "Noddos: Starting epoll event wait");
-    	}
+  	    DLOG_IF(INFO, config.DebugEvents == true) << "Noddos: Starting epoll event wait";
 		int eCnt = epoll_wait(epfd, epoll_events, MAXEPOLLEVENTS, 60000);
     	if (eCnt < 0) {
-    		syslog(LOG_ERR, "Noddos: Epoll event wait error");
+    		LOG(ERROR) << "Noddos: Epoll event wait error";
     	}
-    	if (config.DebugEvents == true) {
-    		syslog(LOG_DEBUG, "Noddos: Received %d events", eCnt);
-    	}
+    	DLOG_IF(INFO, config.DebugEvents == true) << "Noddos: Received " << eCnt << " events";
 		int ev;
     	for (ev = 0; ev< eCnt; ev++) {
 
@@ -245,7 +240,7 @@ int main(int argc, char** argv) {
     	    //
     	    if ((epoll_events[ev].events & EPOLLERR) || (epoll_events[ev].events & EPOLLHUP) ||
                     (not epoll_events[ev].events & EPOLLIN)) {
-				syslog(LOG_ERR, "Noddos: Epoll event error for FD %d", epoll_events[ev].data.fd);
+				LOG(ERROR) << "Noddos: Epoll event error for FD " << epoll_events[ev].data.fd;
 				epollmap.erase(epoll_events[ev].data.fd);
 				if (epoll_events[ev].data.fd == ft.getFileHandle() && geteuid() == 0) {
 					// Connection tracking has shown it can have hickups so we re-initiate it when that happens
@@ -253,52 +248,47 @@ int main(int argc, char** argv) {
 					ft.Open();
 			    	add_epoll_filehandle(epfd, epollmap, ft);
 				} else {
-					syslog(LOG_ERR, "Noddos: Closing file description without re-opening it %d", epoll_events[ev].data.fd);
+					LOG(ERROR) << "Noddos: Closing file description without re-opening it ", epoll_events[ev].data.fd;
 				    close(epoll_events[ev].data.fd);
 				}
 			} else {
 			    //
 			    // epoll event processing
 			    //
-				if (config.DebugEvents == true) {
-					syslog(LOG_DEBUG, "Noddos: Handling event for FD %d", epoll_events[ev].data.fd);
-				}
+			    DLOG_IF(INFO, config.DebugEvents == true) << "Noddos: Handling event for FD " << epoll_events[ev].data.fd;
 				if (epoll_events[ev].data.fd == sfd) {
 					//
 				    // Signal processing
 				    //
-					if (config.DebugEvents == true) {
-						syslog(LOG_DEBUG, "Processing signal event");
-					}
+				    DLOG_IF(INFO, config.DebugEvents == true) << "Processing signal event";
 					struct signalfd_siginfo si;
  					auto res = read (sfd, &si, sizeof(si));
 					if (res < 0) {
-						syslog(LOG_ERR, "Noddos: reading from signal event filehandle");
+						LOG(ERROR) << "Noddos: reading from signal event filehandle";
                     }
 					if (res != sizeof(si)) {
-						syslog(LOG_ERR, "Noddos: Something wrong with reading from signal event filehandle");
+						LOG(ERROR) << "Noddos: Something wrong with reading from signal event filehandle";
                     }
 					if (si.ssi_signo == SIGTERM ) {
-						syslog(LOG_INFO, "Noddos: Processing signal event SIGTERM");
+						DLOG(INFO) << "Noddos: Processing signal event SIGTERM";
 						goto exitprog;
 					} else if (si.ssi_signo == SIGHUP) {
-						syslog(LOG_INFO, "Noddos: Processing signal event SIGHUP");
+						DLOG(INFO) << "Noddos: Processing signal event SIGHUP";
 						try {
 						    config.Load(configfile);
 						} catch (std::exception& e) {
-				            syslog (LOG_ERR, "Config: couldn't open, read or parse config file %s: %s", configfile.c_str(), e.what());
+				            LOG(ERROR) << "Config: couldn't open, read or parse config file " << configfile.c_str() << ": " << e.what();
 				        }
-
 						hC.loadDeviceProfiles(config.DeviceProfilesFile);
 					} else if (si.ssi_signo == SIGUSR1) {
-						syslog(LOG_INFO, "Noddos: Processing signal event SIGUSR1");
+						DLOG(INFO) << "Noddos: Processing signal event SIGUSR1";
 						hC.Match();
 						NextMatch = time(nullptr) + config.MatchInterval;
 						hC.ExportDeviceProfileMatches(config.MatchFile, false);
 						hC.ExportDeviceProfileMatches(config.DumpFile, true);
 						hC.exportDnsCache(config.DnsCacheFile);
 					} else if (si.ssi_signo == SIGUSR2) {
-						syslog(LOG_INFO, "Noddos: Processing signal event SIGUSR2");
+						DLOG(INFO) << "Noddos: Processing signal event SIGUSR2";
 						hC.Match();
 						hC.UploadDeviceStats(futures, config.ClientApiCertFile, config.ClientApiKeyFile, config.DeviceReportInterval != 0);
 						hC.UploadTrafficStats(futures, config.TrafficReportInterval, config.ReportTrafficToRfc1918,
@@ -306,7 +296,7 @@ int main(int argc, char** argv) {
 						NextDeviceUpload = time(nullptr) + config.DeviceReportInterval;
 						NextTrafficUpload = time(nullptr) + config.TrafficReportInterval;
 					} else  {
-						syslog(LOG_ERR, "Noddos: Got some unhandled signal: %zu", res);
+						LOG(ERROR) << "Noddos: Got some unhandled signal: " << res;
 					}
 					setup_signal_fd(sfd);
 				} else {
@@ -330,17 +320,13 @@ int main(int argc, char** argv) {
 					NextDeviceUpload = t + config.DeviceReportInterval;
 				}
 				if (t > NextTrafficUpload && config.TrafficReportInterval > 0) {
-				    if (config.DebugEvents == true) {
-						syslog(LOG_DEBUG, "Noddos: Starting traffic upload");
-					}
+				    DLOG_IF(INFO, config.DebugEvents == true) << "Noddos: Starting traffic upload";
 					hC.UploadTrafficStats(futures, config.TrafficReportInterval, config.ReportTrafficToRfc1918, config.ClientApiCertFile,
 							config.ClientApiKeyFile, config.TrafficReportInterval != 0);
 					NextTrafficUpload = t + config.TrafficReportInterval;
 				}
 				if (t > NextPrune) {
-					if (config.DebugEvents == true) {
-						syslog(LOG_DEBUG, "Noddos: Starting prune");
-					}
+				    DLOG_IF(INFO, config.DebugEvents == true) << "Noddos: Starting prune";
 					hC.Prune(false);
 					for (auto p: pInstances) {
 					    p->pruneTcpSnoopInstances();
@@ -348,9 +334,7 @@ int main(int argc, char** argv) {
 					NextPrune = t + config.PruneInterval;
 				}
 				if (t > NextWsDiscoveryProbe && config.WsDiscoveryProbeInterval > 0) {
-				    if (config.DebugEvents == true) {
-				        syslog(LOG_DEBUG, "Noddos: Starting WS-Discovery Probe");
-				    }
+				    DLOG_IF(INFO, config.DebugEvents == true)  << "Noddos: Starting WS-Discovery Probe";
 				    w.Probe();
 				    NextWsDiscoveryProbe = t + config.WsDiscoveryProbeInterval;
 				}
@@ -363,9 +347,7 @@ int main(int argc, char** argv) {
 			    for (auto future_it = futures.begin(); future_it != futures.end();) {
 			        if (future_it->valid()) {
 			            if (future_it->wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
-		                    if (config.DebugHostCache == true) {
-		                        syslog(LOG_DEBUG, "Noddos: Upload of data returned HTTP status %u", future_it->get());
-		                    }
+		                        DLOG_IF(INFO, config.DebugHostCache == true) << "Noddos: Upload of data returned HTTP status ", future_it->get();
 			                future_it = futures.erase(future_it);
 			            } else {
 			                future_it++;
@@ -388,20 +370,25 @@ exitprog:
 	ft.Close();
 	close (epfd);
 	close (sfd);
-	syslog (LOG_INFO, "Noddos: Exiting");
+	LOG(INFO) << "Noddos: Exiting";
 	closelog();
 	unlink (config.PidFile.c_str());
 	free (epoll_events);
 	curl_global_cleanup();
 }
 
+/*! \brief Add a iDeviceInfoSource filehandle to the map for epoll
+ *
+ * Each DeviceInfoSource has a filehandle. This filehandle is added to the epoll map that the main eventloop uses
+ * to wait for events to process
+  */
 bool add_epoll_filehandle(int epfd, std::map<int,iDeviceInfoSource*> &epollmap, iDeviceInfoSource& i) {
 	struct epoll_event event;
     memset (&event, 0, sizeof (event));
 	event.data.fd = i.getFileHandle();
     event.events = EPOLLIN | EPOLLET;
     if (epoll_ctl(epfd, EPOLL_CTL_ADD, event.data.fd, &event) < 0) {
-    	syslog(LOG_ERR, "Noddos: Can't add file handle to epoll");
+    	LOG(ERROR) << "Noddos: Can't add file handle to epoll";
     	throw std::system_error(errno, std::system_category());
     }
     epollmap[event.data.fd] = &i;
@@ -409,6 +396,11 @@ bool add_epoll_filehandle(int epfd, std::map<int,iDeviceInfoSource*> &epollmap, 
 }
 
 
+/*! \brief set up the signals that need to be acted upon
+ *
+ * Setup of signal mask so that certain signals are processed by the application instead of
+ * by their default signal actions
+ */
 int setup_signal_fd (int sfd) {
 	sigset_t mask;
 	sigemptyset (&mask);
@@ -424,6 +416,11 @@ int setup_signal_fd (int sfd) {
 	return signalfd (sfd, &mask, 0);
 }
 
+/*! \brief Run as non-root user
+ *
+ * Drop root privileges securely. Note that we can't re-open nf_conntrack and can't change firewall
+ * rules if we run without root privileges
+ */
 bool drop_process_privileges(Config &inConfig) {
 	size_t bufsize = sysconf(_SC_GETPW_R_SIZE_MAX);
     if (bufsize == -1) {         /* Value was indeterminate */
@@ -437,7 +434,7 @@ bool drop_process_privileges(Config &inConfig) {
     struct passwd accountdetails;
 
 	if (getuid() != 0) {
-        syslog(LOG_ERR, "Noddos: Can't change user to %s as root privileges were previously dropped", inConfig.User.c_str());
+        LOG(ERROR) << "Noddos: Can't change user to " << inConfig.User << " as root privileges were previously dropped";
 	    throw std::runtime_error ("Can't change user as no root privileges");
 	} else {
 		int s;
@@ -445,9 +442,9 @@ bool drop_process_privileges(Config &inConfig) {
 		if ((s = getpwnam_r(inConfig.User.c_str(), &accountdetails, buf, bufsize, &accountresult)) != 0) {
 		    if (accountresult == NULL) {
 		        if (s == 0) {
-		            syslog(LOG_CRIT, "Noddos: Username %s not found\n", inConfig.User.c_str());
+		            LOG(FATAL) << "Noddos: Username %s not found\n" << inConfig.User;
 		        } else {
-		            syslog(LOG_CRIT, "Noddos: getpwnam_r");
+		            LOG(FATAL) << "Noddos: getpwnam_r";
 		        }
 		        throw std::system_error(errno, std::system_category());
 		    }
@@ -457,30 +454,33 @@ bool drop_process_privileges(Config &inConfig) {
 		if ((s = getgrnam_r(inConfig.Group.c_str(), &groupdetails, buf, (unsigned long int) bufsize, &groupresult)) != 0) {
 			if (groupresult == NULL) {
 		        if (s == 0) {
-		            syslog(LOG_CRIT, "Group %s not found\n", inConfig.Group.c_str());
+		            LOG(FATAL) << "Group %s not found\n" << inConfig.Group;
 		        } else {
-		            syslog(LOG_CRIT, "getgrnam_r");
+		            LOG(FATAL) << "getgrnam_r";
 		        }
 		        throw std::system_error(errno, std::system_category());
 		    }
 		}
 		if (initgroups(inConfig.User.c_str(), groupdetails.gr_gid) != 0) {
-			syslog (LOG_CRIT, "Noddos: initgroups for user %s to %d failed", inConfig.User.c_str(), groupdetails.gr_gid);
+			LOG(FATAL) << "Noddos: initgroups for user " << inConfig.User << " to " << groupdetails.gr_gid << " failed";
 			throw std::system_error(errno, std::system_category());
 		}
 		if (setuid(accountdetails.pw_uid) != 0) {
-			syslog (LOG_CRIT, "Noddos: dropping privileges to %d failed", accountdetails.pw_uid);
+			LOG(FATAL) << "Noddos: dropping privileges to " << accountdetails.pw_uid << " failed";
 			throw std::system_error(errno, std::system_category());
 		}
 		if (setuid(0) != -1) {
-		     syslog(LOG_CRIT, "Noddos: Managed to regain root privileges?");
+		     LOG(FATAL) << "Noddos: Managed to regain root privileges?";
 		     throw std::system_error(errno, std::system_category());
 		}
-		syslog (LOG_NOTICE, "Noddos: Dropped process privileges to user %s and group %s", inConfig.User.c_str(), inConfig.Group.c_str());
+		LOG(INFO) << "Noddos: Dropped process privileges to user " << inConfig.User << " and group " << inConfig.Group;
 	}
 	return true;
 }
 
+/*! \brief Run as service daemon, detached from the terminal
+ *
+ */
 
 bool daemonize (Config &inConfig) {
     std::ifstream ifs;
@@ -492,16 +492,12 @@ bool daemonize (Config &inConfig) {
 	if (ifs.is_open()) {
 		ifs >> origpid;
 		std::string pidprocpath = "/proc/" + origpid + "/stat";
-		if (inConfig.Debug == true) {
-		    fprintf (stderr, "Checking if pid file %s exists\n", pidprocpath.c_str());
-		}
+		DLOG(INFO) << "Checking if pid file " << pidprocpath << " exists";
 		struct stat buf;
 		if (stat (pidprocpath.c_str(), &buf) == 0) {
 		    throw std::runtime_error ("Pid file " + inConfig.PidFile + " exists and contains PID of a running process ");
 		}
-        if (inConfig.Debug == true) {
-            fprintf (stderr, "Deleting stale pid file %s\n", pidprocpath.c_str());
-        }
+        DLOG(INFO) << "Deleting stale pid file " << pidprocpath;
 		unlink(inConfig.PidFile.c_str());
 		ifs.close();
 	}
@@ -526,14 +522,14 @@ bool daemonize (Config &inConfig) {
 	// Since the child process is a daemon, the umask needs to be set so files and logs can be written
 	umask(0);
 
-	syslog(LOG_INFO, "Noddos: Successfully started noddos client");
+	LOG(INFO) << "Noddos: Successfully started noddos client";
 
 	// Generate a session ID for the child process
 	sid = setsid();
 	// Ensure a valid SID for the child process
 	if(sid < 0) {
 		// Log failure and exit
-		syslog(LOG_ERR, "Noddos: Could not generate session ID for child process");
+		LOG(FATAL) << "Noddos: Could not generate session ID for child process";
 
 		// If a new session ID could not be generated, we must terminate the child process
 		// or it will be orphaned
@@ -543,7 +539,7 @@ bool daemonize (Config &inConfig) {
     // Change the current working directory to a directory guaranteed to exist
 	if((chdir("/")) < 0) {
 	   // Log failure and exit
-	   syslog(LOG_ERR, "Noddos: Could not change working directory to /");
+	   LOG(FATAL) << "Noddos: Could not change working directory to /";
 
 	   // If our guaranteed directory does not exist, terminate the child process to ensure
 	   // the daemon has not been hijacked
@@ -558,19 +554,26 @@ bool daemonize (Config &inConfig) {
 	return true;
 }
 
+/*! \brief Write pid file to disk
+ *
+ * By writing the pid file to disk we avoid two processes trying to open sockets at the same time
+ */
 bool write_pidfile(std::string pidfile) {
 	std::ofstream ofs(pidfile);
 	if (ofs.is_open()) {
 		ofs << getpid();
 		ofs.close();
 	} else {
-		syslog(LOG_ERR, "Noddos: Error creating PID file %s", pidfile.c_str());
+		LOG(ERROR) <<  "Noddos: Error creating PID file " << pidfile;
 		return true;
 	}
 	return false;
 
 }
 
+/*! \brief Command line parser
+ *
+ */
 void parse_commandline(int argc, char** argv, bool& debug, std::string& configfile, bool& daemon) {
 	int debug_flag = 0;
 	int daemon_flag = 1;
