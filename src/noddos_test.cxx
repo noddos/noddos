@@ -343,11 +343,14 @@ TEST(DnsCacheTest, importARecords) {
 }
 
 TEST(DnsCacheTest, addARecord) {
-    DnsCache <Tins::IPv4Address> i(true);
+    DnsCache <Tins::IPv4Address> i(3600, true);
+    auto now = time(nullptr);
     Tins::IPv4Address t("10.0.0.1");
 
     i.addorupdateResourceRecord("www.test.com", t, 2);
     std::map<Tins::IPv4Address, time_t> rrs = i.lookupResourceRecord("www.test.com");
-    ASSERT_EQ(rrs.size(), 1);
-    ASSERT_EQ(rrs["www.test.com"], 1);
+    size_t s = rrs.size();
+    ASSERT_EQ(s, 1);
+    time_t ttl = rrs[t];
+    ASSERT_GE(ttl, now + 1);
 }

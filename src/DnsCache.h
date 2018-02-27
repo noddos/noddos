@@ -198,7 +198,7 @@ public:
         std::string fqdn = inFqdn;
         std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
 
-        DLOG_IF(INFO, Debug) << "DnsCache: Setting " << inFqdn << " to " << inIpAddress << " with TTL " << Expiration;
+        DLOG_IF(INFO, Debug) << "DnsCache: Adding resource record for " << inFqdn << " with IP " << inIpAddress << " with TTL " << Expiration;
         DnsFwdCache[inFqdn].insert(std::make_pair(inIpAddress, Expiration));
         DnsRevCache[inIpAddress].insert(std::make_pair(inFqdn, Expiration));
     }
