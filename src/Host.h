@@ -68,7 +68,7 @@ private:
    	WsDiscoveryHost Wsd;
    	MdnsHost Mdns;
    	std::string Uuid;
-   	time_t matchversion;
+   	uint16_t matchversion;
    	ConfidenceLevel IdentifyConfidenceLevel;
    	ConfidenceLevel EnforceConfidenceLevel;
    	bool UploadStats;

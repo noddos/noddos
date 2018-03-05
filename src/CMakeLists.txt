@@ -39,78 +39,20 @@ configure_file (
 # so that we will find TutorialConfig.h
 include_directories("${PROJECT_BINARY_DIR}")
  
-add_executable(noddos noddos.cxx Host.cxx Mdns.cxx DnsCache.cxx
+add_executable(noddos noddos.cxx Host.cxx Mdns.cxx 
     HostCache.cxx SsdpServer.cxx SsdpLocation.cxx FlowTrack.cxx Config.cxx
     opensslfingerprint.cxx PacketSnoop.cxx Ipset.cxx DeviceProfile.cxx WsDiscovery.cxx)
 target_link_libraries(noddos libnetfilter_conntrack.so ssl crypto curl tins ipset gtest pthread yaml-cpp glog)
 
 enable_testing()
 
-add_test (Host Host_test)
-add_executable(Host_test Host_test.cxx DnsCache.cxx
-    Host.cxx HostCache.cxx SsdpServer.cxx SsdpLocation.cxx
-	DeviceProfile.cxx opensslfingerprint.cxx Ipset.cxx)
-target_link_libraries(Host_test tins curl ssl crypto ipset gtest pthread glog)
-
-add_test (HostCache HostCache_test)
-add_executable(HostCache_test HostCache_test.cxx  Ipset.cxx
-    Host.cxx HostCache SsdpServer.cxx SsdpLocation.cxx DnsCache.cxx
-    DeviceProfile.cxx opensslfingerprint.cxx Ipset.cxx)
-target_link_libraries(HostCache_test tins curl ssl crypto ipset gtest pthread glog)
-
-
-add_test (DeviceProfile DeviceProfile_test)
-add_executable(DeviceProfile_test DeviceProfile_test.cxx 
-	DeviceProfile.cxx DnsCache.cxx
-	FlowTrack.cxx Config.cxx HostCache.cxx Host.cxx SsdpServer.cxx
-	SsdpLocation.cxx opensslfingerprint.cxx Ipset.cxx)
-target_link_libraries(DeviceProfile_test tins curl ssl crypto netfilter_conntrack ipset gtest pthread yaml-cpp glog)
-
-add_test (Identifier Identifier_test)
-add_executable(Identifier_test Identifier_test.cxx
-	DeviceProfile.cxx Ipset.cxx)
-target_link_libraries(Identifier_test tins ipset glog)
-
-add_test (Config Config_test)
-add_executable(Config_test Config_test.cxx opensslfingerprint.cxx)
-target_link_libraries(Config_test curl ssl crypto yaml-cpp glog)
-
-add_test (Ipset Ipset_test)
-add_executable(Ipset_test Ipset_test.cxx Ipset.cxx)
-target_link_libraries(Ipset_test tins ipset glog)
-
-add_test (SsdpServer SsdpServer_test)
-add_executable(SsdpServer_test SsdpServer_test.cxx  DnsCache.cxx
-    HostCache.cxx Host.cxx SsdpServer.cxx SsdpLocation.cxx
-    opensslfingerprint.cxx Ipset.cxx DeviceProfile.cxx)
-target_link_libraries(SsdpServer_test tins curl ssl crypto ipset gtest pthread glog)
-
-add_test (WsDiscovery WsDiscovery_test)
-add_executable(WsDiscovery_test WsDiscovery_test.cxx 
-    HostCache.cxx Host.cxx WsDiscovery.cxx DnsCache.cxx
-    opensslfingerprint.cxx Ipset.cxx DeviceProfile.cxx)
-target_link_libraries(WsDiscovery_test tins curl ssl crypto ipset gtest pthread glog)
-
-add_test (Mdns Mdns_test)
-add_executable(Mdns_test Mdns_test.cxx  Mdns.cxx
-    HostCache.cxx Host.cxx DnsCache.cxx
-    opensslfingerprint.cxx Ipset.cxx DeviceProfile.cxx)
-target_link_libraries(Mdns_test tins curl ssl crypto ipset gtest pthread tins glog)
-
-add_test (MacAddress MacAddress_test)
-add_executable(MacAddress_test MacAddress_test.cxx)
-
-add_test (Curl Curl_test)
-add_executable(Curl_test Curl_test.cxx)
-target_link_libraries(Curl_test curl ssl crypto glog)
-
 add_executable (PacketSnoop_test PacketSnoop_test.cxx PacketSnoop.cxx 
-	HostCache.cxx Host.cxx SsdpServer.cxx SsdpLocation.cxx DnsCache.cxx
+	HostCache.cxx Host.cxx SsdpServer.cxx SsdpLocation.cxx 
     opensslfingerprint.cxx DeviceProfile.cxx Ipset.cxx)
 target_link_libraries(PacketSnoop_test curl ssl crypto tins ipset gtest pthread yaml-cpp glog)
 
 add_test (Noddos noddos_test)
-add_executable(noddos_test noddos_test.cxx Host.cxx Mdns.cxx DnsCache.cxx
+add_executable(noddos_test noddos_test.cxx Host.cxx Mdns.cxx 
     HostCache.cxx SsdpServer.cxx SsdpLocation.cxx FlowTrack.cxx Config.cxx
     opensslfingerprint.cxx PacketSnoop.cxx Ipset.cxx DeviceProfile.cxx
     WsDiscovery.cxx)

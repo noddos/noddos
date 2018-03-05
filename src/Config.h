@@ -33,11 +33,6 @@
 #include <syslog.h>
 
 #include <yaml-cpp/yaml.h>
-// #include <json.hpp>
-// using nlohmann::json;
-
-// From opensslfingerprint.cxx (valgrind claims there is a memory leak)
-// std::string getCertFingerprint(const std::string certfile, const bool Debug = false);
 
 enum UploadMode {Anonymous, Account};
 

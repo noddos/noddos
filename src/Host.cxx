@@ -98,7 +98,7 @@ bool Host::Match(const DeviceProfileMap& dpMap) {
 			UploadStats = kv.second->getUploadStats();
 			bestmatch = match;
 			matcheduuid = kv.first;
-			matchversion = time(nullptr);
+			matchversion = dp.getDeviceProfileVersion();
 		}
 
 	}

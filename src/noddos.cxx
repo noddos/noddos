@@ -108,7 +108,7 @@ int main(int argc, char** argv) {
         LOG (FATAL) << "Config: couldn't open, read or parse config file" << configfile << " :" << e.what();
         exit (1);
     }
-	InterfaceMap ifMap(config.LanInterfaces,config.WanInterfaces, config.DebugHostCache);
+	InterfaceMap ifMap(config.LanInterfaces, config.WanInterfaces, config.DebugHostCache);
 
 	if (daemon) {
 		daemonize(config);
