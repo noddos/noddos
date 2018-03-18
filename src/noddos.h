@@ -23,7 +23,9 @@
 #ifndef NODDOS_H_
 #define NODDOS_H_
 
-#define FLOWDEFAULTEXPIRATION 14400
+#define FLOWDEFAULTTTL 14400
+#define DNSQUERYDEFAULTTTL 604800
+#define HOSTDEFAULTTTL 604800
 
 #include <iostream>
 #include <unordered_map>

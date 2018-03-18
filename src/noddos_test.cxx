@@ -108,39 +108,6 @@ TEST(WsDiscoveryHostTest, Comparison) {
     ASSERT_TRUE(h1 == h2);
 }
 
-TEST(   HostTest, Comparison) {
-    struct MdnsHost h1, h2;
-    ASSERT_TRUE(h1 == h2);
-    h1.IpAddress = "192.168.1.1";
-    ASSERT_FALSE(h1 == h2);
-    h1.Hostname = "simpletest";
-    ASSERT_FALSE(h1 == h2);
-    h1.Os = "linux";
-    ASSERT_FALSE(h1 == h2);
-    h1.Hw = "hardware";
-    ASSERT_FALSE(h1 == h2);
-    h1.DeviceUrl = "http://192.168.1.3/testmodel";
-    ASSERT_FALSE(h1 == h2);
-    h1.Manufacturer = "someco";
-    ASSERT_FALSE(h1 == h2);
-    h1.ModelName= "somedevice";
-    ASSERT_FALSE(h1 == h2);
-
-    h2.IpAddress = "192.168.1.1";
-    ASSERT_FALSE(h1 == h2);
-    h2.Hostname = "simpletest";
-    ASSERT_FALSE(h1 == h2);
-    h2.Os = "linux";
-    ASSERT_FALSE(h1 == h2);
-    h2.Hw = "hardware";
-    ASSERT_FALSE(h1 == h2);
-    h2.DeviceUrl = "http://192.168.1.3/testmodel";
-    ASSERT_FALSE(h1 == h2);
-    h2.Manufacturer = "someco";
-    ASSERT_FALSE(h1 == h2);
-    h2.ModelName= "somedevice";
-    ASSERT_TRUE(h1 == h2);
-}
 
 TEST(SsdpHostTest, Comparison) {
     struct SsdpHost h1, h2;
@@ -192,7 +159,7 @@ TEST(SsdpHostTest, Comparison) {
  * A FQDN with a CNAME record
  */
 TEST(DnsCacheTest, addCname) {
-    DnsCache <std::string> c(14400, true);
+    DnsCache <std::string> c(14400, false);
     c.addorupdateCname ("originalfqdn", "cnamefqdn", 3600);
 
     ASSERT_EQ(c.getFqdns("cnamefqdn").count("originalfqdn"),1);
@@ -203,7 +170,7 @@ TEST(DnsCacheTest, addCname) {
  * An FQDN with a CNAME record that has a CNAME record
  */
 TEST(DnsCacheTest, addLinkedCname) {
-    DnsCache <std::string> c(14400, true);
+    DnsCache <std::string> c(14400, false);
     c.addorupdateCname ("originalfqdn", "cnamefqdn", 3600);
     c.addorupdateCname ("cnamefqdn", "anothercnamefqdn", 3600);
 
@@ -217,7 +184,7 @@ TEST(DnsCacheTest, addLinkedCname) {
  * One FQDN with two CNAME records
  */
 TEST(DnsCacheTest, twoCname) {
-    DnsCache <std::string> c(14400, true);
+    DnsCache <std::string> c(14400, false);
     c.addorupdateCname ("originalfqdn", "cnamefqdn", 3600);
     c.addorupdateCname ("originalfqdn", "newcnamefqdn", 3600);
 
@@ -231,7 +198,7 @@ TEST(DnsCacheTest, twoCname) {
  * Two FQDNs with the same CNAME record
  */
 TEST(DnsCacheTest, sameCname) {
-    DnsCache <std::string> c(14400, true);
+    DnsCache <std::string> c(14400, false);
     c.addorupdateCname ("originalfqdn", "cnamefqdn", 3600);
     c.addorupdateCname ("anotherfqdn", "cnamefqdn", 3600);
 
@@ -244,7 +211,7 @@ TEST(DnsCacheTest, sameCname) {
  * One FQDN with two CNAME records
  */
 TEST(DnsCacheTest, pruneCnameRecords) {
-    DnsCache <std::string> c(1, true);
+    DnsCache <std::string> c(1, false);
     c.addorupdateCname ("originalfqdn", "cnamefqdn", 1);
     c.addorupdateCname ("originalfqdn", "newcnamefqdn", 1);
 
@@ -289,7 +256,7 @@ TEST(DnsCacheTest, pruneCnameRecords) {
 
 TEST(DnsTest, importCnameRecords) {
     FqdnDeviceProfileMap fdpMap;
-    DnsCache <std::string> c(true);
+    DnsCache <std::string> c(14400, false);
 
     std::string filename = "tests/DnsCache.json";
     std::ifstream ifs(filename);
@@ -321,8 +288,8 @@ TEST(DnsTest, importCnameRecords) {
 
 TEST(DnsCacheTest, importARecords) {
     FqdnDeviceProfileMap fdpMap;
-    DnsCache <Tins::IPv4Address> i(true);
-    DnsCache <Tins::IPv6Address> isix(true);
+    DnsCache <Tins::IPv4Address> i(14400, false);
+    DnsCache <Tins::IPv6Address> isix(14400, false);
 
     std::string filename = "tests/DnsCache.json";
     std::ifstream ifs(filename);
@@ -358,7 +325,7 @@ TEST(DnsCacheTest, importARecords) {
 }
 
 TEST(DnsCacheTest, addARecord) {
-    DnsCache <Tins::IPv4Address> i(3600, true);
+    DnsCache <Tins::IPv4Address> i(3600, false);
     auto now = time(nullptr);
     Tins::IPv4Address t("10.0.0.1");
 
@@ -384,13 +351,13 @@ TEST(DeviceProfileTest, matchTest) {
     json j;
     ifs >> j;
     for (json::iterator it = j.begin(); it != j.end(); ++it) {
-        std::cout << *it << std::endl;
-        std::string uuid = (*it)["DeviceProfileUuid"].get<std::string>();
+        DLOG_IF(INFO, Debug) << *it;
+        std::string uuid = (*it)["DeviceProfileUuid"];
         DeviceProfiles[uuid] = std::make_shared<DeviceProfile>(*it);
         ASSERT_TRUE(DeviceProfiles[uuid]->isValid());
     }
     InterfaceMap ifMap;
-    HostCache hc(ifMap, "", 0, 0, "", false, true);
+    HostCache hc(ifMap, "", 0, 0, "", false, false);
     hc.AddByMac (MacAddress("00:00:00:00:00:01"), "192.168.1.232");
     hc.AddByMac (MacAddress("00:00:00:00:00:02"), "192.168.1.98");
     hc.AddByMac (MacAddress("00:00:00:00:00:03"), "192.168.1.99");
@@ -439,18 +406,18 @@ bool test_match (std::string inIp, std::string inDpUuid, HostCache &hc) {
             return false;
             std::string uuid = h_ptr->getUuid ();
             if (uuid != inDpUuid) {
-                if (uuid == "") {
-                    std::cout << inIp << " did not match with profile " << inDpUuid << std::endl;
-                } else {
-                    std::cout << inIp << " did not match with profile " << inDpUuid << " but with " << uuid << std::endl;
-                }
+                    if (uuid == "") {
+                        DLOG_IF(INFO, Debug) << inIp << " did not match with profile " << inDpUuid;
+                    } else {
+                        DLOG_IF(INFO, Debug) << inIp << " did not match with profile " << inDpUuid << " but with " << uuid;
+                    }
                 json j;
-                h_ptr->DeviceStats(j, true, true);
-                std::cout << j << std::endl;
+                h_ptr->DeviceStats(j, 604800, true, true);
+                DLOG_IF(INFO, Debug) << j;
                 return false;
 
             } else {
-                std::cout << inIp << " MATCHED " << inDpUuid << std::endl;
+                DLOG_IF(INFO, Debug)  << inIp << " MATCHED " << inDpUuid;
                 return true;
             }
         }
@@ -461,7 +428,7 @@ bool test_match (std::string inIp, std::string inDpUuid, HostCache &hc) {
 
 TEST(HostCacheTest, importDeviceProfileMatches) {
     InterfaceMap ifMap;
-    HostCache hC(ifMap, "", 0, 0, "", false, true);
+    HostCache hC(ifMap, "", 0, 0, "", false, false);
     hC.loadDeviceProfiles("tests/DeviceProfiles.json");
     auto  matches = hC.ImportDeviceProfileMatches("tests/DeviceMatches.json");
     ASSERT_EQ(matches, 9);
@@ -470,8 +437,8 @@ TEST(HostCacheTest, importDeviceProfileMatches) {
 TEST(HostCacheTest, MacAddressTest) {
     Config c(true);
     c.Load("tests/noddos.yml");
-    InterfaceMap ifMap(c.LanInterfaces, c.WanInterfaces, true);
-    HostCache hC(ifMap, "", 0, 0, "", false, true);
+    InterfaceMap ifMap(c.LanInterfaces, c.WanInterfaces, false);
+    HostCache hC(ifMap, "", 0, 0, "", false, false);
     MacAddress Mactest ("00:00:00:00:00:03");
     hC.AddByMac (Mactest, "192.168.1.99");
 
@@ -519,21 +486,21 @@ TEST(MdnsTest, parseMdnsInfo) {
     msg[340] = 41;
 
     InterfaceMap ifMap;
-    HostCache hC(ifMap, "", 0, 14400, "", false, true);
+    HostCache hC(ifMap, "", 0, 14400, "", false, false);
 
-    auto Host = std::make_shared<MdnsHost>();
+    auto mHost = std::make_shared<MdnsHost>();
 
     Mdns m(hC, 86400);
-    m.parseTxtRr(Host, msg);
+    m.parseTxtRr(mHost, msg);
 
-    ASSERT_EQ(Host->Manufacturer, "EPSON");
-    ASSERT_EQ(Host->ModelName, "XP-410 Series");
-    ASSERT_EQ(Host->DeviceUrl, "http://EPSON410.local.:80/PRESENTATION/BONJOUR");
+    ASSERT_EQ(mHost->Manufacturer, "EPSON");
+    ASSERT_EQ(mHost->ModelName, "XP-410 Series");
+    ASSERT_EQ(mHost->DeviceUrl, "http://EPSON410.local.:80/PRESENTATION/BONJOUR");
 }
 
 TEST(SsdpServerTest, ssdpLocation) {
     InterfaceMap ifMap;
-    HostCache hC(ifMap, "", 0, 1400, "", false, true);
+    HostCache hC(ifMap, "", 0, 1400, "", false, false);
     auto sHost = std::make_shared<SsdpHost>();
     sHost->Location="http://192.168.1.248:49152/rootDesc.xml";
     sHost->IpAddress = "192.168.1.249";
@@ -548,7 +515,7 @@ TEST(SsdpServerTest, ssdpLocation) {
 
 TEST(SsdpServerTest, parseSsdpMessage) {
     InterfaceMap ifMap;
-    HostCache hC(ifMap, "", 0, 1400, "", false, true);
+    HostCache hC(ifMap, "", 0, 1400, "", false, false);
     SsdpServer sServer(hC, 86400);
     char msg[300] = "NOTIFY * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nCACHE-CONTROL: max-age=60\r\nlOCATION: http://192.168.1.248:49152/rootDesc.xml\r\nSERVER: Linux 3.0.8 UPnP/1.1 MiniUPnPd/1.7\r\nupnp:rootdevice\r\nuuid:Upnp-BasicDevice-1_0-BC66411075FD::upnp:rootdevice\r\n\01-NLS: 1\r\nBOOTID.UPNP.ORG: 1\r\nCONFIGID.UPNP.ORG: 1337\r\n";
     auto sHost = std::make_shared<SsdpHost>();
@@ -560,7 +527,7 @@ TEST(SsdpServerTest, parseSsdpMessage) {
 
 TEST(WsDiscoveryTest, parseWsDiscoveryMessage) {
     InterfaceMap ifMap;
-    HostCache hC(ifMap, "", 0, 1400, "", false, true);
+    HostCache hC(ifMap, "", 0, 1400, "", false, false);
     WsDiscovery wServer(hC, 86400);
 
     unsigned char WsDiscoveryResponse[] = "<?xml version=\"1.0\" encoding=\"utf-8\"?><soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\" xmlns:wsdp=\"http://schemas.xmlsoap.org/ws/2006/02/devprof\" xmlns:wsa=\"http://schemas.xmlsoap.org/ws/2004/08/addressing\" xmlns:wsd=\"http://schemas.xmlsoap.org/ws/2005/04/discovery\" xmlns:wprt=\"http://schemas.microsoft.com/windows/2006/08/wdp/print\" xmlns:wscn=\"http://schemas.microsoft.com/windows/2006/08/wdp/scan\"><soap:Header><wsa:Action>http://schemas.xmlsoap.org/ws/2005/04/discovery/ProbeMatches</wsa:Action><wsa:To>http://schemas.xmlsoap.org/ws/2004/08/addressing/role/anonymous</wsa:To><wsa:MessageID>urn:uuid:0af48d00-a033-11b2-b522-ac1826841a46</wsa:MessageID><wsa:RelatesTo>urn:uuid:4ed84e57-4743-412a-ab29-e7887ce6f587</wsa:RelatesTo><wsd:AppSequence  InstanceId=\"271\" MessageNumber=\"10\"></wsd:AppSequence></soap:Header><soap:Body><wsd:ProbeMatches><wsd:ProbeMatch><wsa:EndpointReference><wsa:Address>urn:uuid:cfe92100-67c4-11d4-a45f-ac1826841a46</wsa:Address></wsa:EndpointReference><wsd:Types>wsdp:Device wscn:ScanDeviceType wprt:PrintDeviceType</wsd:Types><wsd:XAddrs>http://192.168.1.245:80/WSD/DEVICE</wsd:XAddrs><wsd:MetadataVersion>207</wsd:MetadataVersion></wsd:ProbeMatch></wsd:ProbeMatches></soap:Body></soap:Envelope>";
@@ -569,11 +536,139 @@ TEST(WsDiscoveryTest, parseWsDiscoveryMessage) {
     ASSERT_TRUE(wServer.ParseWsDiscoveryMessage(Host, WsDiscoveryResponse, len));
 }
 
+
+TEST(HostTest, Comparison) {
+    struct MdnsHost h1, h2;
+    ASSERT_TRUE(h1 == h2);
+    h1.IpAddress = "192.168.1.1";
+    ASSERT_FALSE(h1 == h2);
+    h1.Hostname = "simpletest";
+    ASSERT_FALSE(h1 == h2);
+    h1.Os = "linux";
+    ASSERT_FALSE(h1 == h2);
+    h1.Hw = "hardware";
+    ASSERT_FALSE(h1 == h2);
+    h1.DeviceUrl = "http://192.168.1.3/testmodel";
+    ASSERT_FALSE(h1 == h2);
+    h1.Manufacturer = "someco";
+    ASSERT_FALSE(h1 == h2);
+    h1.ModelName= "somedevice";
+    ASSERT_FALSE(h1 == h2);
+
+    h2.IpAddress = "192.168.1.1";
+    ASSERT_FALSE(h1 == h2);
+    h2.Hostname = "simpletest";
+    ASSERT_FALSE(h1 == h2);
+    h2.Os = "linux";
+    ASSERT_FALSE(h1 == h2);
+    h2.Hw = "hardware";
+    ASSERT_FALSE(h1 == h2);
+    h2.DeviceUrl = "http://192.168.1.3/testmodel";
+    ASSERT_FALSE(h1 == h2);
+    h2.Manufacturer = "someco";
+    ASSERT_FALSE(h1 == h2);
+    h2.ModelName= "somedevice";
+    ASSERT_TRUE(h1 == h2);
+}
+
+TEST(HostTest, pruneHost) {
+    MacAddress m("00:00:00:00:00:01");
+    Host h(m, false);
+    ASSERT_TRUE(h.setFlowEntry(1000, "10.0.0.0", 80, 17, 0));
+    ASSERT_TRUE(h.setFlowEntry(1001, "10.0.0.1", 81, 17, 60));
+    ASSERT_FALSE(h.setFlowEntry(1001, "10.0.0.1", 81, 17, 60));
+    ASSERT_EQ(h.FlowDestinationCount(),2);
+    ASSERT_EQ(h.Prune(false), 1);
+    ASSERT_EQ(h.Prune(true), 1);
+}
+
+TEST(HostTest, exportDeviceInfo) {
+    std::string deviceprofilesfile = "tests/DeviceProfiles.json";
+
+    InterfaceMap ifMap;
+    HostCache hC(ifMap, "", 0, 14400, "", false, false);
+    hC.loadDeviceProfiles(deviceprofilesfile);
+    hC.AddByMac (MacAddress("00:00:00:00:00:01"), "192.168.1.234");
+
+    auto sh = std::make_shared<SsdpHost>();
+    sh->IpAddress = "192.168.1.234";
+    sh->Manufacturer = "Amazon.com, Inc.";
+    sh->ModelName = "FireTV";
+    hC.AddSsdpInfo(sh);
+    // This should match with UUID: 694e8c7e-69f0-400f-824d-b94af7c7b7cc
+    ASSERT_TRUE(hC.MatchByIpAddress("192.168.1.234"));
+
+    // We add additional data to it
+    hC.AddDhcpRequest("192.168.1.234", MacAddress("00:00:00:00:00:01"), "android-49e3daef3e116688", "android-dhcp-7.1.1");
+
+    std::string msg = "^txtvers=1^priority=30^ty=EPSON XP-410 Series^usb_MFG=EPSON^usb_MDL=XP-410 Series^product=(EPSON XP-410 Series)^pdl=application/octet-stream,image/urf,image/jpeg^rp=ipp/print^qtotal=1&adminurl=http://EPSON410.local.:80/PRESENTATION/BONJOUR^note=^Color=T^Duplex=F^Fax=F^Scan=T^URF=CP1,MT1-3-8-10-11-12,PQ4-5,OB9,OFU0,RS360,SRGB24,W8,IS1,V1.2^UUID=cfe92100-67c4-11d4-a45f-ac1826841a46";
+    msg[0] = 9;
+    msg[10] = 11;
+    msg[22] = 22;
+    msg[45] = 13;
+    msg[59] = 21;
+    msg[81] = 29;
+    msg[111] = 49;
+    msg[161] = 12;
+    msg[174] = 8;
+    msg[183] = 55;
+    msg[239] = 5;
+    msg[245] = 7;
+    msg[253] = 8;
+    msg[262] = 5;
+    msg[268] = 6;
+    msg[275] = 64;
+    msg[340] = 41;
+
+
+    auto mdnsHost = std::make_shared<MdnsHost>();
+    mdnsHost->IpAddress = "192.168.1.234";
+
+    Mdns m(hC, 86400);
+    m.parseTxtRr(mdnsHost, msg);
+    hC.AddMdnsInfo(mdnsHost);
+
+    auto h_sptr = hC.FindHostByIp("192.168.1.234");
+
+    h_sptr->addorupdateDnsQueryList("www.noddos.io", 60);
+    json j;
+    h_sptr->ExportDeviceInfo(j, true);
+    ASSERT_EQ(j[0]["MacAddress"], "00:00:00:00:00:01");
+    ASSERT_EQ(j[0]["DeviceProfileUuid"], h_sptr->getUuid());
+    ASSERT_EQ(j[0]["Ipv4Address"], "192.168.1.234");
+    ASSERT_EQ(j[0]["Ipv6Address"], "");
+    ASSERT_EQ(j[0]["SsdpManufacturer"], "Amazon.com, Inc.");
+    ASSERT_EQ(j[0]["SsdpModelName"], "FireTV");
+    ASSERT_EQ(j[0]["MacOid"], "00:00:00");
+    ASSERT_EQ(j[0]["MdnsModelName"], "XP-410 Series");
+    ASSERT_EQ(j[0]["MdnsManufacturer"], "EPSON");
+    ASSERT_EQ(j[0]["DhcpHostname"], "android-49e3daef3e116688");
+    ASSERT_EQ(j[0]["DhcpVendor"], "android-dhcp-7.1.1");
+    // ASSERT_EQ(j[0][""], "");
+    ASSERT_EQ(j[0]["DnsQueries"], "www.noddos.io ");
+}
+
+TEST (HostTest, dnsQueryList) {
+    MacAddress mac("00:00:00:00:00:01");
+    Host h(mac, false);
+    h.addorupdateDnsQueryList("www.noddos.io", 0);
+    h.addorupdateDnsQueryList("api.noddos.io", 60);
+    ASSERT_TRUE(h.inDnsQueryList("www.noddos.io"));
+    ASSERT_TRUE(h.inDnsQueryList("api.noddos.io"));
+    ASSERT_EQ(h.pruneDnsQueryList(false),1);
+    ASSERT_FALSE(h.inDnsQueryList("www.noddos.io"));
+    ASSERT_TRUE(h.inDnsQueryList("api.noddos.io"));
+    ASSERT_EQ(h.pruneDnsQueryList(true),1);
+    ASSERT_FALSE(h.inDnsQueryList("www.noddos.io"));
+    ASSERT_FALSE(h.inDnsQueryList("api.noddos.io"));
+    ASSERT_EQ(h.pruneDnsQueryList(true),0);
+}
+
 TEST(HostTest, matchHostsToDeviceProfile) {
     std::string deviceprofilesfile = "tests/DeviceProfiles.json";
 
     InterfaceMap ifMap;
-    HostCache hC(ifMap, "", 0, 14400, "", false, true);
+    HostCache hC(ifMap, "", 0, 14400, "", false, false);
     hC.loadDeviceProfiles(deviceprofilesfile);
     hC.AddByMac (MacAddress("00:00:00:00:00:01"), "192.168.1.232");
     hC.AddByMac (MacAddress("00:00:00:00:00:02"), "192.168.1.98");
@@ -625,17 +720,6 @@ TEST(HostTest, matchHostsToDeviceProfile) {
     hC.AddDhcpRequest("192.168.1.251", MacAddress("00:00:00:00:00:20"), "kindle-a40752280", "");
     hC.AddDnsQueryIp("192.168.1.251", "api.amazon.com", "1.1.1.5");
     ASSERT_TRUE(hC.MatchByIpAddress("192.168.1.251"));
-
-    auto h = Host(MacAddress("01:01:01:01:01:01"), true);
-    ASSERT_FALSE(h.inPrivateAddressRange("11.0.0.0"));
-    ASSERT_FALSE(h.inPrivateAddressRange("9.255.255.255"));
-    ASSERT_FALSE(h.inPrivateAddressRange("172.15.255.255"));
-    ASSERT_FALSE(h.inPrivateAddressRange("172.24.0.0"));
-    ASSERT_FALSE(h.inPrivateAddressRange("192.167.255.255"));
-    ASSERT_FALSE(h.inPrivateAddressRange("192.169.0.0"));
-    ASSERT_TRUE(h.inPrivateAddressRange("192.168.1.1"));
-    ASSERT_TRUE(h.inPrivateAddressRange("172.20.1.1"));
-    ASSERT_TRUE(h.inPrivateAddressRange("10.255.1.1"));
 }
 
 TEST(IpsetTest, blah) {
@@ -643,8 +727,8 @@ TEST(IpsetTest, blah) {
     // EXPECT_EQ(u, 0);
 
     if (u == 0) {
-        Ipset i(true);
-        i.Open("noddostestv4", "hash:ip", true, true);
+        Ipset i(false);
+        i.Open("noddostestv4", "hash:ip", true, false);
 
         Tins::IPv4Address ipfirst("192.168.1.1");
 
@@ -659,14 +743,14 @@ TEST(IpsetTest, blah) {
         ASSERT_TRUE(i.Remove(ipthird));
 
         Ipset s(true);
-        i.Open("noddostestv6", "hash:ip", false, true);
+        i.Open("noddostestv6", "hash:ip", false, false);
 
         Tins::IPv6Address ipsix("fdbb:2ad1:cea0:0:1e1b:dff:fe7d:f5ec");
         ASSERT_TRUE(i.Add(ipsix, 604800));
         ASSERT_TRUE(i.In(ipsix));
         ASSERT_TRUE(i.Remove(ipsix));
 
-        Ipset j("noddostest2", "hash:ip", NFPROTO_IPV4, true);
+        Ipset j("noddostest2", "hash:ip", NFPROTO_IPV4, false);
         Tins::IPv4Address ipfourth("192.168.1.1");
 
         ASSERT_TRUE(j.Add(ipfourth, 604800));
@@ -694,14 +778,13 @@ uint32_t RestApiCall (const std::string api, const json &j, const std::string Cl
     std::string body = j.dump();
     char buf[strlen(body.c_str())+1];
     strcpy(buf, body.c_str());
-    if (Debug) {
-        syslog (LOG_DEBUG, "Uploading %zu bytes of data to %s", strlen(buf), url.c_str());
-    }
+    DLOG_IF(INFO, Debug) << "Uploading " << strlen(buf) << " bytes of data to " << url;
+    DLOG_IF(INFO, Debug) << "HostCache: Upload using cert " << ClientApiCertFile << " and key " << ClientApiKeyFile;
 
     struct curl_slist *hlist = NULL;
     hlist = curl_slist_append(hlist, "Content-Type: application/json");
     if (hlist == NULL) {
-        syslog(LOG_ERR, "Couldn't create curl header for API call to %s", api.c_str());
+        LOG(ERROR) << "Couldn't create curl header for API call to " << api;
     }
 
     std::string response_string;
@@ -712,98 +795,52 @@ uint32_t RestApiCall (const std::string api, const json &j, const std::string Cl
     if (curl) {
         CURLcode ret;
         ret = curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-        if(ret) {
-            syslog (LOG_ERR, "Curl setopt CURLOPT_URL returned %d",ret);
-        }
+        LOG_IF(ERROR, ret) << "Curl setopt CURLOPT_URL returned " << ret;
         // curl_easy_setopt(curl, CURLOPT_SSLCERTTYPE, "PEM");
         ret = curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_ALL);
-        if(ret) {
-            syslog (LOG_ERR, "Curl setopt CURLOPT_USE_SSL returned %u", ret);
-        }
+        LOG_IF(ERROR, ret) << "Curl setopt CURLOPT_USE_SSL returned " << ret;
         ret = curl_easy_setopt(curl, CURLOPT_SSLCERT, ClientApiCertFile.c_str());
-        if(ret) {
-            syslog (LOG_ERR, "Curl setopt CURLOPT_SSLCERT returned %u", ret);
-        }
+        LOG_IF(ERROR, ret) << "Curl setopt CURLOPT_SSLCERT returned " << ret;
         ret = curl_easy_setopt(curl, CURLOPT_SSLKEY, ClientApiKeyFile.c_str());
-        if(ret) {
-            syslog (LOG_ERR, "Curl setopt CURLOPT_SSLKEY returned %u", ret);
-        }
+        LOG_IF(ERROR, ret) << "Curl setopt CURLOPT_SSLKEY returned " << ret;
         ret = curl_easy_setopt(curl, CURLOPT_SSL_CIPHER_LIST, "ECDHE-RSA-AES256-GCM-SHA384");
-        if(ret) {
-            syslog (LOG_ERR, "Curl setopt CURLOPT_SSL_CIPHER_LIST returned %d", ret);
-        }
+        LOG_IF(ERROR, ret) << "Curl setopt CURLOPT_SSL_CIPHER_LIST returned " << ret;
         ret = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, buf);
-        if(ret) {
-            syslog (LOG_ERR, "Curl setopt CURLOPT_POSTFIELDS returned %d", ret);
-        }
+        LOG_IF(ERROR, ret) << "Curl setopt CURLOPT_POSTFIELDS returned " << ret;
         ret = curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, (curl_off_t) strlen(buf));
-        if(ret) {
-            syslog (LOG_ERR, "Curl setopt CURLOPT_POSTFIELDSIZE_LARGE returned %d", ret);
-        }
+        LOG_IF(ERROR, ret) << "Curl setopt CURLOPT_POSTFIELDSIZE_LARGE returned " << ret;
         ret = curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
-        if(ret) {
-            syslog (LOG_ERR, "Curl setopt CURLOPT_NOPROGRESS returned %d", ret);
-        }
+        LOG_IF(ERROR, ret) << "Curl setopt CURLOPT_NOPROGRESS returned " << ret;
         ret = curl_easy_setopt(curl, CURLOPT_USERAGENT, "noddos/1.0.0");
-        if(ret) {
-            syslog (LOG_ERR, "Curl setopt CURLOPT_USERAGENT returned %u", ret);
-        }
+        LOG_IF(ERROR, ret) << "Curl setopt CURLOPT_USERAGENT returned " << ret;
         ret = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, hlist);
-        if(ret) {
-            syslog (LOG_ERR, "Curl setopt CURLOPT_HTTPHEADER returned %d", ret);
-        }
+        LOG_IF(ERROR, ret) << "Curl setopt CURLOPT_HTTPHEADER returned " << ret;
         // Curllib version on lede doesn't support HTTP 2.0
         // ret = curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2_0);
-        // if(ret) {
-        //  syslog (LOG_ERR, "Curl setopt CURLOPT_WRITEFUNCTION returned %d", ret);
-        // }
+        // LOG_IF(ERROR, ret) << "Curl setopt CURLOPT_WRITEFUNCTION returned " << ret;
         ret = curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 0L);
-        if(ret) {
-            syslog (LOG_ERR, "Curl setopt CURLOPT_MAXREDIRS returned %d", ret);
-        }
+        LOG_IF(ERROR, ret) << "Curl setopt CURLOPT_MAXREDIRS returned " << ret;
         ret = curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 0L);
-        if(ret) {
-            syslog (LOG_ERR, "Curl setopt CURLOPT_TCP_KEEPALIVE returned %d", ret);
-        }
+        LOG_IF(ERROR, ret) << "Curl setopt CURLOPT_TCP_KEEPALIVE returned " << ret;
         // ret = curl_easy_setopt(curl, CURLOPT_TCP_FASTOPEN, 1L);
-        // if(ret) {
-        //  syslog (LOG_ERR, "Curl setopt CURLOPT_WRITEFUNCTION returned %d", ret);
-        // }
+        // LOG_IF(ERROR, ret) << "Curl setopt CURLOPT_WRITEFUNCTION returned " << ret;
         ret = curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, (long) 5000);
-        if(ret) {
-            syslog (LOG_ERR, "Curl setopt CURLOPT_TIMEOUT_MS returned %d", ret);
-        }
+        LOG_IF(ERROR, ret) << "Curl setopt CURLOPT_TIMEOUT_MS returned " << ret;
         ret = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlwriteFunction);
-        if(ret) {
-            syslog (LOG_ERR, "Curl setopt CURLOPT_WRITEFUNCTION returned %d", ret);
-        }
+        LOG_IF(ERROR, ret) << "Curl setopt CURLOPT_WRITEFUNCTION returned " << ret;
         ret = curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_string);
-        if(ret) {
-            syslog (LOG_ERR, "Curl setopt CURLOPT_WRITEDATA returned %d", ret);
-        }
+        LOG_IF(ERROR, ret) << "Curl setopt CURLOPT_WRITEDATA returned " << ret;
         ret = curl_easy_setopt(curl, CURLOPT_HEADERDATA, &header_string);
-        if(ret) {
-            syslog (LOG_ERR, "Curl setopt CURLOPT_HEADERDATA returned %d", ret);
-        }
-        if (false && Debug) {
-            // TODO test on whether STDOUT is open for writing
-            // 'always' disabled as this logs to STDOUT, which is normally closed
-            ret = curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-        }
-
+        LOG_IF(ERROR, ret) << "Curl setopt CURLOPT_HEADERDATA returned " << ret;
 
         ret = curl_easy_perform(curl);
-        if(ret) {
-            syslog (LOG_ERR, "Curl easy_perform returned %d", ret);
-        }
+        LOG_IF(ERROR, ret) << "Curl easy_perform returned " << ret;
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
         curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &elapsed);
         curl_slist_free_all(hlist);
         curl_easy_cleanup(curl);
         curl = NULL;
-        if (Debug) {
-                syslog (LOG_DEBUG, "Upload resulted in %lu status, data %s", response_code, response_string.c_str());
-            }
+        DLOG_IF(INFO, Debug) << "Upload resulted in " << response_code << " status, data " << response_string;
     }
 
     if (Debug) {
@@ -816,7 +853,7 @@ uint32_t RestApiCall (const std::string api, const json &j, const std::string Cl
         std::string filename = "/tmp/" + file + "-" + buf;
         std::ofstream ofs(filename);
         if (not ofs.is_open()) {
-            syslog(LOG_WARNING, "Couldn't open %s", filename.c_str());
+            DLOG(WARNING) << "Couldn't open" << filename;
         }
         ofs << std::setw(4) << j << std::endl;
         ofs.close();

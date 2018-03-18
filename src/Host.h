@@ -36,6 +36,8 @@
 #include "json.hpp"
 using json = nlohmann::json;
 
+#include <glog/logging.h>
+
 #include "noddos.h"
 #include "DhcpRequest.h"
 #include "FlowEntry.h"
@@ -49,39 +51,55 @@ using json = nlohmann::json;
 typedef std::list<std::shared_ptr<FlowEntry>> FlowEntryList;
 
 
-#define HOSTDEFAULTEXPIRATION 604800
 
+
+/*! \class Host
+ *  \brief A host device on the network that may have been matched to a device profile
+ *
+ *  The Host class stores all information about a host/device on the network. The traffic of hosts
+ *  is tracked to allow it to be matched to a list of Device Profiles to find out what the manufacter and model
+ *  of the host is. Traffic policies may be assigned to all traffic coming from and destined for the host.
+ */
 class Host : public iCache {
 private:
-    // All DNS queries performed by the host
-    std::map<std::string,time_t> DnsQueryList;
 
-    // IPv4 & IPv6 flows of the host
- 	std::map<Tins::IPv4Address, std::shared_ptr<FlowEntryList>> FlowCacheIpv4;
-   	std::map<Tins::IPv6Address, std::shared_ptr<FlowEntryList>> FlowCacheIpv6;
+    std::map<std::string,time_t> DnsQueryList; //!< All DNS queries performed by the host
 
-   	std::string Ipv4Address;
-   	std::string Ipv6Address;
-   	MacAddress Mac;
-   	DhcpRequest Dhcp;
-   	SsdpHost Ssdp;
-   	WsDiscoveryHost Wsd;
-   	MdnsHost Mdns;
-   	std::string Uuid;
-   	uint16_t matchversion;
-   	ConfidenceLevel IdentifyConfidenceLevel;
-   	ConfidenceLevel EnforceConfidenceLevel;
-   	bool UploadStats;
-   	bool Debug;
+ 	std::map<Tins::IPv4Address, std::shared_ptr<FlowEntryList>> FlowCacheIpv4; //!< Tracking of all IPv4 flows of the host
+   	std::map<Tins::IPv6Address, std::shared_ptr<FlowEntryList>> FlowCacheIpv6; //!< Tracking of all IPv6 flows of the host
+
+   	std::string Ipv4Address; //!< IPv4 address of the host TODO: support multiple IPv6 addresses
+   	std::string Ipv6Address; //!< IPv6 address of the host TODO: support multiple IPv6 addresses
+   	MacAddress Mac; //!< Ethernet MAC address of the host
+   	DhcpRequest Dhcp; //!< Data on any DHCP request sent by the host
+   	SsdpHost Ssdp; //!< Simple Service Discovery Protocol data sent by the host
+   	WsDiscoveryHost Wsd; //!< Web Service Discovery data sent by the host
+   	MdnsHost Mdns; //!< Multicast Domain Name Service data sent by the host
+   	std::string Uuid; //!< UUID of the DeviceProfile that the host has been matched with
+   	uint16_t matchversion; //!< The version of the DeviceProfile used to match the host with
+   	ConfidenceLevel IdentifyConfidenceLevel; //!< Confidence level of the match
+   	ConfidenceLevel EnforceConfidenceLevel; //!< Confidence level to restrict traffic of the host
+   	bool UploadStats; //!< Should statistics of this host be uploaded to the cloud API?
+   	bool Debug; //!< Should debug logging be generated for this host?
 
 public:
+   	/*! \brief Constructor for the Host class
+   	 *  Creates a new host object
+   	 *  \param [in] inMac the Ethernet MAC address of the host
+   	 *  \param [in] inDebug optional flag to enable debug logging for this host
+   	 */
 	Host(const MacAddress inMac, const bool inDebug = false): Mac{inMac}, Debug{inDebug}  {
 		iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);
 		UploadStats = true;
 		matchversion = 0;
 		IdentifyConfidenceLevel = EnforceConfidenceLevel = ConfidenceLevel::None;
 	}
-
+    /*! \brief Constructor for the Host class
+     *  Creates a new host object
+     *  \param [in] inMac the Ethernet MAC address of the host
+     *  \param [in] inUuid the UUID of the DeviceProfile to which the host has previously been matched
+     *  \param [in] inDebug optional flag to enable debug logging for this host
+     */
 	Host(const MacAddress inMac, const std::string inUuid, const bool inDebug = false):
 			Mac{inMac}, Uuid{inUuid}, Debug{inDebug} {
 		iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);
@@ -90,48 +108,98 @@ public:
 		IdentifyConfidenceLevel = EnforceConfidenceLevel = ConfidenceLevel::None;
 	}
 	virtual ~Host() {
-	    if (Debug == true) {
-	        syslog (LOG_DEBUG, "Host: Destroying Host instance: %s", Ipv4Address.c_str());
-	    }
+	    DLOG_IF(INFO, Debug) << "Host: Destroying Host instance: " << Ipv4Address;
 	};
+
+	uint32_t Prune (const bool Force = false);
+
 	bool Match(const DeviceProfileMap& dpMap);
 	ConfidenceLevel Match(const DeviceProfile& dp);
 	ConfidenceLevel Match(const Identifier& i);
 	bool Match(const MatchCondition& mc);
 	bool Match(const ContainCondition& cc);
-	void setIpAddress (const std::string inIpAddress) { Ipv4Address = inIpAddress; }
+
+
 	bool setFlowEntry(const uint16_t inSrcPort, const std::string inDstIp,
-			const uint16_t inDstPort, const uint8_t inProtocol, const uint32_t inExpiration);
-	uint32_t FlowCacheCount () { return FlowCacheIpv4.size() + FlowCacheIpv6.size(); }
-    bool setDhcp (const std::string IpAddress, const MacAddress Mac, const std::string Hostname, const std::string DhcpVendor);
+			const uint16_t inDstPort, const uint8_t inProtocol, const uint32_t inTtl);
+
+	/*! \brief Get the total number of destinations in the FlowCache for a host
+	 *  \return Total number of IPv4 and IPv6 destinations to which a host has flows
+	 */
+	uint32_t FlowDestinationCount () { return FlowCacheIpv4.size() + FlowCacheIpv6.size(); }
+
+	bool setDhcp (const std::string IpAddress, const MacAddress Mac, const std::string Hostname, const std::string DhcpVendor);
 	bool setSsdpInfo(const std::shared_ptr<SsdpHost> insHost);
 	bool setWsDiscoveryInfo(const std::shared_ptr<WsDiscoveryHost> inwsdHost);
     bool setMdnsInfo(const std::shared_ptr<MdnsHost> inmdnsHost);
 
-    void addorupdateDnsQueryList (std::string inFqdn);
+    void addorupdateDnsQueryList (const std::string inFqdn, const time_t inTtl = DNSQUERYDEFAULTTTL);
     bool inDnsQueryList (std::string inFqdn);
-  	uint32_t pruneDnsQueryList (time_t Expired = 14400, bool Force = false);
+  	uint32_t pruneDnsQueryList (const bool Force = false);
 
+  	/*! \brief Check whether a host has been matched to a Device Profile
+  	 *  \return bool on whether the host has been matched to a Device Profile
+  	 */
 	bool isMatched () { return Uuid != ""; }
-	bool UploadsEnabled ();
+
+	/*! \brief Get the UUID of the DeviceProfile to which the host has been matched
+	 *  \return string with UUID of the host or an empty string if the host has not been matched
+	 */
 	std::string getUuid () { return Uuid; }
+
+	/*! \brief Get the MAC address of the host
+	 *  \return string with the MAC address of the host
+	 */
 	std::string getMacAddress () { return Mac.str(); }
+
+    /*! \brief Set the IPv4 address of the host
+     *  \param [in] inIpAddress constant string with an IPv4 address
+     */
+    void setIpAddress (const std::string inIpAddress) { Ipv4Address = inIpAddress; }
+
+    /*! \brief Get the IPv4 address of the host
+	 *  \return string with the IPv4 address of the host or empty string if the host does not have an IPv4 address
+	 */
 	std::string getIpv4Address () { return Ipv4Address; }
+
+    /*! \brief Get the IPv6 address of the host
+     *  \return string with the IPv6 address of the host or empty string if the host does not have an IPv4 address
+     */
 	std::string getIpv6Address () { return Ipv6Address; }
-	void ExportDeviceInfo (json &j, bool detailed = false);
+
+	/*! \brief Check whether the upload of statistics is enabled for this host
+     * \return bool whether uploads are enabled for the host
+     */
+    bool UploadsEnabled () { return UploadStats; }
+
+	void ExportDeviceInfo (json &j, const bool detailed = false);
 	bool DeviceStats(json& j, const uint32_t interval, bool force = false, bool detailed = false);
 	bool TrafficStats(json& j, const uint32_t interval, const bool ReportRfc1918,
 	        const std::set<std::string> & LocalIps,
 	        const DnsCache <Tins::IPv4Address> &dCipv4,
 	        const DnsCache <Tins::IPv6Address> &dCipv6,
-	        const DnsCache <std::string> &dCcname, bool force = false);
-	bool inPrivateAddressRange(const std::string ip );
+	        const DnsCache <std::string> &dCcname, const bool Force = false);
 
-	// iCache interface methods.
-    time_t setExpiration (time_t inExpiration = HOSTDEFAULTEXPIRATION);
-    time_t getExpiration () { return iCache::LastSeen + HOSTDEFAULTEXPIRATION; }
-	bool isExpired() { return time(nullptr) >= iCache::LastSeen + HOSTDEFAULTEXPIRATION; }
-	uint32_t Prune (bool Force = false);
+	/*
+	 * iCache interface methods.
+	 */
+
+	/*! \brief Set the expiration of the host
+	 * Hosts discovered on the network may eventually be expired if no traffic has been traffic to or from the host
+	 * \param [in] inExpiration seconds after which a host with no inbound or outgoing traffic should be expired
+	 * \return Timestamp of when host will be expired
+	 */
+	time_t setExpiration (const uint32_t inTtl = HOSTDEFAULTTTL) {return iCache::Expires = time(nullptr) + inTtl; }
+
+	/*! \brief Get the expiration of the host
+	 *  \return the timestamp of the expiration of the host
+	 */
+    time_t getExpiration () { return iCache::Expires; }
+
+    /*! \brief is the host expired?
+     *  \return bool on whether the host has expired
+     */
+	bool isExpired() { return time(nullptr) >= iCache::Expires;}
 };
 #endif /* HOST_CXX_ */
 

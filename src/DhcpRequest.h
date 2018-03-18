@@ -39,8 +39,8 @@ public:
 	DhcpRequest(const time_t inExpiration = DHCPDEFAULTEXPIRATION) { setExpiration(inExpiration); }
 
 	// iCache interface methods.
-    time_t setExpiration (time_t inExpiration = DHCPDEFAULTEXPIRATION) {
-    	return iCache::Expires = time(nullptr) + inExpiration;
+    time_t setExpiration (uint32_t inTtl = DHCPDEFAULTEXPIRATION) {
+    	return iCache::Expires = time(nullptr) + inTtl;
     }
     time_t getExpiration () { return iCache::Expires; }
     bool isExpired() { return time(nullptr) >= iCache::Expires; }

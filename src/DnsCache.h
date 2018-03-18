@@ -412,8 +412,9 @@ public:
      * \param [in] inFqdn a constant string specifying the Fully Qualified Domain Name to add
      * \param [in] inCname a constant string specifying the CNAME record
      * \param [in] inTtl a time_t specifying the Time To Live for the DNS record
+     * \return bool whether the record was added
      */
-    void addorupdateCname (const std::string inFqdn, const std::string inCname,  time_t inTtl) {
+    bool addorupdateCname (const std::string inFqdn, const std::string inCname,  time_t inTtl) {
         auto now = time(nullptr);
         if (inTtl < MinTtl) {
             inTtl = MinTtl;
@@ -428,32 +429,39 @@ public:
 
         DLOG_IF(INFO, Debug) << "DnsCnameCache: Setting " << fqdn << " to CNAME " << cname << " with expiration " << Expiration;
 
+        bool fqdnAdded = (DnsFwdCache.find(fqdn) == DnsFwdCache.end());
         DnsRevCache[cname][fqdn] = Expiration;
         DnsFwdCache[fqdn][cname] = Expiration;
+        return fqdnAdded;
     }
 
     /*! \brief Add or update CNAME
-     * Adds the CNAME record for an FQDN
+     * Adds the DNS lookup for a FQDN that resulted in a CNAME. If the FQDN is in the FQDN-to-DeviceProfile map then
+     * copy that entry for the CNAME so that the CNAME is also associated with the Device Profiles.
      * \param [in] inFqdn a constant string specifying the Fully Qualified Domain Name to add
      * \param [in] inCname a constant string specifying the CNAME record
-     * \param
+     * \param [in/out] fdpMap reference to a FQDN to Device Profile Map
      * \param [in] inTtl a time_t specifying the Time To Live for the DNS record
+     * \return bool whether the record was added
+     * \sa addorupdateCname(const std::string inFqdn, const std::string inCname, const time_t inTtl), FqdnDeviceProfileMap, DnsCache
      */
-    void addorupdateCname (const std::string inFqdn, const std::string inCname, FqdnDeviceProfileMap &fdpMap, const time_t inTtl) {
+    bool addorupdateCname (const std::string inFqdn, const std::string inCname, FqdnDeviceProfileMap &fdpMap, const time_t inTtl) {
         std::string fqdn = inFqdn;
         std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
 
         std::string cname = inCname;
         std::transform(cname.begin(), cname.end(), cname.begin(), ::tolower);
 
+        // If the FQDN is in the DeviceProfileMap with then we want to create another
+        // DeviceProfileMap entry for the CNAME with the same data as for the FQDN
         auto it = fdpMap.find(fqdn);
         if (it != fdpMap.end()) {
-            DLOG_IF(INFO, Debug) << "DnsCnameCache: Found FqdnDeviceProfileMap entry for " << inFqdn << " with CNAME " << inCname;
+            DLOG_IF(INFO, Debug) << "DnsCnameCache: Found FqdnDeviceProfileMap entry for " << inFqdn << " with CNAME " << inCname << ", so copying its data";
+            fdpMap[cname].insert(it->second.begin(), it->second.end());
         } else {
             DLOG_IF(INFO, Debug) << "DnsCnameCache: Didn't find FqdnDeviceProfileMap entry for " << inFqdn << " with CNAME " << inCname;
-            fdpMap[cname].insert(it->second.begin(), it->second.end());
         }
-        addorupdateCname(fqdn, cname, inTtl);
+        return addorupdateCname(fqdn, cname, inTtl);
     }
 
 
@@ -463,6 +471,8 @@ public:
      * \param [in] inCname a constant string specifying the Fully Qualified Domain Name for which to find FQDNs that have a CNAME to it
      * \param [in] recdepth an optional constant uint8_t specifying the depth of the recursion. This is a safety valve against CNAMEs that
      * directly or indirectly point back to the original FQDN
+     * \return bool whether the record was added
+     * \sa addorupdateCname(const std::string inFqdn, const std::string inCname, FqdnDeviceProfileMap &fdpMap,const time_t inTtl), FqdnDeviceProfileMap, DnsCache
      */
     std::set<std::string> getFqdns (const std::string inCname, const uint8_t recdepth = 0) const {
         if (recdepth > 5) {

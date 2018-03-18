@@ -64,6 +64,7 @@ private:
 	Ipset srcIpset, dstv4Ipset, dstv6Ipset; //!< Ipset groups that will used to filter traffic from matched hosts to their whitelisted destination IP addresses
 	std::set<std::string> Hosts;
 	std::set<std::string> AllowedFqdns; //!< List of whitelisted destination FQDNs for the devices matching the profile
+	// TODO: Make below a map where the value is the TTL for the Allowed IP v4/v6 address
 	std::set<Tins::IPv4Address> AllowedIpv4s; //!< List of whitelisted hardcoded destinations with IPv4 addresses for the devices matching the profile
     std::set<Tins::IPv6Address> AllowedIpv6s;//!< List of whitelisted hardcoded destinations with IPv6 addresses for the devices matching the profile
 
@@ -170,6 +171,10 @@ public:
         return AllowedFqdns;
     }
 
+    /*! \brief Get a vector of the Identifier objects for a DeviceProfile
+     *  Returns the vector of Identifier objects for a DeviceProfile
+     *  \return constant vector of Identifier objects
+     */
 	const std::vector<std::shared_ptr<Identifier>> & getIdentifiers() const { return Identifiers; }
 
 };

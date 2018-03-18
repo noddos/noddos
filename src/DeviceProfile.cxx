@@ -22,6 +22,11 @@
 
 #include "DeviceProfile.h"
 
+/*! Creates or updates the IPsets for a Device Profile; the IPset for MAC addresses of hosts identified under the Device Profile
+ * the IPset for destination IPv4 addresses and the IPset for destination IPv6 addresses. The latter two may have been listed
+ * in the DeviceProfile or may have been resolved through DNS based on the FQDNs listed in the DeviceProfile
+ *
+ */
 void DeviceProfile::createorupdateIpsets (bool inForce) {
     if (inForce || (hasAllowedEndpoints() && Hosts.size() > 0)) {
         try {
@@ -32,52 +37,49 @@ void DeviceProfile::createorupdateIpsets (bool inForce) {
         }
 
         for (auto ip: AllowedIpv4s) {
-            dstv4Ipset.Add(ip, 31449600); // 1 year
+            dstv4Ipset.Add(ip, 31449600); // TODO: set the TTL based on the TTL of the FQDN instead of 1 year
         }
         for (auto ip: AllowedIpv6s) {
-            dstv6Ipset.Add(ip, 31449600); // 1 year
+            dstv6Ipset.Add(ip, 31449600); // TODO: set the TTL based on the TTL of the FQDN instead of 1 year
         }
         for (auto host: Hosts) {
-            srcIpset.Add(host, 604800); // 1 week
+            srcIpset.Add(host, 31449600); // 1 year, a host is not expected to change device profile and even if it does, the old entry does no harm
         }
     }
 }
 
+/*! Parses JSON object to populate DeviceProfile. The file with JSON objects can be downloaded from https://www.noddos.io/config/DeviceProfiles.json
+ */
 bool DeviceProfile::from_json(const json &j) {
     if (j.find("DeviceProfileUuid") == j.end()) {
-        syslog(LOG_ERR, "No DeviceProfileUuid set, ignoring this Object");
+        LOG(ERROR) << "No DeviceProfileUuid set, ignoring this Object";
         return false;
     }
     if (! j["DeviceProfileUuid"].is_string()) {
-        syslog(LOG_ERR, "DeviceProfileUuid is not a string, ignoring this Object");
+        LOG(ERROR) << "DeviceProfileUuid is not a string, ignoring this Object";
         return false;
     }
     if (DeviceProfileUuid != j["DeviceProfileUuid"].get<std::string>())
         return false;
 
-    if (Debug == true) {
-        syslog(LOG_DEBUG, "Read Device Profile for UUID %s", DeviceProfileUuid.c_str());
-    }
+
+    DLOG_IF(INFO, Debug) << "Read Device Profile for UUID " << DeviceProfileUuid;
 
     if (j.find("DeviceProfileVersion") == j.end()) {
-        syslog(LOG_ERR, "No DeviceProfileVersion value set, ignoring this Object");
+        LOG(ERROR) << "No DeviceProfileVersion value set, ignoring this Object";
         return false;
     }
     if (! j["DeviceProfileVersion"].is_number()) {
-        syslog(LOG_ERR, "DeviceProfile:DeviceProfileVersion is not a number, ignoring this Object");
+        LOG(ERROR) << "DeviceProfile:DeviceProfileVersion is not a number, ignoring this Object";
         return false;
     }
     DeviceProfileVersion = j["DeviceProfileVersion"].get<uint32_t>();
 
     if (j.find("UploadStats") == j.end()) {
-        if (Debug == true) {
-            syslog(LOG_DEBUG, "DeviceProfile:No UploadStats value set, defaulting to false");
-        }
+        DLOG_IF(INFO, Debug) << "DeviceProfile:No UploadStats value set, defaulting to false";
         UploadStats = false;
     } else if (! j["UploadStats"].is_boolean()) {
-        if (Debug == true) {
-            syslog(LOG_DEBUG, "UDeviceProfile:ploadStats is not a bool, defaulting to false");
-        }
+        DLOG_IF(INFO, Debug) <<"UDeviceProfile:UploadStats is not a bool, defaulting to false";
         UploadStats = false;
     } else {
         UploadStats = j["UploadStats"].get<bool>();
@@ -94,38 +96,32 @@ bool DeviceProfile::from_json(const json &j) {
     Identifiers.clear();
 
     if (j.find("Identifiers") == j.end()) {
-        syslog(LOG_WARNING, "DeviceProfile:No Identifiers for profile %s so all devices would match this profile, ignoring this Profile", DeviceProfileUuid.c_str());
+        LOG(WARNING) << "DeviceProfile:No Identifiers for profile " << DeviceProfileUuid << " so all devices would match this profile, ignoring this Profile";
         return false;
     }
     json ijson = j["Identifiers"];
     if (! ijson.is_array()) {
-        syslog(LOG_ERR, "DeviceProfile:Identifiers is not an array so ignoring this profile %s", DeviceProfileUuid.c_str());
+        LOG(ERROR) << "DeviceProfile:Identifiers is not an array so ignoring this profile " << DeviceProfileUuid;
         return false;
     }
     for (json::iterator it = ijson.begin(); it != ijson.end(); ++it ) {
-        if (Debug == true) {
-            syslog(LOG_DEBUG, "DeviceProfile: Adding Identifier");
-        }
+        DLOG_IF(INFO, Debug) << "DeviceProfile: Adding Identifier";
         auto i = std::make_shared<Identifier>(*it);
         Identifiers.push_back(i);
     }
 
     if (j.find("AllowedEndpoints") == j.end()) {
-        if (Debug == true) {
-            syslog(LOG_DEBUG, "DeviceProfile: No whitelist found for profile %s", DeviceProfileUuid.c_str());
-        }
+        DLOG_IF(INFO, Debug) << "DeviceProfile: No whitelist found for profile " << DeviceProfileUuid;
     } else {
         json ajson = j["AllowedEndpoints"];
         if (! ijson.is_array()) {
-            syslog(LOG_ERR, "DeviceProfile:AllowedEndpoints is not an array so ignoring this profile %s", DeviceProfileUuid.c_str());
+            LOG(ERROR) << "DeviceProfile:AllowedEndpoints is not an array so ignoring this profile " << DeviceProfileUuid;
             return false;
         }
         for (json::iterator it = ajson.begin(); it != ajson.end(); ++it ) {
             withAllowedEndpoints = true;
             std::string endpoint = it->get<std::string>();
-            if (Debug == true) {
-                syslog(LOG_DEBUG, "DeviceProfile: Adding allowed endpoint %s", endpoint.c_str());
-            }
+            DLOG_IF(INFO, Debug) << "DeviceProfile: Adding allowed endpoint " << endpoint;
             try {
                 if (isIpv4Address(endpoint, Debug)) {
                     Tins::IPv4Address ip(endpoint);

@@ -56,19 +56,12 @@ public:
 		return 1;
 	}
     // iCache interface methods.
-    time_t setExpiration( time_t inExpiration = FLOWDEFAULTEXPIRATION) {
-    	if (Debug == true) {
-    		syslog (LOG_DEBUG, "Setting flow expiration to %ld", inExpiration);
-    	}
-    	return iCache::Expires = (time(nullptr) + inExpiration);
+    time_t setExpiration( uint32_t inTtl = FLOWDEFAULTTTL) {
+    	return iCache::Expires = (time(nullptr) + inTtl);
     }
     time_t getExpiration () { return iCache::Expires; }
     bool isExpired() {
-    	auto n = time(nullptr);
-    	if (Debug == true) {
-    		syslog (LOG_DEBUG, "Now: %ld, expiration at %ld", n, iCache::Expires );
-    	}
-    	return n >= iCache::Expires;
+    	return time(nullptr) >= iCache::Expires;
     }
 
     uint32_t Prune (bool Force = false) {

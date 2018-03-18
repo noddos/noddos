@@ -115,7 +115,7 @@ public:
     // Adding collected information to a Host instance
 	bool AddByMac (const MacAddress inMacAddress, const std::string inIpAddress = "");
 	bool AddFlow (const std::string srcip, const uint16_t srcport, const std::string dstip, const uint16_t dstport, const uint8_t protocol, const uint32_t expiration);
-	bool AddDnsQueryIp (const std::string clientip, const std::string fqdn, const std::string ip, const uint32_t expire = 86400);
+	bool AddDnsQueryIp (const std::string clientip, const std::string fqdn, const std::string ip, const uint32_t inTtl = DNSQUERYDEFAULTTTL);
     bool AddDhcpRequest (const std::string IpAddress, const MacAddress inMac, const std::string Hostname, const std::string DhcpVendor);
 	bool AddSsdpInfo (const std::shared_ptr<SsdpHost> insHost);
 	bool AddWsDiscoveryInfo (std::shared_ptr<WsDiscoveryHost> inwsdHost);

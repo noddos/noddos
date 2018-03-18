@@ -82,6 +82,14 @@ public:
 	bool operator == (const MacAddress &rhs) const {
 		return Mac == rhs.Mac;
 	}
+    bool operator != (const MacAddress &rhs) const {
+        return Mac != rhs.Mac;
+    }
+
+	friend std::ostream &operator<< (std::ostream & stream, const MacAddress mac) {
+	    stream<<mac.MacString;
+	    return stream;
+	}
 };
 
 #endif /* MACADDRESS_H_ */
