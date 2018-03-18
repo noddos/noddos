@@ -46,7 +46,6 @@
 #include <ifaddrs.h>
 #include <linux/if_link.h>
 
-#include <syslog.h>
 #include <cstdio>
 #include <iomanip>
 #include <cstring>
@@ -60,9 +59,7 @@ using nlohmann::json;
 #include "HostCache.h"
 
 uint32_t HostCache::Prune (bool Force) {
-	if (Debug == true) {
-	    syslog (LOG_DEBUG, "HostCache: starting prune");
-	}
+    DLOG_IF(INFO, Debug) << "starting prune";
 	uint32_t prunedhosts = 0;
 
 	for (auto it = hC.begin(); it != hC.end();) {
@@ -82,21 +79,13 @@ uint32_t HostCache::Prune (bool Force) {
 		    it++;
 		}
 	}
-	if (Debug == true) {
-	    syslog(LOG_DEBUG, "HostCache: Pruned %u hosts", prunedhosts);
-	}
+	DLOG_IF(INFO, Debug) << "Pruned " << prunedhosts << " hosts";
 	uint32_t count = pruneDnsQueryCache(Force);
-    if (Debug == true) {
-        syslog(LOG_DEBUG, "HostCache: Pruned %u DNS queries", count);
-    }
+	DLOG_IF(INFO, Debug) << "Pruned " << count << " DNS queries";
 	count = pruneDnsIpCache(Force);
-    if (Debug == true) {
-        syslog(LOG_DEBUG, "HostCache: Pruned %u DNS IP cache entries", count);
-    }
+	DLOG_IF(INFO, Debug) << "Pruned " << count << " DNS IP cache entries";
     count = pruneDnsCnameCache(Force);
-    if (Debug == true) {
-        syslog(LOG_DEBUG, "HostCache: Pruned %u DNS CNAME cache entries", count);
-    }
+    DLOG_IF(INFO, Debug) << "Pruned " << count << " DNS CNAME cache entries";
   	return prunedhosts;
 }
 
@@ -113,9 +102,7 @@ uint32_t HostCache::Match() {
 }
 
 bool HostCache::MatchByMac(const MacAddress &inMacAddress) {
-	if (Debug == true) {
-		syslog(LOG_DEBUG, "HostCache: Starting match for MAC address %s", inMacAddress.c_str());
-	}
+    DLOG_IF(INFO, Debug) << "Starting match for MAC address " << inMacAddress;
 	if (hC.find(inMacAddress.get()) != hC.end()) {
 		auto &h = *(hC[inMacAddress.get()]);
 		return h.Match(dpMap);
@@ -140,13 +127,12 @@ std::shared_ptr<Host> HostCache::FindHostByIp (const std::string inIp) {
 	return FindHostByMac (mac);
 }
 
-std::shared_ptr<Host> HostCache::FindOrCreateHostByIp (const std::string inIp, const std::string Uuid) {
-	if (Debug == true) {
-		syslog(LOG_DEBUG, "HostCache: Find or create host for IP %s", inIp.c_str());
-	}
+std::shared_ptr<Host> HostCache::FindOrCreateHostByIp (const std::string inIp,
+        const std::string Uuid) {
+    DLOG_IF(INFO, Debug) << "Find or create host for IP " << inIp;
 
 	if (inIp == "0.0.0.0" || inIp == "") {
-	    syslog (LOG_NOTICE, "HostCache: finding host by IP address %s is not possible", inIp.c_str());
+	    LOG(INFO) << "finding host by IP address " << inIp << " is not possible";
 	}
 	if (inIp == "" || WhitelistedNodes.find(inIp) != WhitelistedNodes.end()) {
 		return nullptr;
@@ -156,9 +142,7 @@ std::shared_ptr<Host> HostCache::FindOrCreateHostByIp (const std::string inIp, c
 	if ( it == Ip2MacMap.end()) {
 		Mac = MacLookup(inIp);
 		if (Mac.isValid() == false) {
-			if (Debug == true) {
-			    syslog(LOG_DEBUG, "HostCache: Did not find ARP entry for %s", inIp.c_str());
-			}
+		    DLOG_IF(INFO, Debug) << "Did not find ARP entry for " << inIp;
 			return nullptr;
 		}
 		Ip2MacMap[inIp] = Mac.get();
@@ -170,7 +154,7 @@ std::shared_ptr<Host> HostCache::FindOrCreateHostByIp (const std::string inIp, c
 
 std::shared_ptr<Host> HostCache::FindHostByMac (const MacAddress &inMac) {
 	if (inMac.isValid() == false) {
-		syslog(LOG_WARNING, "HostCache: Mac Address with invalid value provided");
+		LOG(WARNING) << "Mac Address with invalid value provided";
 		return nullptr;
 	}
 	if (hC.find(inMac.get()) == hC.end()) {
@@ -179,29 +163,25 @@ std::shared_ptr<Host> HostCache::FindHostByMac (const MacAddress &inMac) {
 	return hC[inMac.get()];
 }
 
-std::shared_ptr<Host> HostCache::FindOrCreateHostByMac (const MacAddress inMac, const std::string Uuid, const std::string inIp) {
-	if (Debug == true) {
-		syslog(LOG_DEBUG, "HostCache: Find or create host for MAC %s", inMac.c_str());
-	}
+std::shared_ptr<Host> HostCache::FindOrCreateHostByMac (const MacAddress inMac,
+        const std::string Uuid, const std::string inIp) {
+    DLOG_IF(INFO, Debug) << "Find or create host for MAC " << inMac;
 	if (WhitelistedNodes.find(inMac.str()) != WhitelistedNodes.end()) {
 		return nullptr;
     }
 	if (inMac.isValid() == false) {
-		syslog(LOG_WARNING, "HostCache: Invalid Mac Address provided: %s", inMac.c_str());
+		LOG(WARNING) << "Invalid Mac Address provided: " << inMac;
 		return nullptr;
 	}
 	if (hC.find(inMac.get()) == hC.end()) {
-		if (Debug == true) {
-			syslog(LOG_DEBUG, "HostCache: Adding new Host with MAC address %s for IP %s", inMac.c_str(), inIp.c_str());
-		}
+	    DLOG_IF(INFO, Debug) << "Adding new Host with MAC address " << inMac
+	            << " for IP " << inIp;
 		auto h = std::make_shared<Host>(inMac.str(), Uuid, Debug);
 		h->setIpAddress (inIp);
 		hC[inMac.get()] = h;
 		return h;
 	}
-	if (Debug == true) {
-		syslog(LOG_DEBUG, "HostCache: Found MAC address %s for IP %s", inMac.c_str(), inIp.c_str());
-	}
+	DLOG_IF(INFO, Debug) << "Found MAC address " << inMac << " for IP " << inIp;
 	std::shared_ptr<Host> h = hC[inMac.get()];
 	if (inIp != "" && inIp != "0.0.0.0") {
 	     if (h->getIpv4Address() == "0.0.0.0") {
@@ -212,9 +192,8 @@ std::shared_ptr<Host> HostCache::FindOrCreateHostByMac (const MacAddress inMac, 
 }
 
 bool HostCache::AddByMac (const MacAddress inMacAddress, const std::string inIpAddress) {
-	if (Debug == true) {
-		syslog(LOG_DEBUG, "HostCache: Creating new host for MAC %s with IP %s", inMacAddress.c_str(), inIpAddress.c_str());
-	}
+    DLOG_IF(INFO, Debug) << "Creating new host for MAC " << inMacAddress
+            << " with IP " << inIpAddress;
 	if (hC.find(inMacAddress.get()) != hC.end()) {
 		return false;
     }
@@ -225,12 +204,12 @@ bool HostCache::AddByMac (const MacAddress inMacAddress, const std::string inIpA
 	return true;
 }
 
-bool HostCache::AddFlow (const std::string srcip, const uint16_t srcport, const std::string dstip, const uint16_t dstport, const uint8_t protocol, const uint32_t expiration) {
-	if (Debug == true) {
-		syslog(LOG_DEBUG, "HostCache: Adding flow for host with IP %s", srcip.c_str());
-	}
-	// DHCP requests are sent from 0.0.0.0. As we can't associate this flow with a MAC address from the FlowTrack data,
-	// we ignore the flow
+bool HostCache::AddFlow (const std::string srcip, const uint16_t srcport,
+        const std::string dstip, const uint16_t dstport, const uint8_t protocol,
+        const uint32_t expiration) {
+    DLOG_IF(INFO, Debug) << "Adding flow for host with IP " << srcip;
+	// DHCP requests are sent from 0.0.0.0. As we can't associate this flow with
+    // a MAC address from the FlowTrack data, we ignore the flow
 	if (srcip == "0.0.0.0") {
 		return false;
 	}
@@ -249,10 +228,10 @@ bool HostCache::AddFlow (const std::string srcip, const uint16_t srcport, const 
 }
 
 
-bool HostCache::AddDnsQueryIp (const std::string clientip, const std::string fqdn, const std::string ip, const uint32_t inTtl) {
-	if (Debug == true) {
-		syslog(LOG_DEBUG, "HostCache: Adding dns query for %s for host with IP %s", fqdn.c_str(), clientip.c_str());
-	}
+bool HostCache::AddDnsQueryIp (const std::string clientip, const std::string fqdn,
+        const std::string ip, const uint32_t inTtl) {
+    DLOG_IF(INFO, Debug) << "Adding dns query for " << fqdn
+            << " for host with IP " <<  clientip;
 	if (WhitelistedNodes.find(clientip) != WhitelistedNodes.end()) {
 		return false;
 	}
@@ -268,12 +247,12 @@ bool HostCache::AddDnsQueryIp (const std::string clientip, const std::string fqd
 }
 
 
-bool HostCache::AddDhcpRequest (const std::string IpAddress, const MacAddress inMac, const std::string Hostname, const std::string DhcpVendor) {
-	if (Debug == true) {
-		syslog(LOG_DEBUG, "HostCache: Adding DHCP request for host with MAC %s & IP %s", inMac.c_str(), IpAddress.c_str());
-	}
+bool HostCache::AddDhcpRequest (const std::string IpAddress, const MacAddress inMac,
+        const std::string Hostname, const std::string DhcpVendor) {
+    DLOG_IF(INFO, Debug) << "Adding DHCP request for host with MAC " <<
+            inMac << " & IP "  << IpAddress;
 	if ((IpAddress == "" || IpAddress == "0.0.0.0") && inMac.isValid() == false) {
-		syslog(LOG_WARNING, "HostCache: No IpAdddress or Macaddress in DHCP request");
+		LOG(WARNING) << "No IpAdddress or Macaddress in DHCP request";
 		return false;
 
 	}
@@ -305,11 +284,9 @@ bool HostCache::AddDhcpRequest (const std::string IpAddress, const MacAddress in
 }
 
 bool HostCache::AddSsdpInfo (const std::shared_ptr<SsdpHost> sHost) {
-	if (Debug == true) {
-		syslog(LOG_DEBUG, "HostCache: Adding SSDP info for host with IP %s", sHost->IpAddress.c_str());
-	}
+    DLOG_IF(INFO, Debug) << "Adding SSDP info for host with IP " << sHost->IpAddress;
 	if (sHost->IpAddress == "") {
-		syslog(LOG_WARNING, "HostCache: AddSsdpInfo: no IP address provided");
+		LOG(WARNING) << "AddSsdpInfo: no IP address provided";
 		return false;
 	}
 	if (WhitelistedNodes.find(sHost->IpAddress) != WhitelistedNodes.end()) {
@@ -327,11 +304,9 @@ bool HostCache::AddSsdpInfo (const std::shared_ptr<SsdpHost> sHost) {
 }
 
 bool HostCache::AddWsDiscoveryInfo (const std::shared_ptr<WsDiscoveryHost> inwsdHost) {
-    if (Debug == true) {
-        syslog(LOG_DEBUG, "HostCache: Adding WsDiscovery info for host with IP %s", inwsdHost->IpAddress.c_str());
-    }
+    DLOG_IF(INFO, Debug) << "Adding WsDiscovery info for host with IP " << inwsdHost->IpAddress;
     if (inwsdHost->IpAddress == "") {
-        syslog(LOG_WARNING, "HostCache: AddWsDiscoveryInfo: no IP address provided");
+        LOG(WARNING) << "AddWsDiscoveryInfo: no IP address provided";
         return false;
     }
     if (WhitelistedNodes.find(inwsdHost->IpAddress) != WhitelistedNodes.end()) {
@@ -350,11 +325,9 @@ bool HostCache::AddWsDiscoveryInfo (const std::shared_ptr<WsDiscoveryHost> inwsd
 }
 
 bool HostCache::AddMdnsInfo (const std::shared_ptr<MdnsHost> inmdnsHost) {
-    if (Debug == true) {
-        syslog(LOG_DEBUG, "HostCache: Adding mDNS info for host with IP %s", inmdnsHost->IpAddress.c_str());
-    }
+    DLOG_IF(INFO, Debug) << "Adding mDNS info for host with IP " << inmdnsHost->IpAddress;
     if (inmdnsHost->IpAddress == "") {
-        syslog(LOG_WARNING, "HostCache: AddMdnsInfo: no IP address provided");
+        LOG(WARNING) << "AddMdnsInfo: no IP address provided";
         return false;
     }
     if (WhitelistedNodes.find(inmdnsHost->IpAddress) != WhitelistedNodes.end()) {
@@ -376,10 +349,8 @@ bool HostCache::AddMdnsInfo (const std::shared_ptr<MdnsHost> inmdnsHost) {
 // These functions are for DnsQueryCache
 void HostCache::addorupdateDnsQueryCache (uint16_t id) {
 	time_t Expiration = time(nullptr) + 60;
-    if (Debug == true) {
-	    syslog (LOG_DEBUG, "HostCache: setting DnsQueryCache for %u to %zu", id, Expiration);
-	}
-    DnsQueryCache[id] = time(nullptr) + 60;
+	DLOG_IF(INFO, Debug) <<"HostCache: setting DnsQueryCache for " << id << " to " << Expiration;
+	DnsQueryCache[id] = time(nullptr) + 60;
 }
 
 bool HostCache::inDnsQueryCache (uint16_t id) {
@@ -399,9 +370,8 @@ uint32_t HostCache::pruneDnsQueryCache (bool Force) {
 	auto i = DnsQueryCache.begin();
 	while (i != DnsQueryCache.end()) {
 		if (Force || now > i->second) {
-			if (Debug == true) {
-				syslog (LOG_DEBUG, "HostCache: Deleting %u from DnsQueryCache as %lu is later than %lu", i->first, now, i->second);
-			}
+		    DLOG_IF(INFO, Debug) <<"HostCache: Deleting " << i->first << " from DnsQueryCache as " <<
+		            now << " is later than " << i->second;
 			i = DnsQueryCache.erase(i);
 			deletecount++;
 		} else {
@@ -414,29 +384,19 @@ uint32_t HostCache::pruneDnsQueryCache (bool Force) {
 MacAddress HostCache::MacLookup (const std::string inIpAddress) {
     MacAddress Mac("00:00:00:00:00:00");
     if (LocalIpAddresses.find(inIpAddress) != LocalIpAddresses.end()) {
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "HostCache: Skipping MacLookup of local IP address %s", inIpAddress.c_str());
-        }
+        DLOG_IF(INFO, Debug) <<"HostCache: Skipping MacLookup of local IP address " << inIpAddress;
         return Mac;
     }
-    if (Debug == true) {
-        syslog (LOG_DEBUG, "HostCache: MacLookup of %s", inIpAddress.c_str());
-    }
+    DLOG_IF(INFO, Debug) <<"HostCache: MacLookup of " << inIpAddress;
     for (auto lanInterface: ifMap->getLanInterfaces()) {
         Mac = MacLookup(inIpAddress, lanInterface, true);
         if (Mac.isValid() == true) {
-            if (Debug == true) {
-                syslog (LOG_DEBUG, "HostCache: Found MAC entry %s on interface %s", Mac.c_str(), lanInterface.c_str());
-            }
+            DLOG_IF(INFO, Debug) <<"HostCache: Found MAC entry " << Mac << " on interface " << lanInterface;
             return Mac;
         }
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "HostCache: MAC entry not found on interface %s", lanInterface.c_str());
-        }
+        DLOG_IF(INFO, Debug) <<"HostCache: MAC entry not found on interface " << lanInterface;
     }
-    if (Debug == true) {
-        syslog (LOG_DEBUG, "HostCache: MAC entry not found on lan interfaces");
-    }
+    DLOG_IF(INFO, Debug) <<"HostCache: MAC entry not found on lan interfaces";
     return Mac;
 }
 
@@ -457,7 +417,7 @@ MacAddress HostCache::MacLookup (const std::string inIpAddress, const std::strin
         addr_ptr = &(sin6->sin6_addr);
     }
     if (not inet_pton(domain, inIpAddress.c_str(), addr_ptr)) {
-        syslog (LOG_ERR, "HostCache: inet_pton failed for %s", inIpAddress.c_str());
+        LOG(ERROR) << "inet_pton failed for " << inIpAddress;
         return Mac;
     }
 
@@ -468,8 +428,8 @@ MacAddress HostCache::MacLookup (const std::string inIpAddress, const std::strin
     /* Get an internet domain socket. */
     int s;
     if ((s = socket(domain, SOCK_DGRAM, 0)) == -1) {
-        syslog(LOG_ERR, "HostCache: Can't open socket for ARP table lookup for IP %s, domain %d on interface %s",
-                inIpAddress.c_str(), domain, inInterface.c_str());
+        LOG(ERROR) << "Can't open socket for ARP table lookup for IP " << inIpAddress
+                << ", domain " << domain << " on interface " << inInterface;
         return Mac;
     }
 
@@ -479,9 +439,7 @@ MacAddress HostCache::MacLookup (const std::string inIpAddress, const std::strin
             sendUdpPing (inIpAddress, 1900);
             MacLookup (inIpAddress, inInterface, false);
         }
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "HostCache: ARP lookup failure for %s on interface %s", inIpAddress.c_str(), inInterface.c_str());
-        }
+        DLOG_IF(INFO, Debug) <<"HostCache: ARP lookup failure for " << inIpAddress << " on interface " << inInterface;
         return Mac;
     }
     close (s);
@@ -507,12 +465,12 @@ bool HostCache::sendUdpPing (const std::string DstIpAddress, const uint16_t DstP
 
        //Create the socket
        if((sock=socket(AF_INET, SOCK_DGRAM, 0))<0) {
-           syslog(LOG_ERR, "HostCache: Failed to create socket");
+           PLOG(ERROR) << "Failed to create socket";
            return false;
        }
 
        if(bind(sock,( struct sockaddr *) &myaddr, sizeof(myaddr))<0) {
-           syslog(LOG_ERR, "HostCache: bind failed");
+           PLOG(ERROR) << "bind failed";
            close (sock);
            return false;
        }
@@ -523,7 +481,7 @@ bool HostCache::sendUdpPing (const std::string DstIpAddress, const uint16_t DstP
 
        //send the message to server
        if(sendto(sock, s.c_str(), s.size(), 0, (struct sockaddr *)&myaddr, sizeof(myaddr))!=s.size()) {
-           syslog(LOG_ERR, "HostCache: Mismatch in number of bytes sent");
+           PLOG(ERROR) << "Mismatch in number of bytes sent";
            close (sock);
            return false;
        }
@@ -534,15 +492,13 @@ bool HostCache::sendUdpPing (const std::string DstIpAddress, const uint16_t DstP
 
 // TODO: We should consolidate this in the IfMap data structure
 uint32_t HostCache::getInterfaceIpAddresses() {
-    if (Debug == true) {
-        syslog (LOG_DEBUG, "HostCache: discovering IP addresses of network interfaces");
-    }
+    DLOG_IF(INFO, Debug) <<"HostCache: discovering IP addresses of network interfaces";
     struct ifaddrs *ifaddr, *ifa;
     int family, s, n;
     char host[NI_MAXHOST];
 
     if (getifaddrs(&ifaddr) == -1) {
-        syslog(LOG_ERR, "HostCache: Can't loop through local interfaces: getifaddrs");
+        PLOG(ERROR) << "Can't loop through local interfaces: getifaddrs";
         return 0;
     }
 
@@ -557,12 +513,10 @@ uint32_t HostCache::getInterfaceIpAddresses() {
 
         // Display interface name and family (including symbolic
         //   form of the latter for the common families)
-        if (Debug == true) {
-            syslog(LOG_DEBUG, "HostCache: Interface %-8s %s (%d)", ifa->ifa_name,
-                    (family == AF_PACKET) ? "AF_PACKET" :
-                            (family == AF_INET) ? "AF_INET" :
-                                    (family == AF_INET6) ? "AF_INET6" : "???", family);
-        }
+        DLOG_IF(INFO, Debug) << "Interface " << ifa->ifa_name << " " <<
+                ((family == AF_PACKET) ? "AF_PACKET" :
+                        ((family == AF_INET) ? "AF_INET" :
+                                ((family == AF_INET6) ? "AF_INET6" : "???"))) << "(" << family << ")";
         LocalInterfaces.insert(ifa->ifa_name);
 
         if (family == AF_INET || family == AF_INET6) {
@@ -570,14 +524,12 @@ uint32_t HostCache::getInterfaceIpAddresses() {
                     (family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6),
                             host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
             if (s != 0) {
-                syslog(LOG_ERR, "HostCache: getnameinfo() failed: %s\n", gai_strerror(s));
+                PLOG(ERROR) << "getnameinfo() failed: " << gai_strerror(s);
                 freeifaddrs(ifaddr);
                 return 0;
             }
 
-            if(Debug == true) {
-                syslog (LOG_DEBUG, "HostCache: Interface %s with IP address: %s", ifa->ifa_name, host);
-            }
+            DLOG_IF(INFO, Debug) <<"HostCache: Interface " << ifa->ifa_name << " with IP address: " << host;
             LocalIpAddresses.insert(host);
         }
     }
@@ -594,12 +546,12 @@ bool HostCache::ExportDeviceProfileMatches(const std::string filename, bool deta
 	json j;
 	for (auto it : hC) {
 		if (not isWhitelisted(*(it.second))) {
-			it.second->ExportDeviceInfo(j, detailed);
+			it.second->exportDeviceInfo(j, detailed);
 		}
 	}
 
 	if (not ofs.is_open()) {
-		syslog(LOG_WARNING, "HostCache: Couldn't open %s", filename.c_str());
+		PLOG(WARNING) << "Couldn't open " << filename;
 		return false;
 	}
 	ofs << std::setw(4) << j << std::endl;
@@ -618,7 +570,7 @@ uint32_t RestApiCall (const std::string api, const json &j, const std::string Cl
     char buf[strlen(body.c_str())+1];
     strcpy(buf, body.c_str());
     DLOG_IF(INFO, Debug) << "Uploading " << strlen(buf) << " bytes of data to " << url;
-    DLOG_IF(INFO, Debug) << "HostCache: Upload using cert " << ClientApiCertFile << " and key " << ClientApiKeyFile;
+    DLOG_IF(INFO, Debug) << "Upload using cert " << ClientApiCertFile << " and key " << ClientApiKeyFile;
 
 
 	long response_code = 0;
@@ -710,7 +662,7 @@ void HostCache::UploadDeviceStats(std::vector<std::future<uint32_t>> &futures, c
 	for (auto it : hC) {
 		if ( (not isWhitelisted(*(it.second))) && not it.second->isMatched()) {
 		json h;
-			if (it.second->DeviceStats(h, 604800, false, true)) {
+			if (it.second->exportDeviceStats(h, 604800, false, true)) {
 				uploads++;
 				j.push_back(h);
 			}
@@ -720,9 +672,9 @@ void HostCache::UploadDeviceStats(std::vector<std::future<uint32_t>> &futures, c
 	    // TOD: Might be a race condition in RestApiCall as they both use global Curl instance
 	    RestApiCall_async(futures, "v1/uploaddevices", j, ClientApiCertFile, ClientApiKeyFile, doUpload);
 	    // RestApiCall("v1/uploaddevices", j, ClientApiCertFile, ClientApiKeyFile, doUpload);
-	    syslog(LOG_INFO, "HostCache: Called v1/uploaddevices API with for %u devices", uploads);
+	    LOG(INFO) << "Called v1/uploaddevices API with for " << uploads << " devices";
 	} else {
-		syslog(LOG_INFO, "HostCache: Not calling v1/uploaddevices API as there is no data to report");
+		LOG(INFO) << "Not calling v1/uploaddevices API as there is no data to report";
 	}
 
 }
@@ -733,7 +685,7 @@ void HostCache::UploadTrafficStats(std::vector<std::future<uint32_t>> &futures, 
 	for (auto it : hC) {
 		if ( (not isWhitelisted(*(it.second))) && it.second->isMatched()) {
 			json h;
-			if (it.second->TrafficStats(h, interval, ReportRfc1918, LocalIpAddresses, dCipv4, dCipv6, false)) {
+			if (it.second->exportTrafficStats(h, interval, ReportRfc1918, LocalIpAddresses, dCipv4, dCipv6, false)) {
 				uploads++;
 				j.push_back(h);
 			}
@@ -743,27 +695,25 @@ void HostCache::UploadTrafficStats(std::vector<std::future<uint32_t>> &futures, 
         // TODO: Might be a race condition in RestApiCall as they both use global Curl instance
 	    RestApiCall_async(futures, "v1/uploadstats", j, ClientCertFile, ClientApiKeyFile, doUpload);
 	    // RestApiCall("v1/uploadstats", j, ClientCertFile, ClientApiKeyFile, doUpload);
-		syslog(LOG_INFO, "HostCache: Called v1/uploadstats API with for %u hosts", uploads);
+		LOG(INFO) << "Called v1/uploadstats API with for " << uploads << " hosts";
 	} else {
-		syslog(LOG_INFO, "HostCache: Not calling v1/uploadstats API as there is no data to report");
+		LOG(INFO) << "Not calling v1/uploadstats API as there is no data to report";
 	}
 }
 
 uint32_t HostCache::ImportDeviceProfileMatches(const std::string filename) {
-	if (Debug == true) {
-		syslog(LOG_DEBUG, "HostCache: Importing Device Profile matches from %s", filename.c_str());
-	}
+    DLOG_IF(INFO, Debug) << "Importing Device Profile matches from " << filename;
 
 	std::ifstream ifs(filename);
 	if (not ifs.is_open()) {
-		syslog(LOG_WARNING, "HostCache: Couldn't open %s", filename.c_str());
+		PLOG(WARNING) << "Couldn't open " << filename;
 		return false;
 	}
 	json j;
 	try {
 	    ifs >> j;
 	} catch (...) {
-	    syslog (LOG_ERR, "HostCache: failed to parse Device Matches json data from %s", filename.c_str());
+	    LOG(ERROR) << "failed to parse Device Matches json data from " << filename;
 	}
 	ifs.close();
 
@@ -773,31 +723,23 @@ uint32_t HostCache::ImportDeviceProfileMatches(const std::string filename) {
 		   matches++;
 	   }
 	}
-	if (Debug == true) {
-	    syslog(LOG_DEBUG, "HostCache: DeviceMatches read: %u", matches);
-	}
+	DLOG_IF(INFO, Debug) << "DeviceMatches read: " << matches;
 	updateDeviceProfileMatchesDnsData();
 	writeIptables();
 	return matches;
 }
 
 void HostCache::updateDeviceProfileMatchesDnsData () {
-    if (Debug) {
-        syslog (LOG_DEBUG, "HostCache: starting updateDeviceProfileMatchesDnsData");
-    }
+    DLOG_IF(INFO, Debug) <<"HostCache: starting updateDeviceProfileMatchesDnsData";
     for (auto dp_it: dpMap) {
         // Now we need to update the ipset rules for Device Profiles with
         // hasAllowedEndpoints and one or more hosts matched to it
-        if (Debug) {
-            syslog (LOG_DEBUG, "HostCache: updateDeviceProfileMatchesDnsData processing DP %s", dp_it.second->getDeviceDescription().c_str());
-        }
+        DLOG_IF(INFO, Debug) <<"HostCache: updateDeviceProfileMatchesDnsData processing DP " << dp_it.second->getDeviceDescription();
         dp_it.second->createorupdateIpsets();
         std::set<std::string> fqdns = dp_it.second->getDestinations();
         for (auto fqdn: fqdns) {
             fdpMap[fqdn].insert(dp_it.second);
-            if (Debug) {
-                syslog (LOG_DEBUG, "HostCache: updateDeviceProfileMatchesDnsData adding FQDN %s", fqdn.c_str());
-            }
+            DLOG_IF(INFO, Debug) <<"HostCache: updateDeviceProfileMatchesDnsData adding FQDN " << fqdn;
             try {
                 std::map<Tins::IPv4Address, time_t> p = dCipv4.lookupResourceRecord(fqdn);
                 for (auto ip_it: p) {
@@ -822,9 +764,8 @@ void HostCache::updateDeviceProfileMatchesDnsData () {
                 } catch (std::runtime_error &e) {
                     break;
                 }
-                if (Debug) {
-                    syslog (LOG_DEBUG, "HostCache: updateDeviceProfileMatchesDnsData adding CNAME %s for FQDN %s", cname.c_str(), fqdn.c_str());
-                }
+                DLOG_IF(INFO, Debug) <<"HostCache: updateDeviceProfileMatchesDnsData adding CNAME " << cname <<
+                        " for FQDN " << fqdn;
                 try {
                     std::map<Tins::IPv4Address, time_t> p = dCipv4.lookupResourceRecord(cname.c_str());
                     for (auto ip_it: p) {
@@ -845,9 +786,8 @@ void HostCache::updateDeviceProfileMatchesDnsData () {
                 // so if subsequently an A record is received for the CNAME,
                 // the ipsets for the device profiles must be updated
                 fdpMap[cname].insert(dp_it.second);
-                if (Debug) {
-                    syslog (LOG_DEBUG, "HostCache: updateDeviceProfileMatchesDnsData Finishing with FQDN %s and CNAME %s", fqdn.c_str(), cname.c_str());
-                }
+                DLOG_IF(INFO, Debug) <<"HostCache: updateDeviceProfileMatchesDnsData Finishing with FQDN " << fqdn <<
+                        " and CNAME " << cname;
                 // On nex iteration, do a CNAME lookup for the cname we found in this iteration
                 fqdn = cname;
             }
@@ -857,7 +797,7 @@ void HostCache::updateDeviceProfileMatchesDnsData () {
 bool HostCache::exportDnsCache (const std::string filename) {
     std::ofstream ofs(filename);
     if (not ofs.is_open()) {
-        syslog(LOG_WARNING, "HostCache: Couldn't open %s", filename.c_str());
+        LOG(WARNING) << "Couldn't open " << filename;
         return true;
     }
     json j;
@@ -871,33 +811,27 @@ bool HostCache::exportDnsCache (const std::string filename) {
 }
 
 bool HostCache::importDnsCache (const std::string filename) {
-    if (Debug == true) {
-        syslog (LOG_DEBUG, "HostCache: Importing DnsCache from %s", filename.c_str());
-    }
+    DLOG_IF(INFO, Debug) << "Importing DnsCache from " << filename;
     std::ifstream ifs(filename);
     if (not ifs.is_open()) {
-        syslog(LOG_WARNING, "HostCache: Couldn't open %s for reading", filename.c_str());
+        PLOG(WARNING) << "Couldn't open %s for reading" << filename;
         return true;
     }
     json j;
     try {
         ifs >> j;
     } catch (...) {
-        syslog (LOG_ERR, "HostCache: failed to parse Dns Cache json data from %s", filename.c_str());
+        PLOG(ERROR) << "failed to parse Dns Cache json data from " << filename;
     }
 
     try {
         size_t dnsRecords = dCipv4.importJson(j, fdpMap);
         dnsRecords += dCipv6.importJson(j, fdpMap);
-        if (Debug == true) {
-            syslog(LOG_DEBUG, "HostCache: Read %zu cached DNS IP address records", dnsRecords);
-        }
+        DLOG_IF(INFO, Debug) << "Read " << dnsRecords << " cached DNS IP address records";
         dnsRecords = dCcname.importJson(j, fdpMap);
-        if (Debug == true) {
-            syslog(LOG_DEBUG, "HostCache: Read %zu cached DNS CNAME records", dnsRecords);
-        }
+        DLOG_IF(INFO, Debug) << "Read " << dnsRecords << " cached DNS CNAME records";
     } catch (...) {
-        syslog (LOG_ERR, "HostCache: Failure parsing DnsCache json data");
+        LOG(ERROR) << "Failure parsing DnsCache json data";
     }
     ifs.close();
     return false;
@@ -942,45 +876,40 @@ bool HostCache::removeDeviceProfile(const std::string inUuid) {
 bool HostCache::ImportDeviceInfo (json &j) {
 	std::string DeviceProfileUuid;
 	if (j.find("DeviceProfileUuid") == j.end()) {
-		if (Debug == true) {
-			syslog(LOG_DEBUG, "HostCache: No DeviceProfileUuid set, ignoring this Object");
-		}
+	    LOG(WARNING) << "No DeviceProfileUuid set, ignoring this Object";
 		return false;
 	}
 	if (not j["DeviceProfileUuid"].is_string()) {
-		syslog(LOG_ERR, "HostCache: DeviceProfileUuid is not a string, ignoring this Object");
+		LOG(ERROR) << "DeviceProfileUuid is not a string, ignoring this Object";
 		return false;
 	}
-	DeviceProfileUuid = j["DeviceProfileUuid"].get<std::string>();
+	DeviceProfileUuid = j["DeviceProfileUuid"];
 	if (DeviceProfileUuid == "") {
-		if (Debug == true) {
-			syslog(LOG_DEBUG, "HostCache: DeviceProfileUuid is not set, ignoring this Object");
-		}
+	    LOG(ERROR) << "DeviceProfileUuid is not set, ignoring this Object";
 		return false;
 	}
 
 	std::string MacAddressString;
 	if (j.find("MacAddress") == j.end()) {
-		syslog(LOG_ERR, "HostCache: No MacAddress set, ignoring this Object");
+		LOG(ERROR) << "No MacAddress set, ignoring this Object";
 		return false;
 	}
 	if (not j["MacAddress"].is_string()) {
-		syslog(LOG_ERR, "HostCache: MacAddress is not a string, ignoring this Object");
+		LOG(ERROR) << "MacAddress is not a string, ignoring this Object";
 		return false;
 	}
-	MacAddressString = j["MacAddress"].get<std::string>();
+	MacAddressString = j["MacAddress"];
 	if (MacAddressString == "" ) {
-		syslog(LOG_ERR, "HostCache: MacAddress set to empty value, ignoring this Object");
+		LOG(ERROR) << "MacAddress set to empty value, ignoring this Object";
 		return false;
     }
 
-	if (Debug == true) {
-		syslog(LOG_DEBUG, "HostCache: Importing Device Profile for UUID %s with MacAddress %s", DeviceProfileUuid.c_str(), MacAddressString.c_str());
-	}
+	DLOG_IF(INFO, Debug) << "Importing Device Profile for UUID " << DeviceProfileUuid <<
+	        " with MacAddress " << MacAddressString;
 	std::string Ipv4Address = "";
 	if (j.find("Ipv4Address") != j.end()) {
 		if (j["Ipv4Address"].is_string()) {
-			Ipv4Address = j["Ipv4Address"].get<std::string>();
+			Ipv4Address = j["Ipv4Address"];
 		}
 	}
 
@@ -989,13 +918,14 @@ bool HostCache::ImportDeviceInfo (json &j) {
 	if (hit != hC.end()) {
 		std::string uuid = hit->second->getUuid();
 		if (uuid != DeviceProfileUuid) {
-			syslog(LOG_WARNING, "HostCache: Conflicting Uuid for imported device with existing Host Cache");
+			LOG(WARNING) << "Conflicting Uuid for imported device with existing Host Cache";
 			return false;
 		}
 	}
 	try {
 	    if (not FindOrCreateHostByMac(Mac, DeviceProfileUuid, Ipv4Address)) {
-	        syslog(LOG_WARNING, "HostCache: Failed to create Host with MacAddress %s and uuid %s", MacAddressString.c_str(), DeviceProfileUuid.c_str());
+	        LOG(WARNING) << "Failed to create Host with MacAddress " << MacAddressString
+	                << "and uuid  " << DeviceProfileUuid;
 	        return false;
 	    }
 	} catch (...) {
@@ -1005,12 +935,13 @@ bool HostCache::ImportDeviceInfo (json &j) {
 	try {
 	    auto it = dpMap.find(DeviceProfileUuid);
 	    if (it == dpMap.end()) {
-	        syslog (LOG_NOTICE, "Importing device with non-existing Device Profile UUID");
+	        LOG(WARNING) << "Importing device with non-existing Device Profile UUID";
 	        return false;
 	    }
 	    it->second->addHost(Mac);
 	} catch (...) {
-	    syslog (LOG_ERR, "HostCache: Ipset host:mac does not exist for device profile %s during import of DeviceMatches", DeviceProfileUuid.c_str());
+	    LOG(ERROR) << "Ipset host:mac does not exist for device profile " <<
+	            DeviceProfileUuid << "during import of DeviceMatches" ;
 	}
 	return true;
 }
@@ -1019,27 +950,25 @@ bool HostCache::ImportDeviceInfo (json &j) {
 // FIXME: need to recreate AllowedEndpoint IPsets for DeviceProfiles that have a new / higher version number
 
 uint32_t HostCache::loadDeviceProfiles(const std::string filename) {
-	if (Debug == true) {
-		syslog(LOG_DEBUG, "HostCache: Opening & reading %s", filename.c_str());
-	}
+    DLOG_IF(INFO, Debug) << "Opening & reading " << filename;
 	// Read the DeviceProfiles file
 	std::ifstream ifs(filename);
 	if (not ifs.is_open()) {
-		syslog(LOG_WARNING, "HostCache: Couldn't open %s", filename.c_str());
+		PLOG(WARNING) << "Couldn't open " << filename;
 		return 0;
 	}
 	json j;
     try {
         ifs >> j;
     } catch (...) {
-        syslog (LOG_ERR, "HostCache: failed to parse Device Profiles json data from %s", filename.c_str());
+        LOG(ERROR) << "failed to parse Device Profiles json data from %s";
     }
 
 	// Track which DeviceProfileUuids were read from the file
 	std::unordered_set<std::string> uuids;
 
 	for (auto it = j.begin(); it != j.end(); ++it) {
-	  std::string uuid = (*it)["DeviceProfileUuid"].get<std::string>();
+	  std::string uuid = (*it)["DeviceProfileUuid"];
 	  dpMap[uuid] = std::make_shared<DeviceProfile>(*it, Debug);
 	  uuids.insert (uuid);
 	}
@@ -1049,27 +978,21 @@ uint32_t HostCache::loadDeviceProfiles(const std::string filename) {
 	// in the file we just read and parsed
 	for (auto it = dpMap.begin(); it != dpMap.end();) {
 		if (uuids.find(it->first) == uuids.end()) {
-			if (Debug == true) {
-				syslog(LOG_DEBUG, "HostCache: Profile no longer in DeviceProfiles file: %s", it->first.c_str());
-			}
+		    DLOG_IF(INFO, Debug) << "Profile no longer in DeviceProfiles file: " << it->first;
 			it = dpMap.erase(it);
 		} else {
 		    it++;
 		}
 	}
 	auto s = uuids.size();
-	if (Debug == true) {
-		syslog(LOG_DEBUG, "HostCache: Profiles imported %zu", s);
-	}
+	DLOG_IF(INFO, Debug) << "Profiles imported " << s;
 	return s;
 }
 
 uint32_t HostCache::Whitelists_set (const std::unordered_set<std::string>& inIpv4Addresses,
 		const std::unordered_set<std::string>& inIpv6Addresses,
 		const std::unordered_set<std::string>& inMacAddresses) {
-    if (Debug == true) {
-        syslog (LOG_DEBUG, "HostCache: set whitelists");
-    }
+    DLOG_IF(INFO, Debug) << "set whitelists";
     WhitelistedNodes.clear();
 	WhitelistedNodes.insert(inIpv4Addresses.begin(), inIpv4Addresses.end());
 	WhitelistedNodes.insert(inIpv6Addresses.begin(), inIpv6Addresses.end());
@@ -1079,14 +1002,10 @@ uint32_t HostCache::Whitelists_set (const std::unordered_set<std::string>& inIpv
 
 void HostCache::writeIptables()  {
     if (FirewallRulesFile == "") {
-        if (Debug == true) {
-            syslog(LOG_DEBUG, "Iptables: Not writing firewall rules as feature is disabled");
-        }
+        DLOG_IF(INFO, Debug) << "Iptables: Not writing firewall rules as this feature is disabled";
         return;
     }
-    if (Debug == true) {
-        syslog(LOG_DEBUG, "Iptables: Writing firewall rules to %s", FirewallRulesFile.c_str());
-    }
+    DLOG_IF(INFO, Debug) << "Iptables: Writing firewall rules to " << FirewallRulesFile;
     std::ofstream outputfs(FirewallRulesFile);
     std::vector<std::string> ifaces = ifMap->getLanInterfaces();
     std::string action = "LOG --log-prefix Noddos-IPtables-LOG ";
@@ -1097,15 +1016,12 @@ void HostCache::writeIptables()  {
     outputfs << "*filter" << std::endl;
 
     for (auto dp_it: dpMap) {
-        if (Debug == true) {
-            syslog(LOG_DEBUG, "Iptables: Processing Device Profile %s with endpoints? %sand with hosts associated? %s",
-                    dp_it.second->getUuid().c_str(), dp_it.second->hasAllowedEndpoints() ? "true" : "false",
-                    dp_it.second->hasHosts() ? "true" : "false");
-        }
+        DLOG_IF(INFO, Debug) << "Iptables: Processing Device Profile " << dp_it.second->getUuid() <<
+                " with endpoints? " << (dp_it.second->hasAllowedEndpoints() ? "true" : "false") <<
+                " and with hosts associated? " << (dp_it.second->hasHosts() ? "true" : "false");
+
         if (dp_it.second->hasAllowedEndpoints() && dp_it.second->hasHosts()) {
-            if (Debug == true) {
-                syslog(LOG_DEBUG, "Iptables: Device Profile has endpoints");
-            }
+            DLOG_IF(INFO, Debug) << "Iptables: Device Profile has endpoints";
             std::string srcipset = getIpsetName(dp_it.second->getUuid(),true,false);
             std::string ipv46flag;
             std::string dstipset;
@@ -1142,29 +1058,29 @@ void HostCache::writeIptables()  {
     std::string command4 = "iptables-restore -T filter -n " + FirewallRulesFile;
     std::string command6 = "ip6tables-restore -T filter -n " + FirewallRulesFile;
     if (Debug == true) {
-        syslog (LOG_DEBUG, "HostCache: updating ip(6)tables");
+        DLOG_IF(INFO, Debug) << "updating ip(6)tables";
     }
     int rc1 = system("iptables --flush NODDOS");
     int rc2 = system(command4.c_str());
     int rc3 = system("ip6tables --flush NODDOS");
     int rc4 = system(command6.c_str());
     if (rc1 == -1 || rc2 == -1 || rc3 == -1 || rc4 == 1) {
-        syslog(LOG_ERR, "HostCache: Could not create child process for 'system' call");
+        PLOG(ERROR) << "Could not create child process for 'system' call";
     }
     if (rc1 == 127|| rc2 == 127 || rc3 == 127 || rc4 == 127) {
-        syslog(LOG_ERR, "HostCache: Shell could not be executed in child process for 'system' call");
+        PLOG(ERROR) << "Shell could not be executed in child process for 'system' call";
     }
     if (rc1 != 0) {
-        syslog(LOG_ERR, "HostCache: iptables existing with code %d", rc1);
+        PLOG(ERROR) << "iptables exiting with code " << rc1;
     }
     if (rc2 != 0) {
-        syslog(LOG_ERR, "HostCache: iptables-restore existing with code %d", rc2);
+        PLOG(ERROR) << "iptables-restore existing with code " << rc2;
     }
     if (rc3 != 0) {
-        syslog(LOG_ERR, "HostCache: ip6tables existing with code %d", rc3);
+        PLOG(ERROR) << "ip6tables existing with code " << rc3;
     }
     if (rc4 != 0) {
-        syslog(LOG_ERR, "HostCache: ip6tables-restore existing with code %d", rc4);
+        PLOG(ERROR) << "ip6tables-restore existing with code ", rc4;
     }
 }
 

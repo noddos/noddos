@@ -27,7 +27,6 @@
 #include <vector>
 #include <unordered_set>
 #include <set>
-#include "syslog.h"
 
 #include "json.hpp"
 using nlohmann::json;
@@ -49,24 +48,18 @@ size_t pruneDnsCache (std::map<U, std::map<V, time_t>> &cache, bool Force = fals
         auto it_record = it_resource->second.begin();
         while (it_record != it_resource->second.end()) {
             if (Force || now > (it_record->second + 1)) {
-                if (Debug == true) {
-                 //   syslog(LOG_DEBUG, "pruneDnsCache: pruning %s pointing to %s with expiration %lu while now is %lu",
+                 DLOG_IF(INFO, Debug) << "pruning %s pointing to %s with expiration %lu while now is %lu",
                  //           it_resource->first.to_str().c_str(), it_record->first.to_string().c_str(), it_record->second, now);
-                }
                 it_record = it_resource->second.erase(it_record);
             } else {
                 it_record++;
             }
         }
         if (Force || it_resource->second.empty()) {
-            if (Debug == true) {
-                // syslog(LOG_DEBUG, "pruneDnsCache: Removing record for %s as there is no data left", it_resource->first.to_string.c_str());
-            }
+                // DLOG_IF(INFO, Debug) << "Removing record for %s as there is no data left", it_resource->first.to_string.c_str());
             PrunedFqdns++;
             it_resource = cache.erase(it_resource);
-            if (Debug == true) {
-                syslog(LOG_DEBUG, "pruneDnsCache: Deleted record");
-            }
+                DLOG_IF(INFO, Debug) << "Deleted record");
         } else {
             it_resource++;
         }
@@ -100,10 +93,10 @@ public:
      * \param inDebug a constant bool specifying whether to enable debug logging
      */
     DnsCache(const time_t inMinTtl = 14400, const bool inDebug=false): MinTtl{inMinTtl}, Debug{inDebug} {
-        DLOG_IF(INFO, Debug) << "DnsIpCache: constructing instance";
+        DLOG_IF(INFO, Debug) << "constructing instance";
     };
     ~DnsCache() {
-        DLOG_IF(INFO, Debug) << "DnsIpCache: destructing instance";
+        DLOG_IF(INFO, Debug) << "destructing instance";
     };
 
     /*! \brief Set debug logging
@@ -151,10 +144,10 @@ public:
 
         auto fdp_it = fdpMap.find(fqdn);
         if (fdp_it != fdpMap.end()) {
-            DLOG_IF(INFO, Debug) << "DnsCache: Updating resource record with FqdnDeviceProfileMap entry for " << inFqdn;
+            DLOG_IF(INFO, Debug) << "Updating resource record with FqdnDeviceProfileMap entry for " << inFqdn;
             addorupdateResourceRecord (fqdn, inIpAddress, fdp_it, inTtl);
         } else {
-            DLOG_IF(INFO, Debug) << "DnsCache: Didn't find FqdnDeviceProfileMap entry for " << inFqdn;
+            DLOG_IF(INFO, Debug) << "Didn't find FqdnDeviceProfileMap entry for " << inFqdn;
         }
         addorupdateResourceRecord (fqdn, inIpAddress, inTtl);
     }
@@ -172,7 +165,7 @@ public:
         std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
 
         for (auto DeviceProfile_sharedpointer_it: fdp_it->second) {
-            DLOG_IF(INFO, Debug) << "DnsCache: Found FqdnDeviceProfileMap entry with UUID " <<
+            DLOG_IF(INFO, Debug) << "Found FqdnDeviceProfileMap entry with UUID " <<
                     DeviceProfile_sharedpointer_it->getUuid() << " for " << inFqdn <<
                     " with IP " << inIpAddress;
             DeviceProfile_sharedpointer_it->addDestination(inIpAddress, inTtl);
@@ -181,7 +174,7 @@ public:
 
     /*! \brief Add or Update Resource Record including its entry in a Device Profile Map for FQDNs
      * This function updates the Resource Record in the Device Profile Map entry. It adds or updates the DNS Cache
-     * entry for the FQDN.
+     * entry for the FQDN converted to lowercase.
      * \param [in] inFQDN a constant string of the Fully Qualified Domain Name for the cache entry
      * \param [in] inIpAddress a constant IPv4 or IPv6 address for the cache entry
      * \param fdpMap_iterator an iterator to a FQDN Device Profile Map entry
@@ -198,9 +191,9 @@ public:
         std::string fqdn = inFqdn;
         std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
 
-        DLOG_IF(INFO, Debug) << "DnsCache: Adding resource record for " << inFqdn << " with IP " << inIpAddress << " with TTL " << Expiration;
-        DnsFwdCache[inFqdn].insert(std::make_pair(inIpAddress, Expiration));
-        DnsRevCache[inIpAddress].insert(std::make_pair(inFqdn, Expiration));
+        DLOG_IF(INFO, Debug) << "Adding resource record for " << inFqdn << " with IP " << inIpAddress << " with TTL " << Expiration;
+        DnsFwdCache[fqdn].insert(std::make_pair(inIpAddress, Expiration));
+        DnsRevCache[inIpAddress].insert(std::make_pair(fqdn, Expiration));
     }
 
     /*! \brief Imports DNS records from a JSON object as written by DnsCache::exportJson
@@ -210,9 +203,7 @@ public:
       * \return Number of DNS records imported
       */
     size_t importJson (json &j, FqdnDeviceProfileMap &fdpMap) {
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "DnsCache: importing json");
-        }
+        DLOG_IF(INFO, Debug) << "importing json";
         size_t dnsRecords = 0;
         auto cj = j.find("AddressRecords");
         if (cj == j.end()) {
@@ -239,7 +230,7 @@ public:
                 } catch (...) {
                     // Must be either IPv4 address while IPv6 template or vice versa
                     // Exceptions are expected here as value can also be a CNAME
-                    DLOG_IF(INFO, Debug) << "DnsCache: Record " << fqdn << " has value " << ip_it.key() << " which is neither an IPv4 or IPv6 address";
+                    DLOG_IF(INFO, Debug) << "Record " << fqdn << " has value " << ip_it.key() << " which is neither an IPv4 or IPv6 address";
                 }
             }
         }
@@ -252,9 +243,8 @@ public:
       * \return number of DNS records exported
       */
     size_t exportJson(json &j) {
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "DnsCache: export to json");
-        }
+        DLOG_IF(INFO, Debug) << "export to json";
+
         size_t dnsRecords = 0;
         j["AddressRecords"] = json::object();
         for (auto it_resource: DnsFwdCache) {
@@ -267,7 +257,6 @@ public:
             }
 
         }
-
         return dnsRecords;
     }
 
@@ -283,15 +272,11 @@ public:
         if (it != DnsRevCache.end()) {
             const std::map<std::string,time_t> &m = it->second;
             for (auto itf : m) {
-                if (Debug == true) {
-                    syslog (LOG_DEBUG, "DnsCache: AllFqdns adding %s", itf.first.c_str());
-                }
+                    DLOG_IF(INFO, Debug) << "AllFqdns adding " << itf.first;
                 fqdns.push_back(itf.first);
             }
         } else {
-            if (Debug == true) {
-                syslog(LOG_DEBUG, "DnsIpCache: couldn't find DNS mappings for %s", ipstring.c_str());
-            }
+                DLOG_IF(INFO, Debug) << "couldn't find DNS mappings for " << ipstring;
         }
         return fqdns;
     }
@@ -318,7 +303,7 @@ public:
                 auto it_record = it_resource->second.begin();
                 while (it_record != it_resource->second.end()) {
                     if (Force || now > (it_record->second + 1)) {
-                        DLOG_IF(INFO, Debug) << "DnsCache: pruning " << it_resource->first <<
+                        DLOG_IF(INFO, Debug) << "pruning " << it_resource->first <<
                                 " pointing to " << it_record->first << " with expiration " <<
                                 it_record->second << " while now is " << now;
                         it_record = it_resource->second.erase(it_record);
@@ -327,10 +312,10 @@ public:
                     }
                 }
                 if (Force || it_resource->second.empty()) {
-                    DLOG_IF(INFO, Debug) << "DnsCache: Removing record for " << it_resource->first << " as there is no data left";
+                    DLOG_IF(INFO, Debug) << "Removing record for " << it_resource->first << " as there is no data left";
                     PrunedFqdns.insert(it_resource->first);
                     it_resource = DnsFwdCache.erase(it_resource);
-                    DLOG_IF(INFO, Debug) << "DnsCache: Deleted record";
+                    DLOG_IF(INFO, Debug) << "Deleted record";
 
                 } else {
                     it_resource++;
@@ -343,7 +328,7 @@ public:
                 auto it_record = it_resource->second.begin();
                 while (it_record != it_resource->second.end()) {
                     if (Force || now > (it_record->second + 1)) {
-                        DLOG_IF(INFO, Debug) << "DnsCache: pruning entry " << it_resource->first <<
+                        DLOG_IF(INFO, Debug) << "pruning entry " << it_resource->first <<
                                 " pointing to " << it_record->first << " with expiration " <<
                                 it_record->second << " while now is " << now;
                         it_record = it_resource->second.erase(it_record);
@@ -352,10 +337,10 @@ public:
                     }
                 }
                 if (Force || it_resource->second.empty()) {
-                    DLOG_IF(INFO, Debug) << "DnsCache: Removing record as there is no data left";
+                    DLOG_IF(INFO, Debug) << "Removing record as there is no data left";
 
                     it_resource = DnsRevCache.erase(it_resource);
-                    DLOG_IF(INFO, Debug) << "DnsCache: Deleted record";
+                    DLOG_IF(INFO, Debug) << "Deleted record";
                 } else {
                     it_resource++;
                 }
@@ -386,10 +371,10 @@ public:
      * \param inMinTtl a constant time_t specifying minimum time objects should stay in the cache
      * \param inDebug a constant bool specifying whether to enable debug logging
      */    DnsCache(const time_t inMinTtl = 14400, const bool inDebug=false): MinTtl{inMinTtl}, Debug{inDebug} {
-        DLOG_IF(INFO, Debug) << "DnsCnameCache: constructing instance";
+        DLOG_IF(INFO, Debug) << "constructing instance";
     };
     ~DnsCache() {
-        DLOG_IF(INFO, Debug) << "DnsCnameCache: deleting instance";
+        DLOG_IF(INFO, Debug) << "deleting instance";
     };
 
     /*! \brief Set debug logging
@@ -427,7 +412,7 @@ public:
         std::string cname = inCname;
         std::transform(cname.begin(), cname.end(), cname.begin(), ::tolower);
 
-        DLOG_IF(INFO, Debug) << "DnsCnameCache: Setting " << fqdn << " to CNAME " << cname << " with expiration " << Expiration;
+        DLOG_IF(INFO, Debug) << "Setting " << fqdn << " to CNAME " << cname << " with expiration " << Expiration;
 
         bool fqdnAdded = (DnsFwdCache.find(fqdn) == DnsFwdCache.end());
         DnsRevCache[cname][fqdn] = Expiration;
@@ -456,10 +441,10 @@ public:
         // DeviceProfileMap entry for the CNAME with the same data as for the FQDN
         auto it = fdpMap.find(fqdn);
         if (it != fdpMap.end()) {
-            DLOG_IF(INFO, Debug) << "DnsCnameCache: Found FqdnDeviceProfileMap entry for " << inFqdn << " with CNAME " << inCname << ", so copying its data";
+            DLOG_IF(INFO, Debug) << "Found FqdnDeviceProfileMap entry for " << inFqdn << " with CNAME " << inCname << ", so copying its data";
             fdpMap[cname].insert(it->second.begin(), it->second.end());
         } else {
-            DLOG_IF(INFO, Debug) << "DnsCnameCache: Didn't find FqdnDeviceProfileMap entry for " << inFqdn << " with CNAME " << inCname;
+            DLOG_IF(INFO, Debug) << "Didn't find FqdnDeviceProfileMap entry for " << inFqdn << " with CNAME " << inCname;
         }
         return addorupdateCname(fqdn, cname, inTtl);
     }
@@ -476,10 +461,10 @@ public:
      */
     std::set<std::string> getFqdns (const std::string inCname, const uint8_t recdepth = 0) const {
         if (recdepth > 5) {
-            DLOG_IF(INFO, Debug) << "DnsCnameCache: Reached max recursion depth for CNAME " << inCname;
+            DLOG_IF(INFO, Debug) << "Reached max recursion depth for CNAME " << inCname;
             throw std::runtime_error("DNS reverse CNAME recursion depth reached for " + inCname);
         }
-        DLOG_IF(INFO, Debug) << "DnsCnameCache: Resolving CNAME " << inCname;
+        DLOG_IF(INFO, Debug) << "Resolving CNAME " << inCname;
 
         std::string cname = inCname;
         std::transform(cname.begin(), cname.end(), cname.begin(), ::tolower);
@@ -487,7 +472,7 @@ public:
         std::set<std::string> fqdns;
         auto it = DnsRevCache.find(cname);
         if (it != DnsRevCache.end()) {
-            DLOG_IF(INFO, Debug) << "DnsCnameCache: Found one or more reverse CNAME for " << cname;
+            DLOG_IF(INFO, Debug) << "Found one or more reverse CNAME for " << cname;
             for (auto fqdn_it: it->second) {
                 fqdns.insert(fqdn_it.first);
                 std::set<std::string> additional_fqdns = getFqdns(fqdn_it.first, recdepth + 1);
@@ -506,20 +491,20 @@ public:
      */
     std::set<std::string> getCnames (const std::string inFqdn, const uint8_t recdepth = 0) {
         if (recdepth > 5) {
-            DLOG_IF(INFO, Debug) << "DnsCnameCache: Reached max recursion depth for FQDN " << inFqdn;
+            DLOG_IF(INFO, Debug) << "Reached max recursion depth for FQDN " << inFqdn;
             throw std::runtime_error("DNS CNAME recursion depth reached for " + inFqdn);
         }
-        DLOG_IF(INFO, Debug) << "DnsCnameCache: Looking up CNAMEs for " << inFqdn;
+        DLOG_IF(INFO, Debug) << "Looking up CNAMEs for " << inFqdn;
 
         std::string fqdn = inFqdn;
         std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
 
         auto it = DnsFwdCache.find(fqdn);
         if (it == DnsFwdCache.end()) {
-            DLOG_IF(INFO, Debug) << "DnsCnameCache: " << inFqdn << " does not have a CNAME";
+            DLOG_IF(INFO, Debug) << "" << inFqdn << " does not have a CNAME";
             throw std::runtime_error("No CNAME found for " + inFqdn);
         }
-        DLOG_IF(INFO, Debug) << "DnsCnameCache: Found one or more CNAME for " << fqdn;
+        DLOG_IF(INFO, Debug) << "Found one or more CNAME for " << fqdn;
         std::set<std::string> cnames;
         for (auto cname_it: it->second) {
                 cnames.insert(cname_it.first);
@@ -542,7 +527,7 @@ public:
        * \return Number of DNS records imported
        */
     size_t importJson (json &j, FqdnDeviceProfileMap &fdpMap) {
-        DLOG_IF(INFO, Debug) << "DnsCnameCache: importing json with cnames";
+        DLOG_IF(INFO, Debug) << "importing json with cnames";
         size_t dnsRecords = 0;
         auto cj = j.find("CnameRecords");
         if (cj == j.end()) {
@@ -577,7 +562,7 @@ public:
       * \return number of DNS records exported
       */
     size_t exportJson (json &j) {
-        DLOG_IF(INFO, Debug) << "DnsCnameCache: exporting cnames to json";
+        DLOG_IF(INFO, Debug) << "exporting cnames to json";
         size_t dnsRecords = 0;
         j["CnameRecords"] = json::object();
         for (auto it_resource: DnsFwdCache) {
@@ -596,7 +581,7 @@ public:
       * \return vector of strings with Fqdns that have been pruned
       */
     std::set<std::string> pruneCnames (const bool Force) {
-        DLOG_IF(INFO, Debug) << "DnsCnameCache: pruning cnames";
+        DLOG_IF(INFO, Debug) << "pruning cnames";
         std::set<std::string> PrunedFqdns;
         auto now = time(nullptr);
         {

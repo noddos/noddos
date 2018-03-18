@@ -27,7 +27,6 @@
 #include <cstring>
 #include <memory>
 
-#include <syslog.h>
 #include <unistd.h>
 #include <stdexcept>
 
@@ -53,6 +52,8 @@
 #include <linux/ipv6.h>
 #include <linux/if_packet.h>
 #include <netinet/in.h>
+
+#include <glog/logging.h>
 
 #include <tins/ip_address.h>
 #include <tins/ipv6_address.h>
@@ -108,16 +109,12 @@ private:
 
 public:
 	PacketSnoop(HostCache &inHc, const size_t inNumBlocks, const bool inDebug = false):	hC{&inHc}, numBlocks{inNumBlocks}, Debug{inDebug} {
-		if (Debug == true) {
-			syslog (LOG_DEBUG, "PacketSnoop: constructing instance");
-		}
+	    DLOG_IF(INFO, Debug) << "PacketSnoop: constructing instance";
 	};
 
 	virtual ~PacketSnoop() {
 	    Close();
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "PacketSnoop: destructing instance");
-        }
+	    DLOG_IF(INFO, Debug) << "PacketSnoop: destructing instance";
 	};
 	int Open(std::string input, uint32_t inExpiration);
 	int getFileHandle() { return sock; }

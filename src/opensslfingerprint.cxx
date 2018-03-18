@@ -29,12 +29,12 @@
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <unistd.h>
-#include <syslog.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/x509.h>
 #include <openssl/bio.h>
 
+#include <glog/logging.h>
 
 // BUG: valgrind says there is a memory leak here.
 std::string getCertFingerprint(const std::string certfile, const bool Debug = false) {
@@ -43,7 +43,7 @@ std::string getCertFingerprint(const std::string certfile, const bool Debug = fa
 	struct stat sb;
 	if ((stat(certfile.c_str(), &sb)) == -1)
 	{
-		syslog(LOG_CRIT, "Can't stat() %s", certfile.c_str());
+		PLOG(ERROR) << "Can't stat() " << certfile;
 		return "";
 	};
 	ssize_t len = (sb.st_size * 2);
@@ -51,21 +51,21 @@ std::string getCertFingerprint(const std::string certfile, const bool Debug = fa
 	// allocates memory
 	unsigned char * buff;
 	if (not(buff = (unsigned char *) malloc(len))) {
-		fprintf(stderr, "peminfo: out of virtual memory\n");
+		PLOG(FATAL) << "out of virtual memory";
 		return"";
 	};
 
 	// opens file for reading
 	int fd;
 	if ((fd = open(certfile.c_str(), O_RDONLY)) == -1) {
-		syslog (LOG_CRIT, "open() for %s", certfile.c_str());
+		PLOG(ERROR) << "open() for " << certfile;
 		free(buff);
 		return "";
 	};
 
 	// reads file
 	if ((len = read(fd, buff, len)) == -1) {
-		syslog (LOG_CRIT, "read() of %s", certfile.c_str());
+		PLOG(ERROR) << "read() of " << certfile;
 		free(buff);
 		return "";
 	};
@@ -88,7 +88,7 @@ std::string getCertFingerprint(const std::string certfile, const bool Debug = fa
 		while((err = ERR_get_error())) {
 			errmsg[1023] = '\0';
 			ERR_error_string_n(err, errmsg, 1023);
-			syslog (LOG_ERR, "openssl %s\n", errmsg);
+			LOG(ERROR) << "openssl " << errmsg;
 		};
 		BIO_free(bio);
 		free(buff);
@@ -109,9 +109,7 @@ std::string getCertFingerprint(const std::string certfile, const bool Debug = fa
     }
 	snprintf(&fpbuf[57], 3, "%02x", md[19]);
 
-	if (Debug) {
-		syslog (LOG_DEBUG, "Cert: %s, fingerprint: %s", x->name, fpbuf);
-	}
+	DLOG_IF(INFO, Debug) << "Cert: " << x->name << ", fingerprint: " << fpbuf;
 
 	std::string fp = fpbuf;
 	// frees memory

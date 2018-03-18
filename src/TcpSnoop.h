@@ -28,7 +28,8 @@
 #include <vector>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
-#include <syslog.h>
+
+#include <glog/logging.h>
 
 struct TcpSegment {
 public:
@@ -39,7 +40,6 @@ public:
 	uint16_t checksum = 0;
 	std::vector<unsigned char> tcpPayload;
 };
-
 
 class TcpSnoop {
 private:
@@ -57,9 +57,7 @@ private:
 public:
 	TcpSnoop(const bool inDebug = false, const time_t inExpiration = 120): Debug{inDebug} {
         setExpiration(inExpiration);
-		if (Debug == true) {
-			syslog(LOG_DEBUG, "Constructing TcpSnoop instance");
-		}
+        DLOG_IF(INFO, Debug) << "Constructing TcpSnoop instance";
 	}
 	~TcpSnoop() {};
 
@@ -98,10 +96,14 @@ public:
 		}
 		uint16_t tcpPayloadLength = size - dataOffset;
 
-		if (Debug == true) {
-			syslog (LOG_DEBUG, "TcpSnoop: Parsing packet of size %u (header %u), sequence number %u, flags fin: %u, syn %u, rst %u, push %u, ack %u",
-				size, dataOffset, packetSequenceNumber, finFlag, synFlag, rstFlag, pushFlag, ackFlag);
-		}
+		DLOG_IF(INFO, Debug) << "Parsing packet of size " << size
+		        << ", header " << dataOffset
+		        << ", sequence number " << packetSequenceNumber
+		        << ", flags fin: " << finFlag
+		        << ", syn " << synFlag
+		        << ", rst " << rstFlag
+		        << ", push " << pushFlag
+		        << ", ack " << ackFlag;
 
 		const unsigned char *tcpPayload = tcpSegment + dataOffset;
  		packets[packetSequenceNumber].sequenceNumber = packetSequenceNumber;
@@ -131,9 +133,7 @@ public:
 			uint8_t secondByte = t.tcpPayload[firstPacketOffset+1];
 			dnsMessageLength = (firstByte << 8) + secondByte;
 			firstPacketOffset += 2;
-			if (Debug == true) {
-				syslog (LOG_DEBUG, "TcpSnoop: DNS Message length %u", dnsMessageLength);
-			}
+			DLOG_IF(INFO, Debug) << "DNS Message length " << dnsMessageLength;
 		}
 
 		if ((dnsMessageLength + 2) > streamLength) {

@@ -30,12 +30,12 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <syslog.h>
 
 #include <libipset/linux_ip_set.h>
 #include <libipset/types.h>
 #include <libipset/session.h>
 
+#include <glog/logging.h>
 #include <tins/ip_address.h>
 #include <tins/ipv6_address.h>
 
@@ -65,23 +65,17 @@ private:
 public:
     Ipset (const bool inDebug = false): Debug{inDebug}, ipsetType{""}, ipsetName{""}, isIpsetv4{false} {
         // session = nullptr;
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "Ipset: new instance");
-        }
+        DLOG_IF(INFO, Debug) << "new instance";
     };
 
     Ipset(const std::string inIpsetName, std::string inIpsetType, bool inisIpsetv4, bool inDebug = false):
             ipsetName{inIpsetName}, ipsetType{inIpsetType}, isIpsetv4{inisIpsetv4}, Debug{inDebug} {
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "Ipset: new instance");
-        }
+        DLOG_IF(INFO, Debug) << "new instance";
         Open(inIpsetName, inIpsetType, inisIpsetv4);
     }
 
     ~Ipset(void) {
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "Ipset: deleting instance");
-        }
+        DLOG_IF(INFO, Debug) << "deleting instance";
         // if (session != nullptr) {
         //    ipset_session_fini(session);
         //    session = nullptr;
@@ -93,7 +87,7 @@ public:
         try {
             return ipset_exec(IPSET_CMD_DESTROY);
         } catch (...) {
-            syslog (LOG_ERR, "Ipset: Failed to destroy ipset %s", ipsetName.c_str());
+            PLOG(ERROR) << "Failed to destroy ipset " << ipsetName;
         }
         return false;
     }
@@ -101,26 +95,26 @@ public:
         try {
             struct ipset_session *session = ipset_session_init(printf);
             if (session == nullptr) {
-                syslog (LOG_ERR, "Ipset: Cannot initialize ipset session.");
+                PLOG(ERROR) << "Cannot initialize ipset session.";
                 ipset_session_fini(session);
                 throw std::runtime_error ("Cannot initialize ipset session.");
             }
 
             if (ipset_envopt_parse(session, IPSET_ENV_EXIST, NULL) < 0) {
-                syslog (LOG_ERR, "Ipset: Can't set environment option.");
+                PLOG(ERROR) << "Can't set environment option.";
                 ipset_session_fini(session);
                 throw std::runtime_error ("Can't set environment option.");
             }
             int r = ipset_session_data_set(session, IPSET_SETNAME, ipsetName.c_str());
             if (ipset_commit(session) < 0) {
-                syslog (LOG_ERR, "Ipset: Can't commit for setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
+                LOG(ERROR) << "Can't commit for setname " << ipsetName << ": " << ipset_session_error(session);
                 ipset_session_fini(session);
                 throw std::runtime_error("Can't call ipset_commit for " + ipsetName + ": " + ipset_session_error(session));
             }
             ipset_session_fini(session);
             return r == 0;
         } catch (...) {
-            syslog (LOG_ERR, "Ipset: Failed to check existence of ipset %s", ipsetName.c_str());
+            LOG(ERROR) << "Failed to check existence of ipset " << ipsetName;
         }
         return false;
      }
@@ -130,7 +124,7 @@ public:
          try {
              return ipset_exec(IPSET_CMD_ADD, inIpAddress, timeout);
          } catch (...) {
-             syslog (LOG_ERR, "Ipset: Failed to add IP address %s to ipset %s", inIpAddress.to_string().c_str(), ipsetName.c_str());
+             PLOG(ERROR) << "Failed to add IP address " << inIpAddress << " to ipset " << ipsetName;
          }
          return false;
      }
@@ -139,7 +133,7 @@ public:
          try {
              return ipset_exec(IPSET_CMD_ADD, inMac.str(), timeout);
          } catch (...) {
-             syslog (LOG_ERR, "Ipset: Failed to add MAC address %s to ipset %s", inMac.c_str(), ipsetName.c_str());
+             PLOG(ERROR) << "Failed to add MAC address " << inMac << " to ipset " << ipsetName;
          }
          return false;
      }
@@ -147,7 +141,7 @@ public:
          try {
              return ipset_exec(IPSET_CMD_ADD, inMac, timeout);
          } catch (...) {
-             syslog (LOG_ERR, "Ipset: Failed to add MAC address %s to ipset %s", inMac.c_str(), ipsetName.c_str());
+             PLOG(ERROR) << "Failed to add MAC address " << inMac << " to ipset " << ipsetName;
          }
          return false;
      }
@@ -156,7 +150,7 @@ public:
          try {
              return ipset_exec(IPSET_CMD_DEL, inIpAddress, 0);
          } catch (...) {
-             syslog (LOG_ERR, "Ipset: Failed to remove IP address %s from ipset %s ", inIpAddress.to_string().c_str(), ipsetName.c_str());
+             PLOG(ERROR) << "Failed to remove IP address " << inIpAddress << " from ipset " <<  ipsetName;
          }
          return false;
      }
@@ -165,7 +159,7 @@ public:
          try {
          return ipset_exec(IPSET_CMD_DEL, Mac.str(), 0);
          } catch (...) {
-             syslog (LOG_ERR, "Ipset: Failed to remove MAC address %s from  ipset %s", Mac.c_str(), ipsetName.c_str());
+             PLOG(ERROR) << "Failed to remove MAC address " << Mac << " from  ipset " << ipsetName;
          }
          return false;
      }
@@ -173,7 +167,7 @@ public:
          try {
           return ipset_exec(IPSET_CMD_DEL, Mac, 0);
          } catch (...) {
-             syslog (LOG_ERR, "Ipset: Failed to remove Mac address %s from ipset %s", Mac.c_str(), ipsetName.c_str());
+            PLOG(ERROR) << "Failed to remove Mac address " << Mac << " from ipset " << ipsetName;
          }
          return false;
      }
@@ -183,7 +177,7 @@ public:
          try {
          return ipset_exec(IPSET_CMD_TEST, inIpAddress, 0);
          } catch (...) {
-             syslog (LOG_ERR, "Ipset: Failed to check wheth IP address %s is in ipset %s", inIpAddress.to_string().c_str(), ipsetName.c_str());
+             PLOG(ERROR) << "Failed to check wheth IP address " << inIpAddress << " is in ipset " << ipsetName;
          }
          return false;
      }
@@ -192,7 +186,7 @@ public:
          try {
          return ipset_exec(IPSET_CMD_TEST, Mac.str(), 0);
          } catch (...) {
-             syslog (LOG_ERR, "Ipset: Failed to check whether MAC address %s is in ipset %s", Mac.c_str(), ipsetName.c_str());
+             PLOG(ERROR) << "Failed to check whether MAC address " << Mac << " is in ipset " << ipsetName;
          }
          return false;
      }

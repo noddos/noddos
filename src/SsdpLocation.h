@@ -24,10 +24,11 @@
 #define SSDPLOCATION_H_
 
 #include <regex>
-#include <syslog.h>
 #include <iostream>
 
 #include <curl/curl.h>
+
+#include <glog/logging.h>
 
 #include "noddos.h"
 
@@ -82,15 +83,13 @@ public:
 		    curl = NULL;
 		}
 		if (elapsed > (timeout / 1000)) {
-			syslog(LOG_WARNING, "Ssdp info time-out after %d ms for %s", timeout, s.Location.c_str());
+			LOG(INFO) << "Ssdp info time-out after " << timeout << " ms for " << s.Location;
 			return false;
 		}
 
 		// std::string response_string = response.text;
 
-		if(inDebug) {
-			syslog(LOG_DEBUG, "HTTP response: %s", response_string.c_str());
-		}
+		DLOG_IF(INFO, inDebug) << "HTTP response: " << response_string;
 
 		std::smatch m;
 		if (std::regex_search(response_string, m, friendlyname_rx)) {

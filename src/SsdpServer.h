@@ -29,6 +29,7 @@
 #include <memory>
 #include <sys/epoll.h>
 
+#include <glog/logging.h>
 
 #include "iDeviceInfoSource.h"
 #include "HostCache.h"
@@ -44,13 +45,10 @@ private:
 
 	std::regex ssdp_rx;
 
-
 public:
 	SsdpServer(HostCache &inhCache, const time_t inExpiration, const std::string inIpAddress = "", const bool inDebug = false):
 	        hCache{inhCache}, Expiration{inExpiration}, IpAddress{inIpAddress}, Debug{inDebug} {
-		if (Debug == true) {
-		    syslog (LOG_DEBUG, "SsdpServer: constructing instance");
-		}
+		DLOG_IF(INFO , Debug) << "constructing instance";
 	    ssdp_rx = std::regex(R"delim(^(SERVER|LOCATION|NT|USN|USER-AGENT): (.*)$)delim",
 				std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
 
@@ -60,9 +58,7 @@ public:
 	}
 	virtual ~SsdpServer() {
 		Close();
-		if(Debug) {
-			syslog (LOG_DEBUG, "SsdpServer: destructing instance");
-		}
+		DLOG_IF(INFO, Debug) << "destructing instance";
 	}
 
 	bool ParseSsdpMessage (std::shared_ptr<SsdpHost> host, const char * msgbuf, const int nbytes);

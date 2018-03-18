@@ -24,8 +24,6 @@
 #define FLOWENTRY_H_
 
 
-#include <syslog.h>
-
 #include "iCache.h"
 #include "noddos.h"
 

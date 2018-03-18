@@ -14,7 +14,7 @@
 #include <fstream>
 
 #include <net/if.h>
-#include "syslog.h"
+#include "glog/logging.h"
 
 class InterfaceMap {
 private:
@@ -27,16 +27,12 @@ private:
         uint32_t index;
         bool failure = false;
         for (auto i : set) {
-            if (Debug == true) {
-                syslog(LOG_DEBUG, "InterfaceMap: Looking up interface %s", i.c_str());
-            }
+            DLOG_IF(INFO, Debug) << "InterfaceMap: Looking up interface " << i;
             if ((index = if_nametoindex(i.c_str())) > 0) {
-                if (Debug == true) {
-                    syslog(LOG_DEBUG, "Interface: %s -> Index %d", i.c_str(), index);
-                }
+                DLOG_IF(INFO, Debug) << "Interface: " << i << " -> Index " << index;
                 map[index] = i;
             } else {
-                syslog (LOG_ERR, "Can't find interface %s", i.c_str());
+                LOG(ERROR) << "Can't find interface " << i;
                 failure = true;
             }
         }
@@ -46,21 +42,15 @@ private:
 public:
 	InterfaceMap (bool inDebug = false): Debug{inDebug} {};
 	InterfaceMap(std::unordered_set<std::string> inLanInterfaces, std::unordered_set<std::string> inWanInterfaces, bool inDebug = false): Debug{inDebug} {
-		if (Debug == true) {
-		    syslog (LOG_DEBUG, "InterfaceMap: constructing instance");
-		}
+		DLOG_IF(INFO, Debug) << "InterfaceMap: constructing instance";
 	    Load(inLanInterfaces, inWanInterfaces);
 	}
 	~InterfaceMap() {
-	    if (Debug == true) {
-	        syslog (LOG_DEBUG, "InterfaceMap: deleting instance");
-	    }
+	    DLOG_IF(INFO, Debug) << "InterfaceMap: deleting instance";
 	};
 
 	bool Load (std::unordered_set<std::string> &inLanInterfaces, std::unordered_set<std::string> &inWanInterfaces) {
-		if (Debug == true) {
-		    syslog (LOG_DEBUG, "InterfaceMap: loading interfaces");
-		}
+		DLOG_IF(INFO, Debug) << "InterfaceMap: loading interfaces";
 	    bool failure = false;
 		failure |= LoadInterfaces(inLanInterfaces, lanInterfaceMap);
         failure |= LoadInterfaces(inWanInterfaces, wanInterfaceMap);

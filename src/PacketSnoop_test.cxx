@@ -21,7 +21,7 @@
 #include <linux/filter.h>
 #include <linux/if_ether.h>
 
-#include <syslog.h>
+#include <glog/logging.h>
 
 #include "noddos.h"
 #include "PacketSnoop.h"
@@ -41,9 +41,10 @@ int tcp=0,udp=0,icmp=0,others=0,igmp=0,total=0,i,j;
  
 int main()
 {
-    unsigned char *buffer = (unsigned char *) malloc(65536); //Its Big!
+    google::InitGoogleLogging("PacketSnoop_test");
+    FLAGS_logtostderr= true;
 
-	openlog("PacketSnoop_test", LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
+    unsigned char *buffer = (unsigned char *) malloc(65536); //Its Big!
 
 	struct sockaddr_ll saddr;
     int saddr_size = sizeof saddr;
@@ -68,12 +69,12 @@ int main()
             return 1;
         }
         //Now process the packet
-        syslog (LOG_DEBUG, "Received packet of %u bytes", data_size);
+        LOG(INFO) << "Received packet of " << data_size << " bytes";
         ps.Parse(buffer);
         // ProcessPacket(buffer , data_size);
     }
     ps.Close();
-    printf("Finished");
+    LOG(INFO) << "Finished";
     return 0;
 }
  

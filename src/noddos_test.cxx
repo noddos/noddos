@@ -412,7 +412,7 @@ bool test_match (std::string inIp, std::string inDpUuid, HostCache &hc) {
                         DLOG_IF(INFO, Debug) << inIp << " did not match with profile " << inDpUuid << " but with " << uuid;
                     }
                 json j;
-                h_ptr->DeviceStats(j, 604800, true, true);
+                h_ptr->exportDeviceStats(j, 604800, true, true);
                 DLOG_IF(INFO, Debug) << j;
                 return false;
 
@@ -632,7 +632,7 @@ TEST(HostTest, exportDeviceInfo) {
 
     h_sptr->addorupdateDnsQueryList("www.noddos.io", 60);
     json j;
-    h_sptr->ExportDeviceInfo(j, true);
+    h_sptr->exportDeviceInfo(j, true);
     ASSERT_EQ(j[0]["MacAddress"], "00:00:00:00:00:01");
     ASSERT_EQ(j[0]["DeviceProfileUuid"], h_sptr->getUuid());
     ASSERT_EQ(j[0]["Ipv4Address"], "192.168.1.234");
@@ -646,6 +646,72 @@ TEST(HostTest, exportDeviceInfo) {
     ASSERT_EQ(j[0]["DhcpVendor"], "android-dhcp-7.1.1");
     // ASSERT_EQ(j[0][""], "");
     ASSERT_EQ(j[0]["DnsQueries"], "www.noddos.io ");
+}
+
+TEST(HostTest, exportTrafficStats) {
+    std::string deviceprofilesfile = "tests/DeviceProfiles.json";
+
+    InterfaceMap ifMap;
+    HostCache hC(ifMap, "", 0, 14400, "", false, false);
+    hC.loadDeviceProfiles(deviceprofilesfile);
+    hC.AddByMac (MacAddress("00:00:00:00:00:01"), "192.168.1.234");
+
+    auto sh = std::make_shared<SsdpHost>();
+    sh->IpAddress = "192.168.1.234";
+    sh->Manufacturer = "Amazon.com, Inc.";
+    sh->ModelName = "FireTV";
+    hC.AddSsdpInfo(sh);
+    // This should match with UUID: 694e8c7e-69f0-400f-824d-b94af7c7b7cc
+    ASSERT_TRUE(hC.MatchByIpAddress("192.168.1.234"));
+    auto h_sptr = hC.FindHostByIp("192.168.1.234");
+
+    json j;
+    std::set<std::string> localIps;
+    DnsCache <Tins::IPv4Address> dCipv4;
+    DnsCache <Tins::IPv6Address> dCipv6;
+    DnsCache <std::string> dCcname;
+
+    ASSERT_TRUE(h_sptr->setFlowEntry(1000, "1.0.0.0", 80, 17, 0));
+
+    // Use case: single A RR
+    Tins::IPv4Address ip1("1.0.0.1");
+    ASSERT_TRUE(h_sptr->setFlowEntry(1001, "1.0.0.1", 81, 17, 60));
+    dCipv4.addorupdateResourceRecord("www.noddos.io", ip1, 60);
+    h_sptr->addorupdateDnsQueryList("www.noddos.io", 60);
+
+    // Use case: CNAME to CNAME to A RR, only DNS query for A RR and CNAME RR #1
+    Tins::IPv4Address ip2("1.0.0.2");
+    ASSERT_TRUE(h_sptr->setFlowEntry(1002, "1.0.0.2", 82, 17, 60));
+    dCipv4.addorupdateResourceRecord("aRR.noddos.io", ip2, 60);
+    dCcname.addorupdateCname("cnameRR2.noddos.io", "aRR.noddos.io", 60);
+    dCcname.addorupdateCname("cnameRR1.noddos.io", "cnameRR2.noddos.io", 60);
+    h_sptr->addorupdateDnsQueryList("cnameRR1.noddos.io", 60);
+    h_sptr->addorupdateDnsQueryList("aRR.noddos.io", 60);
+
+    // Use case: 2 A RRs, only DNS query for A RR #2
+    ASSERT_TRUE(h_sptr->setFlowEntry(1003, "1.0.0.3", 83, 17, 60));
+    Tins::IPv4Address ip3("1.0.0.3");
+    dCipv4.addorupdateResourceRecord("aRR1.noddos.io", ip3, 60);
+    dCipv4.addorupdateResourceRecord("aRR2.noddos.io", ip3, 60);
+    h_sptr->addorupdateDnsQueryList("aRR2.noddos.io", 60);
+
+    h_sptr->exportTrafficStats(j, 14400, false, localIps, dCipv4, dCipv6, dCcname, false);
+    ASSERT_EQ(j["DeviceProfileUuid"], h_sptr->getUuid());
+    std::set<std::string> endpoints = j["TrafficStats"];
+    ASSERT_NE(endpoints.find("1.0.0.0"), endpoints.end());
+    ASSERT_NE(endpoints.find("www.noddos.io"), endpoints.end());
+
+    // Use case: CNAME to CNAME to A RR, only DNS query for A RR and CNAME RR #1
+    ASSERT_NE(endpoints.find("arr.noddos.io"), endpoints.end());
+    ASSERT_NE(endpoints.find("cnamerr1.noddos.io"), endpoints.end());
+    ASSERT_EQ(endpoints.find("cnamerr2.noddos.io"), endpoints.end());
+
+    // Use case: 2 A RRs, only DNS query for A RR #2
+    ASSERT_NE(endpoints.find("arr2.noddos.io"), endpoints.end());
+    ASSERT_EQ(endpoints.find("arr1.noddos.io"), endpoints.end());
+
+    // Use case: no flow from host
+    ASSERT_EQ(endpoints.find("1.0.0.255"), endpoints.end());
 }
 
 TEST (HostTest, dnsQueryList) {

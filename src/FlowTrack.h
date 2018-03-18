@@ -29,12 +29,13 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <syslog.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 #include <libnetfilter_conntrack/libnetfilter_conntrack_tcp.h>
+
+#include <glog/logging.h>
 
 #include <tins/ip_address.h>
 #include <tins/ipv6_address.h>
@@ -69,30 +70,25 @@ private:
 public:
 	FlowTrack(HostCache & inhC, Config &inConfig,std::set<std::string> & inlocalIpAddresses):
 	        hC{inhC}, config{inConfig}, Debug{inConfig.Debug && inConfig.DebugFlowTrack}, localIpAddresses{inlocalIpAddresses} {
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "FlowTrack: constructing instance");
-        }
+        DLOG_IF(INFO, Debug) << "constructing instance";
 	}
+
 	virtual int Open (std::string input = "", uint32_t inExpiration = 0) {
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "FlowTrack: open");
-        }
+        DLOG_IF(INFO, Debug) << "open";
 		// We don't care about Open parameters in this Class derived from iDeviceInfoSource
 		input = "";
 		inExpiration = 0;
 
 		struct stat buf;
 		if (config.UseNfConntrack == true && stat ("/proc/net/nf_conntrack", &buf) == 0) {
-			if (Debug == true) {
-				syslog (LOG_DEBUG, "FlowTrack: /proc/net/nf_conntrack exists, using it");
-			}
+		    DLOG_IF(INFO, Debug) << "/proc/net/nf_conntrack exists, using it";
 			if ((ctFilePointer = fopen ("/proc/net/nf_conntrack","r")) != NULL) {
 				int flags;
 				int nf_fd = fileno(ctFilePointer);
 				if (-1 == (flags = fcntl(nf_fd, F_GETFL, 0)))
 					flags = 0;
 				if (fcntl(nf_fd, F_SETFL, flags | O_NONBLOCK) == -1) {
-					syslog(LOG_ERR, "FlowTrack: Set O_NONBLOCK on conntrack log file");
+					PLOG(ERROR) << "Set O_NONBLOCK on conntrack log file";
 		            throw std::system_error(errno, std::system_category());
 				} else {
 					useNfct = false;
@@ -101,14 +97,13 @@ public:
 			}
 		}
 		useNfct = true;
-		if (Debug == true) {
-			syslog (LOG_DEBUG, "FlowTrack: Opening NFCT");
-		}
+
+		LOG_IF(INFO, Debug) << "Opening NFCT";
 
         h = nfct_open(CONNTRACK, NF_NETLINK_CONNTRACK_NEW |
                                  NF_NETLINK_CONNTRACK_UPDATE);
         if (!h) {
-       		syslog(LOG_ERR, "FlowTrack: nfct_open");
+       		PLOG(ERROR) << "nfct_open";
        		throw std::system_error(errno, std::system_category());
         }
         int on = 1;
@@ -119,7 +114,7 @@ public:
 
         filter = nfct_filter_create();
         if (!filter) {
-            syslog(LOG_ERR, "nfct_create_filter");
+            PLOG(ERROR) << "nfct_create_filter";
             throw std::system_error(errno, std::system_category());
         }
         // TODO  add other protocols
@@ -183,44 +178,37 @@ public:
        	nfct_filter_add_attr(filter, NFCT_FILTER_SRC_IPV6, &filter_ipv6);
 
         if (nfct_filter_attach(nfct_fd(h), filter) == -1) {
-            syslog(LOG_ERR, "nfct_filter_attach");
+            PLOG(ERROR) << "nfct_filter_attach";
             throw std::system_error(errno, std::system_category());
         }
 
         nfct_callback_register(h, NFCT_T_ALL, netfilter_cb, &hC);
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "FlowTrack: open competed succesfully");
-        }
+
+        DLOG_IF(INFO, Debug) << "open competed succesfully";
 
         return 0;
 	}
 
 	virtual ~FlowTrack() {
 		Close();
-		if (config.Debug) {
-			syslog (LOG_DEBUG, "FlowTrack: destructing instance");
-		}
+		DLOG_IF(INFO, Debug) << "destructing instance";
 	}
 	// iDeviceInfoSource interface methods
 	virtual bool Close () {
 		if (useNfct == false) {
 			if (ctFilePointer == nullptr) {
-				syslog(LOG_WARNING, "FlowTrack: Closing closed conntrack file pointer");
+				LOG(WARNING) << "Closing closed conntrack file pointer";
 				return false;
 			}
-			if (config.DebugFlowTrack == true) {
-			    syslog(LOG_DEBUG, "FlowTrack: Closing conntrack file pointer");
-			}
+			DLOG_IF(INFO, config.DebugFlowTrack) << "Closing conntrack file pointer";
 			return fclose(ctFilePointer);
 		}
 		// useNfct == true
 		if (h == nullptr) {
-			syslog(LOG_WARNING, "FlowTrack: Closing closed conntrack handler");
+			LOG(WARNING) << "Closing closed conntrack handler";
 			return false;
 		}
-		if (config.DebugFlowTrack == true) {
-			syslog(LOG_DEBUG, "FlowTrack: Closing conntrack handler");
-		}
+		DLOG_IF(INFO, config.DebugFlowTrack) << "Closing conntrack handler";
 		// valgrind thinks nfct_close is buggy
 		// return nfct_close(h);
 		return true;
@@ -243,11 +231,9 @@ public:
 		if (useNfct == true) {
 			rt = nfct_catch(h);
 			if (rt < 0) {
-				syslog(LOG_ERR, "nfct_catch: %s ", strerror(errno));
+				PLOG(ERROR) << "nfct_catch";
 			}
-			if (config.DebugFlowTrack) {
-				syslog(LOG_DEBUG, "Conntrack event read at %s with status %d", buf, rt);
-			}
+			DLOG_IF(INFO, config.DebugFlowTrack) << "Conntrack event read at " << buf << " with status " << rt;
 		} else {
         	while ((parseLogLine()) > -1) {}
 		}

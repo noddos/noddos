@@ -40,20 +40,20 @@ configure_file (
 include_directories("${PROJECT_BINARY_DIR}")
  
 add_executable(noddos noddos.cxx Host.cxx Mdns.cxx 
-    HostCache.cxx SsdpServer.cxx SsdpLocation.cxx FlowTrack.cxx Config.cxx
+    HostCache.cxx SsdpServer.cxx FlowTrack.cxx Config.cxx
     opensslfingerprint.cxx PacketSnoop.cxx Ipset.cxx DeviceProfile.cxx WsDiscovery.cxx)
 target_link_libraries(noddos libnetfilter_conntrack.so ssl crypto curl tins ipset gtest pthread yaml-cpp glog)
 
 enable_testing()
 
 add_executable (PacketSnoop_test PacketSnoop_test.cxx PacketSnoop.cxx 
-	HostCache.cxx Host.cxx SsdpServer.cxx SsdpLocation.cxx 
+	HostCache.cxx Host.cxx SsdpServer.cxx 
     opensslfingerprint.cxx DeviceProfile.cxx Ipset.cxx)
 target_link_libraries(PacketSnoop_test curl ssl crypto tins ipset gtest pthread yaml-cpp glog)
 
 add_test (Noddos noddos_test)
 add_executable(noddos_test noddos_test.cxx Host.cxx Mdns.cxx 
-    HostCache.cxx SsdpServer.cxx SsdpLocation.cxx FlowTrack.cxx Config.cxx
+    HostCache.cxx SsdpServer.cxx FlowTrack.cxx Config.cxx
     opensslfingerprint.cxx PacketSnoop.cxx Ipset.cxx DeviceProfile.cxx
     WsDiscovery.cxx)
 target_link_libraries(noddos_test curl ssl crypto ipset tins yaml-cpp gtest

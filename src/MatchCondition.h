@@ -34,9 +34,7 @@ public:
 
 	MatchCondition(const std::string inKey, const std::string inValue, const bool inDebug): Key{inKey}, Value{inValue}, Debug{inDebug} {}
 	~MatchCondition() {
-		if(Debug) {
-			syslog (LOG_DEBUG, "Destroying MatchCondition instance");
-		}
+		DLOG_IF(INFO, Debug) << "Destroying MatchCondition instance";
 	}
 };
 
@@ -49,11 +47,11 @@ public:
 	ContainCondition(const std::string inKey, const json j, const bool inDebug): Key{inKey}, Debug{inDebug} {
 		for (auto &it: j) {
 			if (it.is_string()) {
-				std::string v = it.get<std::string>();
+				std::string v = it;
 				std::transform(v.begin(), v.end(), v.begin(), ::tolower);
 				Values.insert (v);
 			} else {
-				syslog (LOG_ERR, "Contain condition %s contains a value other than a string", Key.c_str());
+				LOG(ERROR) << "Contain condition " << Key << " contains a value other than a string";
 			}
 		}
 	}
@@ -65,9 +63,7 @@ public:
 		return true;
 	}
 	~ContainCondition() {
-		if(Debug) {
-			syslog (LOG_DEBUG, "Destroying ContainCondition instance");
-		}
+		DLOG_IF(INFO, Debug) << "Destroying ContainCondition instance";
 	}
 };
 #endif /* MATCHCONDITION_H_ */

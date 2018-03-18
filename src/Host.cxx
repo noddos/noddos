@@ -31,7 +31,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include <syslog.h>
 #include <glog/logging.h>
 
 #include "json.hpp"
@@ -69,6 +68,27 @@ bool Host::inDnsQueryList (std::string inFqdn) {
     }
     DLOG_IF(INFO, Debug) << "Host(" << Ipv4Address << "): " << fqdn << " is in DnsQueryList";
     return true;
+}
+
+/*! \brief Prune the DNS Query list
+ *  \param [in] Force constant boolean on whether all DNS queries should be pruned (true) or only expired DNS queries (false)
+ *  \return unsigned integer of 32 bits with the number of DNS queries pruned
+ */
+uint32_t Host::pruneDnsQueryList (const bool Force) {
+    uint32_t deletecount;
+    time_t now = time(nullptr);
+    auto i = DnsQueryList.begin();
+    while (i != DnsQueryList.end()) {
+        if (Force || i->second <= now) {
+            DLOG_IF(INFO, Debug) << "Host(" << Ipv4Address << "): Deleting " << i->first << " from DnsQueryList as " <<
+                    i->second << " is earlier than " << now;
+            i = DnsQueryList.erase(i);
+            deletecount++;
+        } else {
+            ++i;
+        }
+    }
+    return deletecount;
 }
 
 /*! \brief Match the host against a list of Device Profiles
@@ -138,14 +158,14 @@ ConfidenceLevel Host::Match(const DeviceProfile& deviceProfile) {
  */
 ConfidenceLevel Host::Match(const Identifier& identifier) {
 	for (auto& matchCondition : identifier.MatchConditions_get()) {
-			DLOG_IF(INFO, Debug) << "Host: Testing match condition " << (*matchCondition).Key;
+			DLOG_IF(INFO, Debug) << "Testing match condition " << (*matchCondition).Key;
 		if(not Match (*matchCondition)) {
 		    DLOG_IF(INFO, Debug) << "Host(" << Ipv4Address << "): Host " << Mac << " did not match condition " << (*matchCondition).Key;
 			return ConfidenceLevel::None;
 		}
 	}
 	for (auto& containCondition : identifier.ContainConditions_get()) {
-	    DLOG_IF(INFO, Debug) << "Host: Testing contain condition " << (*containCondition).Key;
+	    DLOG_IF(INFO, Debug) << "Testing contain condition " << (*containCondition).Key;
 		if(not Match (*containCondition)) {
 		    DLOG_IF(INFO, Debug) << "Host(" << Ipv4Address << "): Host " << Mac << " did not contain condition " << (*containCondition).Key;
 			return ConfidenceLevel::None;
@@ -272,7 +292,7 @@ bool Host::Match(const ContainCondition& containCondition) {
  * \param [in] detailed constant boolean whether the unexpired DNS queries performed by the host should be stored in the json object
  * \return boolean on whether data was stored in the json object
  */
-bool Host::DeviceStats(json& j, const uint32_t time_interval, const bool force, const bool detailed) {
+bool Host::exportDeviceStats(json& j, const uint32_t time_interval, const bool force, const bool detailed) {
 	if (not force && (isMatched() || LastModified < (time(nullptr) - time_interval))) {
 		return false;
 	}
@@ -357,7 +377,7 @@ bool Host::DeviceStats(json& j, const uint32_t time_interval, const bool force, 
  * \param [in] Force boolean constant boolean whether the matched host should always be reported on, regardless or whether traffic
  * for the host has been seen since the last report interval
  */
-bool Host::TrafficStats(json& j, const uint32_t report_interval, const bool ReportPrivateAddresses, const std::set<std::string> &LocalIps,
+bool Host::exportTrafficStats(json& j, const uint32_t report_interval, const bool ReportPrivateAddresses, const std::set<std::string> &LocalIps,
 		const DnsCache <Tins::IPv4Address> &dCipv4, const DnsCache <Tins::IPv6Address> &dCipv6,
 		const DnsCache <std::string> &dCcname, const bool Force) {
 	// We only report traffic for hosts that have been matched to a Device Profile
@@ -479,7 +499,7 @@ bool Host::TrafficStats(json& j, const uint32_t report_interval, const bool Repo
  *  \param [out] j reference to json object
  *  \param [in] detailed bool on whether to write detailed data or just the basics
  */
-void Host::ExportDeviceInfo (json &j, const bool detailed) {
+void Host::exportDeviceInfo (json &j, const bool detailed) {
 	json h{{"MacAddress", Mac.str()},
 			{"DeviceProfileUuid", Uuid},
 			{"Ipv4Address", Ipv4Address},
@@ -488,7 +508,7 @@ void Host::ExportDeviceInfo (json &j, const bool detailed) {
 			{"SsdpModelName", Ssdp.ModelName}
 	};
 	if (detailed) {
-		DeviceStats(h, 604800, true, true);
+		exportDeviceStats(h, 604800, true, true);
 	}
 	j.push_back(h);
 }
@@ -767,25 +787,5 @@ uint32_t Host::Prune (const bool Force) {
 	return pruned_flows;
 }
 
-/*! \brief Prune the DNS Query list
- *  \param [in] Force constant boolean on whether all DNS queries should be pruned (true) or only expired DNS queries (false)
- *  \return unsigned integer of 32 bits with the number of DNS queries pruned
- */
-uint32_t Host::pruneDnsQueryList (const bool Force) {
-	uint32_t deletecount;
-	time_t now = time(nullptr);
-	auto i = DnsQueryList.begin();
-	while (i != DnsQueryList.end()) {
-		if (Force || i->second <= now) {
-		    DLOG_IF(INFO, Debug) << "Host(" << Ipv4Address << "): Deleting " << i->first << " from DnsQueryList as " <<
-		            i->second << " is earlier than " << now;
-			i = DnsQueryList.erase(i);
-			deletecount++;
-		} else {
-			++i;
-		}
-	}
-	return deletecount;
-}
 
 

@@ -28,6 +28,7 @@
 #include <fstream>
 #include <iterator>
 
+#include <glog/logging.h>
 
 std::string getIpsetUuid (const std::string inUuid) {
     std::string res = "";
@@ -64,76 +65,72 @@ bool isIpv4Address(const std::string inIpAddress, const bool Debug) {
     unsigned char buf[sizeof(struct in6_addr)];
     if (inet_pton(AF_INET, inIpAddress.c_str(), buf) == 1) {
         if (Debug == true) {
-            syslog (LOG_DEBUG, "Ipset: %s is an IPv4 address", inIpAddress.c_str());
+            DLOG_IF(INFO, Debug) << "" << inIpAddress << " is an IPv4 address";
         }
         return true;
     }
     if (inet_pton(AF_INET6, inIpAddress.c_str(), buf) == 1) {
         if (Debug == true) {
-            syslog (LOG_DEBUG, "Ipset: %s is an IPv6 address", inIpAddress.c_str());
+            DLOG_IF(INFO, Debug) << "" << inIpAddress << " is an IPv6 address";
         }
         return false;
     }
     if (Debug == true) {
-        syslog (LOG_DEBUG, "Ipset: %s is not an IPv4/v6 address", inIpAddress.c_str());
+        DLOG_IF(INFO, Debug) << "" << inIpAddress << " is not an IPv4/v6 address";
     }
     throw std::runtime_error ("Not an IP address " + inIpAddress);
 }
 
 void Ipset::Open (const std::string inIpsetName, std::string inIpsetType, bool inisIpsetv4, bool inDebug) {
     Debug = inDebug;
-    if (Debug == true) {
-        syslog (LOG_DEBUG, "Ipset: opening instance %s of type %s", inIpsetName.c_str(), inIpsetType.c_str());
-    }
     ipsetName = inIpsetName;
     ipsetType = inIpsetType;
     isIpsetv4 = inisIpsetv4;
+    DLOG_IF(INFO, Debug) << "opening instance " << inIpsetName << " of type " << inIpsetType;
     ipset_load_types();
 
     struct ipset_session *session = ipset_session_init(printf);
     if (session == nullptr) {
-        syslog (LOG_ERR, "Ipset: Cannot initialize ipset session.");
+        LOG(ERROR) << "Cannot initialize ipset session.";
         ipset_session_fini(session);
         throw std::runtime_error ("Cannot initialize ipset session.");
     }
 
     if (ipset_envopt_parse(session, IPSET_ENV_EXIST, NULL) < 0) {
-        syslog (LOG_ERR, "Ipset: Can't set environment option.");
+        LOG(ERROR) << "Can't set environment option.";
         ipset_session_fini(session);
         throw std::runtime_error ("Can't set environment option.");
     }
     int r = ipset_session_data_set(session, IPSET_SETNAME, ipsetName.c_str());
     if ( r < 0) {
-        syslog (LOG_ERR, "Ipset: Can't set setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
+        LOG(ERROR) << "Can't set setname " << ipsetName << ": "  << ipset_session_error(session);
         ipset_session_fini(session);
         throw std::runtime_error("Can't set setname " + ipsetName + ": " + ipset_session_error(session));
     } else if (r > 0) {
-        if (Debug == true) {
-            syslog (LOG_DEBUG, "Ipset: Not creating set %s as it already exists", ipsetName.c_str());
-        }
+        DLOG_IF(INFO, Debug) << "Not creating set " << ipsetName << " as it already exists";
         ipset_session_fini(session);
         return;
     }
     if (ipset_session_data_set(session, IPSET_OPT_TYPENAME, ipsetType.c_str()) < 0) {
-        syslog (LOG_ERR, "Ipset: Can't set setname %s to type %s: %s", ipsetName.c_str(), ipsetType.c_str(), ipset_session_error(session));
+        LOG(ERROR) << "Can't set setname " << ipsetName << " to type " << ipsetType << ": " << ipset_session_error(session);
         ipset_session_fini(session);
         throw std::runtime_error("Can't set type " + ipsetType + ": " + ipset_session_error(session));
     }
     const struct ipset_type *type = ipset_type_get(session, IPSET_CMD_CREATE);
     if (type == NULL) {
-        syslog (LOG_ERR, "Ipset: Can't set create ip %s: %s", ipsetName.c_str(), ipset_session_error(session));
+        LOG(ERROR) << "Can't set create ip " << ipsetName << ": %s" << ipset_session_error(session);
         ipset_session_fini(session);
         throw std::runtime_error("Can't create ipset " + ipsetName + ": " + ipset_session_error(session));
     }
 
     uint32_t timeout = 0; /* default to infinity */
     if (ipset_session_data_set(session, IPSET_OPT_TIMEOUT, &timeout) < 0) {
-        syslog (LOG_ERR, "Ipset: Can't set setname %s to timeout %d: %s", ipsetName.c_str(), timeout, ipset_session_error(session));
+        LOG(ERROR) << "Can't set setname " << ipsetName << " to timeout " << timeout << ": " << ipset_session_error(session);
         ipset_session_fini(session);
         throw std::runtime_error("Can't set time-out " + ipsetName + ": " + ipset_session_error(session));
     }
     if (ipset_session_data_set(session, IPSET_OPT_TYPE, type)) {
-        syslog (LOG_ERR, "Ipset: Can't set setname %s option type: %s", ipsetName.c_str(), ipset_session_error(session));
+        LOG(ERROR) << "Can't set setname " << ipsetName << " option type: " << ipset_session_error(session);
         ipset_session_fini(session);
         throw std::runtime_error("Can't set ipset type: " + ipsetName + ": " + ipset_session_error(session));
     }
@@ -149,18 +146,18 @@ void Ipset::Open (const std::string inIpsetName, std::string inIpsetType, bool i
         throw std::invalid_argument("Unknown ipset data type " + ipsetType);
     }
     if (ipset_session_data_set(session, IPSET_OPT_FAMILY, &family) < 0) {
-        syslog (LOG_ERR, "Ipset: Can't set setname %s address family %d: %s", ipsetName.c_str(), family, ipset_session_error(session));
+        LOG(ERROR) << "Can't set setname " << ipsetName << " address family "  << family << ": " << ipset_session_error(session);
         ipset_session_fini(session);
         throw std::runtime_error("Cannot set ipset family: " + ipsetName + ": " + ipset_session_error(session));
     }
 
     if (ipset_cmd(session, IPSET_CMD_CREATE, /*lineno*/ 0) != 0) {
-        syslog (LOG_ERR, "Ipset: Can't create setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
+        LOG(ERROR) << "Can't create setname " << ipsetName << ": " << ipset_session_error(session);
         ipset_session_fini(session);
         throw std::runtime_error("Failed to create ipset " + ipsetName + ": " + ipset_session_error(session));
     }
     if (ipset_commit(session) < 0) {
-        syslog (LOG_ERR, "Ipset: Can't commit for setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
+        LOG(ERROR) << "Can't commit for setname " << ipsetName << ": " << ipset_session_error(session);
         ipset_session_fini(session);
         throw std::runtime_error("Can't call ipset_commit for " + ipsetName + ": " + ipset_session_error(session));
     }
@@ -171,33 +168,33 @@ void Ipset::Open (const std::string inIpsetName, std::string inIpsetType, bool i
 bool Ipset::ipset_exec(enum ipset_cmd cmd) {
 
     if (Debug == true) {
-        syslog(LOG_DEBUG, "Ipset: received command %d for ipset %s", cmd, ipsetName.c_str());
+        DLOG_IF(INFO, Debug) << "received command " << cmd << " for ipset " << ipsetName;
     }
     struct ipset_session *session = ipset_session_init(printf);
     if (session == nullptr) {
-        syslog (LOG_ERR, "Ipset: Cannot initialize ipset session.");
+        LOG(ERROR) << "Cannot initialize ipset session.";
         ipset_session_fini(session);
         throw std::runtime_error ("Cannot initialize ipset session.");
     }
 
     if (ipset_envopt_parse(session, IPSET_ENV_EXIST, NULL) < 0) {
-        syslog (LOG_ERR, "Ipset: Can't set environment option.");
+        LOG(ERROR) << "Can't set environment option.";
         ipset_session_fini(session);
         throw std::runtime_error ("Can't set environment option.");
     }
     if (ipset_session_data_set(session, IPSET_SETNAME, ipsetName.c_str()) < 0) {
-        syslog (LOG_ERR, "Ipset: Can't set setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
+        LOG(ERROR) << "Can't set setname " << ipsetName << ": " << ipset_session_error(session);
         ipset_session_fini(session);
         throw std::runtime_error("Can't set setname " + ipsetName + ": " + ipset_session_error(session));
     }
 
     if (ipset_cmd(session, cmd, 0) != 0) {
         ipset_session_fini(session);
-        syslog (LOG_ERR, "Ipset: Can't exec ipset cmd for setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
+        LOG(ERROR) << "Can't exec ipset cmd for setname " << ipsetName << ": " << ipset_session_error(session);
         throw std::runtime_error("Can't exec ipset cmd for " + ipsetName + ": " + ipset_session_error(session));
     }
     if (ipset_commit(session) < 0) {
-        syslog (LOG_ERR, "Ipset: Can't commit for setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
+        LOG(ERROR) << "Can't commit for setname " << ipsetName << ": " << ipset_session_error(session);
         ipset_session_fini(session);
         throw std::runtime_error("Can't call ipset_commit for " + ipsetName + ": " + ipset_session_error(session));
     }
@@ -208,49 +205,49 @@ bool Ipset::ipset_exec(enum ipset_cmd cmd) {
 
 bool Ipset::ipset_exec(enum ipset_cmd cmd,  const Tins::IPv4Address &inIpAddress, time_t timeout) {
     if (Debug == true) {
-        syslog(LOG_DEBUG, "Ipset: received command %d for IP address %s for ipset %s", cmd, inIpAddress.to_string().c_str(), ipsetName.c_str());
+        DLOG_IF(INFO, Debug) << "received command " << cmd << " for IP address " << inIpAddress << " for ipset " << ipsetName;
     }
     struct ipset_session *session = ipset_session_init(printf);
     if (session == nullptr) {
-        syslog (LOG_ERR, "Ipset: Cannot initialize ipset session.");
+        LOG(ERROR) << "Cannot initialize ipset session.";
         ipset_session_fini(session);
         throw std::runtime_error ("Cannot initialize ipset session.");
     }
 
     if (ipset_envopt_parse(session, IPSET_ENV_EXIST, NULL) < 0) {
-        syslog (LOG_ERR, "Ipset: Can't set environment option.");
+        LOG(ERROR) << "Can't set environment option.";
         ipset_session_fini(session);
         throw std::runtime_error ("Can't set environment option.");
     }
     if (ipset_session_data_set(session, IPSET_SETNAME, ipsetName.c_str()) < 0) {
-        syslog (LOG_ERR, "Ipset: Can't set setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
+        LOG(ERROR) << "Can't set setname " << ipsetName << ": %s", ipsetName.c_str(), ipset_session_error(session);
         ipset_session_fini(session);
         throw std::runtime_error("Can't set setname " + ipsetName + ": " + ipset_session_error(session));
     }
     const struct ipset_type *type = ipset_type_get(session, cmd);
     if (type == NULL) {
-        syslog (LOG_ERR, "Ipset: Can't get type for set %s: %s", ipsetName.c_str(), ipset_session_error(session));
+        LOG(ERROR) << "Can't get type for set " << ipsetName << ": " << ipset_session_error(session);
         ipset_session_fini(session);
         throw std::runtime_error("Can't get type for set " + ipsetName + ": " + ipset_session_error(session));
     }
 
     uint8_t family = NFPROTO_IPV4;
     if (ipset_session_data_set(session, IPSET_OPT_FAMILY, &family) < 0) {
-        syslog (LOG_ERR, "Ipset: Can't set session data to IPv4 family for set %s: %s", ipsetName.c_str(), ipset_session_error(session));
+        LOG(ERROR) << "Can't set session data to IPv4 family for set " << ipsetName << ": " << ipset_session_error(session);
         ipset_session_fini(session);
         throw std::runtime_error("Can't set session data for " + ipsetName + " to the IPv4 family, error: " + ipset_session_error(session));
     }
     struct in_addr sin;
     inet_aton (inIpAddress.to_string().c_str(), &sin);
     if (ipset_session_data_set(session, IPSET_OPT_IP, &sin) < 0) {
-        syslog (LOG_ERR, "Can't set session data to the IPv4 address for setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
+        LOG(ERROR) << "Can't set session data to the IPv4 address for setname " << ipsetName << ": %s", ipsetName.c_str(), ipset_session_error(session);
         ipset_session_fini(session);
         throw std::runtime_error("Can't set session data to the IPv4 address for setname " + ipsetName + ", error: " + ipset_session_error(session));
     }
 
     if (timeout) {
         if (ipset_session_data_set(session, IPSET_OPT_TIMEOUT, &timeout) != 0) {
-            syslog (LOG_ERR, "Ipset: Can't set timeout for setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
+            LOG(ERROR) << "Can't set timeout for setname " << ipsetName << ": %s", ipsetName.c_str(), ipset_session_error(session);
             ipset_session_fini(session);
             throw std::runtime_error("Can't set timeout for " + ipsetName + ": " + ipset_session_error(session));
             return false;
@@ -258,11 +255,11 @@ bool Ipset::ipset_exec(enum ipset_cmd cmd,  const Tins::IPv4Address &inIpAddress
     }
     if (ipset_cmd(session, cmd, 0) != 0) {
         ipset_session_fini(session);
-        syslog (LOG_ERR, "Ipset: Can't exec ipset cmd for setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
+        LOG(ERROR) << "Can't exec ipset cmd for setname " << ipsetName << ": " << ipset_session_error(session);
         throw std::runtime_error("Can't exec ipset cmd for " + ipsetName + ": " + ipset_session_error(session));
     }
     if (ipset_commit(session) < 0) {
-        syslog (LOG_ERR, "Ipset: Can't commit for setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
+        LOG(ERROR) << "Can't commit for setname " << ipsetName << ": " << ipset_session_error(session);
         ipset_session_fini(session);
         throw std::runtime_error("Can't call ipset_commit for " + ipsetName + ": " + ipset_session_error(session));
     }
@@ -272,35 +269,35 @@ bool Ipset::ipset_exec(enum ipset_cmd cmd,  const Tins::IPv4Address &inIpAddress
 
 bool Ipset::ipset_exec(enum ipset_cmd cmd,  const Tins::IPv6Address &inIpAddress, time_t timeout) {
     if (Debug == true) {
-        syslog(LOG_DEBUG, "Ipset: received command %d for IP address %s for ipset %s", cmd, inIpAddress.to_string().c_str(), ipsetName.c_str());
+        DLOG_IF(INFO, Debug) << "received command " << cmd << " for IP address " << inIpAddress << " for ipset " << ipsetName;
     }
     struct ipset_session *session = ipset_session_init(printf);
     if (session == nullptr) {
-        syslog (LOG_ERR, "Ipset: Cannot initialize ipset session.");
+        PLOG(ERROR) << "Cannot initialize ipset session.";
         ipset_session_fini(session);
         throw std::runtime_error ("Cannot initialize ipset session.");
     }
 
     if (ipset_envopt_parse(session, IPSET_ENV_EXIST, NULL) < 0) {
-        syslog (LOG_ERR, "Ipset: Can't set environment option.");
+        LOG(ERROR) << "Can't set environment option.";
         ipset_session_fini(session);
         throw std::runtime_error ("Can't set environment option.");
     }
     if (ipset_session_data_set(session, IPSET_SETNAME, ipsetName.c_str()) < 0) {
-        syslog (LOG_ERR, "Ipset: Can't set setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
+        LOG(ERROR) << "Can't set setname " << ipsetName << ": " <<  ipset_session_error(session);
         ipset_session_fini(session);
         throw std::runtime_error("Can't set setname " + ipsetName + ": " + ipset_session_error(session));
     }
     const struct ipset_type *type = ipset_type_get(session, cmd);
     if (type == NULL) {
-        syslog (LOG_ERR, "Ipset: Can't get type for set %s: %s", ipsetName.c_str(), ipset_session_error(session));
+        LOG(ERROR) << "Can't get type for set " << ipsetName << ": " << ipset_session_error(session);
         ipset_session_fini(session);
         throw std::runtime_error("Can't get type for set " + ipsetName + ": " + ipset_session_error(session));
     }
 
     uint8_t family = NFPROTO_IPV6;
     if (ipset_session_data_set(session, IPSET_OPT_FAMILY, &family) < 0) {
-        syslog (LOG_ERR, "Ipset: Can't set session data to IPv6 family for set %s: %s", ipsetName.c_str(), ipset_session_error(session));
+        LOG(ERROR) << "Can't set session data to IPv6 family for set " << ipsetName << ": " << ipset_session_error(session);
         ipset_session_fini(session);
         throw std::runtime_error("Can't set session data for " + ipsetName + " to the IPv6 family, error: " + ipset_session_error(session));
     }
@@ -308,25 +305,25 @@ bool Ipset::ipset_exec(enum ipset_cmd cmd,  const Tins::IPv6Address &inIpAddress
     unsigned char buf[sizeof(struct in6_addr)];
     int s = inet_pton(AF_INET6, inIpAddress.to_string().c_str(), buf);
     if (ipset_session_data_set(session, IPSET_OPT_IP, &buf) < 0) {
-        syslog (LOG_ERR, "Ipset: Can't set session data to the IPv4 address for setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
+        LOG(ERROR) << "Can't set session data to the IPv4 address for setname " << ipsetName << ": " << ipset_session_error(session);
         ipset_session_fini(session);
         throw std::runtime_error("Can't set session data to the IPv4 address for setname " + ipsetName + ", error: " + ipset_session_error(session));
     }
 
     if (timeout) {
         if (ipset_session_data_set(session, IPSET_OPT_TIMEOUT, &timeout) != 0) {
-            syslog (LOG_ERR, "Ipset: Can't set timeout for setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
+            LOG(ERROR) << "Can't set timeout for setname " << ipsetName << ": %s" << ipset_session_error(session);
             ipset_session_fini(session);
             throw std::runtime_error("Can't set timeout for " + ipsetName + ": " + ipset_session_error(session));
         }
     }
     if (ipset_cmd(session, cmd, 0) != 0) {
-        syslog (LOG_ERR, "Ipset: Can't exec ipset cmd for setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
+        LOG(ERROR) << "Can't exec ipset cmd for setname " << ipsetName << ": " << ipset_session_error(session);
         ipset_session_fini(session);
         throw std::runtime_error("Can't exec ipset cmd for " + ipsetName + ": " + ipset_session_error(session));
     }
     if (ipset_commit(session) < 0) {
-        syslog (LOG_ERR, "Ipset: Can't commit for setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
+        LOG(ERROR) << "Can't commit for setname " << ipsetName << ": " << ipset_session_error(session);
         ipset_session_fini(session);
         throw std::runtime_error("Can't call ipset_commit for " + ipsetName + ": " + ipset_session_error(session));
     }
@@ -336,50 +333,51 @@ bool Ipset::ipset_exec(enum ipset_cmd cmd,  const Tins::IPv6Address &inIpAddress
 
 bool Ipset::ipset_exec(enum ipset_cmd cmd, const std::string Mac, time_t timeout) {
     if (Debug == true) {
-        syslog(LOG_DEBUG, "Ipset: received command %d for MAC address %s for ipset %s", cmd, Mac.c_str(), ipsetName.c_str());
+        DLOG_IF(INFO, Debug) << "received command " << cmd << " for MAC address " << Mac
+                << " for ipset " << ipsetName;
     }
     struct ipset_session *session = ipset_session_init(printf);
     if (session == nullptr) {
-        syslog (LOG_ERR, "Ipset: Cannot initialize ipset session.");
+        PLOG(ERROR) << "Cannot initialize ipset session.";
         ipset_session_fini(session);
         throw std::runtime_error ("Cannot initialize ipset session.");
     }
 
     if (ipset_envopt_parse(session, IPSET_ENV_EXIST, NULL) < 0) {
-        syslog (LOG_ERR, "Ipset: Can't set environment option.");
+        PLOG(ERROR) << "Can't set environment option.";
         ipset_session_fini(session);
         throw std::runtime_error ("Can't set environment option.");
     }
     if (ipset_session_data_set(session, IPSET_SETNAME, ipsetName.c_str()) < 0) {
-        syslog (LOG_ERR, "Ipset: Can't set setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
+        LOG(ERROR) << "Can't set setname " << ipsetName << ": " << ipset_session_error(session);
         ipset_session_fini(session);
         throw std::runtime_error("Can't set setname " + ipsetName + ": " + ipset_session_error(session));
     }
     const struct ipset_type *type = ipset_type_get(session, cmd);
     if (type == NULL) {
-        syslog (LOG_ERR, "Ipset: Can't get type for set %s: %s", ipsetName.c_str(), ipset_session_error(session));
+        LOG(ERROR) << "Can't get type for set " << ipsetName << ": " << ipset_session_error(session);
         ipset_session_fini(session);
         throw std::runtime_error("Can't get type for set " + ipsetName + ": " + ipset_session_error(session));
     }
     if (ipset_parse_elem(session, (ipset_opt)type->last_elem_optional, Mac.c_str()) < 0) {
-        syslog (LOG_ERR, "Ipset: Can't call ipset_parse_elem for %s: %s ", ipsetName.c_str(), ipset_session_error(session));
+        LOG(ERROR) << "Can't call ipset_parse_elem for " << ipsetName << ": " << ipset_session_error(session);
         ipset_session_fini(session);
         throw std::runtime_error("Can't call ipset_parse_elem for ipset " + ipsetName + ": " + ipset_session_error(session));
     }
     if (timeout) {
         if (ipset_session_data_set(session, IPSET_OPT_TIMEOUT, &timeout) != 0) {
-            syslog (LOG_ERR, "Ipset: Can't set timeout for setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
+            LOG(ERROR) << "Can't set timeout for setname " << ipsetName << ": " << ipset_session_error(session);
             ipset_session_fini(session);
             throw std::runtime_error("Can't set timeout for " + ipsetName + ": " + ipset_session_error(session));
         }
     }
     if (ipset_cmd(session, cmd, 0) != 0) {
-        syslog (LOG_ERR, "Ipset: Can't exec ipset cmd for setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
+        LOG(ERROR) << "Can't exec ipset cmd for setname " << ipsetName << ": " << ipset_session_error(session);
         ipset_session_fini(session);
         throw std::runtime_error("Can't exec ipset cmd for " + ipsetName + ": " + ipset_session_error(session));
     }
     if (ipset_commit(session) < 0) {
-        syslog (LOG_ERR, "Ipset: Can't commit for setname %s: %s", ipsetName.c_str(), ipset_session_error(session));
+        LOG(ERROR) << "Can't commit for setname " << ipsetName << ": %s", ipsetName.c_str(), ipset_session_error(session);
         ipset_session_fini(session);
         throw std::runtime_error("Can't call ipset_commit for " + ipsetName + ": " + ipset_session_error(session));
     }

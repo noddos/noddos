@@ -33,6 +33,7 @@
 #include <memory>
 #include <sys/epoll.h>
 
+#include "glog/logging.h"
 #include "tins/dns.h"
 
 class Mdns : public iDeviceInfoSource {
@@ -50,8 +51,8 @@ public:
         socket_fd = -1;
 
         Open (IpAddress);
-
     }
+
     ~Mdns() {
         // TODO Auto-generated destructor stub
     }

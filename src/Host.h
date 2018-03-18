@@ -108,7 +108,7 @@ public:
 		IdentifyConfidenceLevel = EnforceConfidenceLevel = ConfidenceLevel::None;
 	}
 	virtual ~Host() {
-	    DLOG_IF(INFO, Debug) << "Host: Destroying Host instance: " << Ipv4Address;
+	    DLOG_IF(INFO, Debug) << "Destroying Host instance: " << Ipv4Address;
 	};
 
 	uint32_t Prune (const bool Force = false);
@@ -172,9 +172,9 @@ public:
      */
     bool UploadsEnabled () { return UploadStats; }
 
-	void ExportDeviceInfo (json &j, const bool detailed = false);
-	bool DeviceStats(json& j, const uint32_t interval, bool force = false, bool detailed = false);
-	bool TrafficStats(json& j, const uint32_t interval, const bool ReportRfc1918,
+	void exportDeviceInfo (json &j, const bool detailed = false);
+	bool exportDeviceStats(json& j, const uint32_t interval, bool force = false, bool detailed = false);
+	bool exportTrafficStats(json& j, const uint32_t interval, const bool ReportRfc1918,
 	        const std::set<std::string> & LocalIps,
 	        const DnsCache <Tins::IPv4Address> &dCipv4,
 	        const DnsCache <Tins::IPv6Address> &dCipv6,
