@@ -238,7 +238,7 @@ public:
     }
 
     /*! \brief Exports DNS records to a JSON object
-      * This function exports IPv4 and IPv6 records from the JSON object
+      * This function exports IP records from the JSON object
       * \param [out] reference to json object to store DNS records
       * \return number of DNS records exported
       */
@@ -246,16 +246,13 @@ public:
         DLOG_IF(INFO, Debug) << "export to json";
 
         size_t dnsRecords = 0;
-        j["AddressRecords"] = json::object();
         for (auto it_resource: DnsFwdCache) {
             dnsRecords++;
-            j["AddressRecords"][it_resource.first] = json::object();
             for (auto it_record: it_resource.second) {
                 std::string ip = it_record.first.to_string();
                 time_t ttl = it_record.second;
                 j["AddressRecords"][it_resource.first][ip] = ttl;
             }
-
         }
         return dnsRecords;
     }
