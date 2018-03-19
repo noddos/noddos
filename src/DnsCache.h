@@ -222,10 +222,16 @@ public:
                     dnsRecords++;
 
                     time_t expiration = ip_it.value();
+                    time_t now = time(nullptr);
+                    uint32_t ttl = 86400;
+                    if (expiration > now) {
+                        ttl = expiration - now;
+                    }
+
                     if (fdp_it != fdpMap.end()) {
-                        addorupdateResourceRecord (fqdn, IpAddress, fdp_it, expiration);
+                        addorupdateResourceRecord (fqdn, IpAddress, fdp_it, ttl);
                     } else {
-                        addorupdateResourceRecord (fqdn, IpAddress, expiration);
+                        addorupdateResourceRecord (fqdn, IpAddress, ttl);
                     }
                 } catch (...) {
                     // Must be either IPv4 address while IPv6 template or vice versa
