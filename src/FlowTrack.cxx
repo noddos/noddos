@@ -32,6 +32,9 @@
 #include "FlowTrack.h"
 #include "HostCache.h"
 
+/*! \function netfilter_cb2
+ *  WARNING: dead code, this function is currently not used. For nfct, netfilter_cb is used
+ */
 int netfilter_cb2(const struct nlmsghdr *nlh, enum nf_conntrack_msg_type type, struct nf_conntrack *ct, void *data) {
 	HostCache & hC = *(static_cast<HostCache *>(data));
 	// TODO: parse protocols other than TCP and UDP, i.e. ICMP
@@ -66,6 +69,14 @@ int netfilter_cb2(const struct nlmsghdr *nlh, enum nf_conntrack_msg_type type, s
 	return NFCT_CB_STOP;
 }
 
+/*! \function netfilter_cb
+ * Call-back function for NFCT to pass messages. For that reason, it can't be a method of a class.
+ * The call-back is registered in FlowTrack::Open
+ * \param [in] type enum of nf_conntrack_msg_type
+ * \param [in] ct poiter to struct nf_conntrack object
+ * \param [out] data void * that will be statically case to a reference to class HostCache object
+ * \return integer NFCT_CB_STOP
+ */
 int netfilter_cb(enum nf_conntrack_msg_type type, struct nf_conntrack *ct, void *data) {
 	HostCache & hC = *(static_cast<HostCache *>(data));
 	// TODO: parse protocols other than TCP and UDP, i.e. ICMP
@@ -100,11 +111,15 @@ int netfilter_cb(enum nf_conntrack_msg_type type, struct nf_conntrack *ct, void 
 	return NFCT_CB_STOP;
 }
 
+/*! \brief Parse line of /proc/net/nf_conntract
+ *  \return 0 for success, -1 for read failure
+ */
 int FlowTrack::parseLogLine() {
 	static const auto nf_rx = std::regex(R"delim(^(ipv\d)\s+?(\d+?)\s+?(\w+?)\s+?(\d+?)\s(\d+?)\s(\S+?)?\s?src=(\S+?)\s+dst=(\S+?)\s+sport=(\d+)\s+dport=(\d+))delim",
 			std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
 	char cline[300];
 	if (fgets(cline, 300, ctFilePointer) == NULL) {
+		PLOG(ERROR) << "fgets";
 		return -1;
 	}
 	cline[strcspn(cline, "\n")] = 0;

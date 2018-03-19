@@ -46,6 +46,9 @@
 int netfilter_cb2(const struct nlmsghdr *nlh, enum nf_conntrack_msg_type type, struct nf_conntrack *ct, void *data);
 int netfilter_cb(enum nf_conntrack_msg_type type, struct nf_conntrack *ct, void *data);
 
+/*! \struct Flow
+ *  \brief tracks a connection between a source and a destination
+ */
 struct Flow {
 	struct sockaddr_storage src, dst;
 	uint8_t flowstatus;
@@ -54,25 +57,47 @@ struct Flow {
 
 };
 
-
+/*! \class FlowTrack
+ *  \brief Tracks communication flows between pairs of hosts using the NetFilter Connection Tracking feature
+ *  FlowTrack uses either /proc/net/nf_conntrack or the nfct libraries to track flows between hosts. The latter
+ *  requires root privileges but allows kernel-level filters to specify which flows will be reported to userspace
+ *  FlowTrack implements the iDeviceInfoSource interface so can be used to asyncronously receive messages, process
+ *  these and update the HostCache
+ */
 class FlowTrack : public iDeviceInfoSource {
 private:
     struct nfct_handle *h = nullptr;
     struct nfct_filter *filter = nullptr;
-    HostCache &hC;
-    const Config &config;
-    bool useNfct = false;
-    FILE * ctFilePointer = nullptr;
-    bool Debug = false;
-    std::set<std::string> localIpAddresses;
-
+    HostCache &hC; //!< Reference to the HostCache
+    const Config &config; //!< Reference to the Noddos configuration
+    bool useNfct = false; //!< is NFCT used (true) or /proc/net/nf_conntrack (false)
+    FILE * ctFilePointer = nullptr; //!< Filepointer to /proc/net/nf_conntrack
+    bool Debug = false; //!< Log debug messages?
+    std::set<std::string> localIpAddresses; //!< List of local IP addresses used to filter out NFCT messages
 
 public:
+    /*! \brief Constructer for FlowTrack
+     *
+     */
 	FlowTrack(HostCache & inhC, Config &inConfig,std::set<std::string> & inlocalIpAddresses):
 	        hC{inhC}, config{inConfig}, Debug{inConfig.Debug && inConfig.DebugFlowTrack}, localIpAddresses{inlocalIpAddresses} {
         DLOG_IF(INFO, Debug) << "constructing instance";
 	}
 
+    /*! \brief Destructor for FlowTrack
+     *
+     */
+	virtual ~FlowTrack() {
+	    Close();
+	    DLOG_IF(INFO, Debug) << "destructing instance";
+	}
+
+    // iDeviceInfoSource interface methods
+
+    /*! \brief Open either /proc/net/nf_conntrack or call NFCT SDK otherwise
+     * If /proc/net/nf_conntrack is available and UseNfConntrack is True in the Noddos configuration file then user it
+     * Otherwise use NFCT SDK
+     */
 	virtual int Open (std::string input = "", uint32_t inExpiration = 0) {
         DLOG_IF(INFO, Debug) << "open";
 		// We don't care about Open parameters in this Class derived from iDeviceInfoSource
@@ -96,6 +121,7 @@ public:
 				}
 			}
 		}
+		// Use NFCT SDK
 		useNfct = true;
 
 		LOG_IF(INFO, Debug) << "Opening NFCT";
@@ -108,9 +134,15 @@ public:
         }
         int on = 1;
 
-        setsockopt(nfct_fd(h), SOL_NETLINK, NETLINK_BROADCAST_SEND_ERROR, &on, sizeof(int));
+        if (setsockopt(nfct_fd(h), SOL_NETLINK, NETLINK_BROADCAST_SEND_ERROR, &on, sizeof(int)) == -1) {
+            PLOG(ERROR) << "setsockopt NETLINK_BROADCAST_SEND_ERROR";
+            throw std::system_error(errno, std::system_category());
+        }
 
-        setsockopt(nfct_fd(h), SOL_NETLINK, NETLINK_NO_ENOBUFS, &on, sizeof(int));
+        if (setsockopt(nfct_fd(h), SOL_NETLINK, NETLINK_NO_ENOBUFS, &on, sizeof(int)) == -1) {
+            PLOG(ERROR) << "setsockopt NETLINK_NO_ENOBUFS";
+            throw std::system_error(errno, std::system_category());
+        }
 
         filter = nfct_filter_create();
         if (!filter) {
@@ -189,11 +221,9 @@ public:
         return 0;
 	}
 
-	virtual ~FlowTrack() {
-		Close();
-		DLOG_IF(INFO, Debug) << "destructing instance";
-	}
-	// iDeviceInfoSource interface methods
+	/*! \brief Close either the file handle to /proc/net/nf_conntract or the NFCT file handle
+	 *
+	 */
 	virtual bool Close () {
 		if (useNfct == false) {
 			if (ctFilePointer == nullptr) {
@@ -214,6 +244,9 @@ public:
 		return true;
 	}
 
+	/*! \brief Return the file handle
+	 *  \return file handle for the object
+	 */
 	virtual int getFileHandle() {
 		if (useNfct == false) {
 			return fileno(ctFilePointer);
@@ -221,6 +254,10 @@ public:
 		return nfct_fd(h);
 	}
 
+	/* \brief Process an event that occured during epoll on the filehandle
+	 * \param [in] event constant reference to a struct epoll_event object
+	 * \return always true
+	 */
 	virtual bool processEvent(struct epoll_event &event) {
 		char buf [24];
 		auto rawtime = time (nullptr);
@@ -241,6 +278,5 @@ public:
 	}
 	int parseLogLine();
 };
-
 
 #endif /* FLOWTRACK_H_ */
