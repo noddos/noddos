@@ -57,12 +57,12 @@ int netfilter_cb2(const struct nlmsghdr *nlh, enum nf_conntrack_msg_type type, s
 		uint16_t dstport = std::stoi(m.str(9));
 		// std::string bidirectional = m.str(10);
 		// std::string assured = m.str(12);
-		DLOG_IF(INFO, hC.Debug_get()) << "Flowtrack matched " << srcip << ":" << srcport << " "
+		DLOG_IF(INFO, hC.getDebug()) << "Flowtrack matched " << srcip << ":" << srcport << " "
 		        << dstip << ":" << dstport << " protcol " << protocol
 		        << " expiration " << expiration;
-		hC.AddFlow(srcip, srcport, dstip, dstport, protocol, expiration);
+		hC.addFlow(srcip, srcport, dstip, dstport, protocol, expiration);
 	} else {
-	    DLOG_IF(INFO, hC.Debug_get()) << "not matched " << line;
+	    DLOG_IF(INFO, hC.getDebug()) << "not matched " << line;
 	}
 
     // return NFCT_CB_CONTINUE;
@@ -99,12 +99,12 @@ int netfilter_cb(enum nf_conntrack_msg_type type, struct nf_conntrack *ct, void 
 		uint16_t dstport = std::stoi(m.str(9));
 		// std::string bidirectional = m.str(10);
 		// std::string assured = m.str(12);
-        DLOG_IF(INFO, hC.Debug_get()) << "Flowtrack matched " << srcip << ":" << srcport << " "
+        DLOG_IF(INFO, hC.getDebug()) << "Flowtrack matched " << srcip << ":" << srcport << " "
                 << dstip << ":" << dstport << " protcol " << protocol
                 << " expiration " << expiration;
-		hC.AddFlow(srcip, srcport, dstip, dstport, protocol, expiration);
+		hC.addFlow(srcip, srcport, dstip, dstport, protocol, expiration);
 	} else {
-	    DLOG_IF(INFO, hC.Debug_get()) << "not matched " << line;
+	    DLOG_IF(INFO, hC.getDebug()) << "not matched " << line;
 	}
 
     // return NFCT_CB_CONTINUE;
@@ -136,12 +136,12 @@ int FlowTrack::parseLogLine() {
 		std::string dstip = m.str(8);
 		uint16_t srcport = std::stoi(m.str(9));
 		uint16_t dstport = std::stoi(m.str(10));
-        DLOG_IF(INFO, hC.Debug_get()) << "Flowtrack matched " << srcip << ":" << srcport << " "
+        DLOG_IF(INFO, hC.getDebug()) << "Flowtrack matched " << srcip << ":" << srcport << " "
                 << dstip << ":" << dstport << " protcol " << ipprotonumber
                 << " expiration " << expiration;
-		hC.AddFlow(srcip, srcport, dstip, dstport, ipprotonumber, expiration);
+		hC.addFlow(srcip, srcport, dstip, dstport, ipprotonumber, expiration);
 	} else {
-        DLOG_IF(INFO, hC.Debug_get()) << "not matched " << line;
+        DLOG_IF(INFO, hC.getDebug()) << "not matched " << line;
 	}
 	return 0;
 }

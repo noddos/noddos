@@ -130,7 +130,7 @@ int main(int argc, char** argv) {
 	        config.TrafficReportInterval > config.DeviceReportInterval ? config.TrafficReportInterval : config.DeviceReportInterval,
 	        config.FirewallRulesFile, config.FirewallBlockTraffic, config.Debug && config.DebugHostCache);
 	hC.loadDeviceProfiles(config.DeviceProfilesFile);
-	hC.ImportDeviceProfileMatches(config.MatchFile);
+	hC.importDeviceProfileMatches(config.MatchFile);
 	hC.Whitelists_set(config.WhitelistedIpv4Addresses, config.WhitelistedIpv6Addresses, config.WhitelistedMacAddresses);
 
 
@@ -281,14 +281,14 @@ int main(int argc, char** argv) {
 						DLOG(INFO) << "Processing signal event SIGUSR1";
 						hC.Match();
 						NextMatch = time(nullptr) + config.MatchInterval;
-						hC.ExportDeviceProfileMatches(config.MatchFile, false);
-						hC.ExportDeviceProfileMatches(config.DumpFile, true);
+						hC.exportDeviceProfileMatches(config.MatchFile, false);
+						hC.exportDeviceProfileMatches(config.DumpFile, true);
 						hC.exportDnsCache(config.DnsCacheFile);
 					} else if (si.ssi_signo == SIGUSR2) {
 						DLOG(INFO) << "Processing signal event SIGUSR2";
 						hC.Match();
-						hC.UploadDeviceStats(futures, config.ClientApiCertFile, config.ClientApiKeyFile, config.DeviceReportInterval != 0);
-						hC.UploadTrafficStats(futures, config.TrafficReportInterval, config.ReportTrafficToRfc1918,
+						hC.uploadDeviceStats(futures, config.ClientApiCertFile, config.ClientApiKeyFile, config.DeviceReportInterval != 0);
+						hC.uploadTrafficStats(futures, config.TrafficReportInterval, config.ReportTrafficToRfc1918,
 								config.ClientApiCertFile, config.ClientApiKeyFile, config.TrafficReportInterval != 0);
 						NextDeviceUpload = time(nullptr) + config.DeviceReportInterval;
 						NextTrafficUpload = time(nullptr) + config.TrafficReportInterval;
@@ -309,16 +309,16 @@ int main(int argc, char** argv) {
 				if (t > NextMatch) {
 					hC.Match();
 					NextMatch = time(nullptr) + config.MatchInterval;
-					hC.ExportDeviceProfileMatches(config.MatchFile, false);
-					hC.ExportDeviceProfileMatches(config.DumpFile, true);
+					hC.exportDeviceProfileMatches(config.MatchFile, false);
+					hC.exportDeviceProfileMatches(config.DumpFile, true);
 				}
 				if (t > NextDeviceUpload && config.DeviceReportInterval > 0) {
-					hC.UploadDeviceStats(futures, config.ClientApiCertFile, config.ClientApiKeyFile, config.DeviceReportInterval != 0);
+					hC.uploadDeviceStats(futures, config.ClientApiCertFile, config.ClientApiKeyFile, config.DeviceReportInterval != 0);
 					NextDeviceUpload = t + config.DeviceReportInterval;
 				}
 				if (t > NextTrafficUpload && config.TrafficReportInterval > 0) {
 				    DLOG_IF(INFO, config.DebugEvents) << "Starting traffic upload";
-					hC.UploadTrafficStats(futures, config.TrafficReportInterval, config.ReportTrafficToRfc1918, config.ClientApiCertFile,
+					hC.uploadTrafficStats(futures, config.TrafficReportInterval, config.ReportTrafficToRfc1918, config.ClientApiCertFile,
 							config.ClientApiKeyFile, config.TrafficReportInterval != 0);
 					NextTrafficUpload = t + config.TrafficReportInterval;
 				}
@@ -356,7 +356,7 @@ int main(int argc, char** argv) {
 
     }
 exitprog:
-	hC.ExportDeviceProfileMatches(config.MatchFile);
+	hC.exportDeviceProfileMatches(config.MatchFile);
     hC.exportDnsCache(config.DnsCacheFile);
     hC.Prune();
 	s.Close();

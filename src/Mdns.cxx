@@ -183,7 +183,7 @@ bool Mdns::processEvent (struct epoll_event &event) {
                     << " with " << nbytes << " bytes";
             try {
                 if (parseMessage(mdnsHost, msgbuf, nbytes) == true) {
-                    hCache.AddMdnsInfo(mdnsHost);
+                    hCache.addMdnsInfo(mdnsHost);
                 }
             } catch (...) {
                 DLOG_IF(INFO, Debug) << "Couldn't parse packet";

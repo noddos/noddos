@@ -100,7 +100,7 @@ bool WsDiscovery::processEvent (struct epoll_event &event) {
                     << " with " << nbytes << " bytes";
 
             if (ParseWsDiscoveryMessage(wsdHost, msgbuf, nbytes)) {
-                hCache.AddWsDiscoveryInfo(wsdHost);
+                hCache.addWsDiscoveryInfo(wsdHost);
             } else {
                 DLOG_IF(INFO, Debug) << "Didn't parse packet";
             }

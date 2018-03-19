@@ -101,7 +101,7 @@ uint32_t HostCache::Match() {
 	return matched;
 }
 
-bool HostCache::MatchByMac(const MacAddress &inMacAddress) {
+bool HostCache::matchByMac(const MacAddress &inMacAddress) {
     DLOG_IF(INFO, Debug) << "Starting match for MAC address " << inMacAddress;
 	if (hC.find(inMacAddress.get()) != hC.end()) {
 		auto &h = *(hC[inMacAddress.get()]);
@@ -110,24 +110,24 @@ bool HostCache::MatchByMac(const MacAddress &inMacAddress) {
 	return false;
 }
 
-bool HostCache::MatchByIpAddress(const std::string inIpAddress) {
+bool HostCache::matchByIpAddress(const std::string inIpAddress) {
 	if (Ip2MacMap.find(inIpAddress) != Ip2MacMap.end()) {
 		MacAddress m(Ip2MacMap[inIpAddress]);
-		return MatchByMac(m);
+		return matchByMac(m);
 	}
 	return false;
 }
 
-std::shared_ptr<Host> HostCache::FindHostByIp (const std::string inIp) {
+std::shared_ptr<Host> HostCache::findHostByIp (const std::string inIp) {
 	auto it = Ip2MacMap.find(inIp);
 	if ( it == Ip2MacMap.end()) {
 		return nullptr;
 	}
 	MacAddress mac(it->second);
-	return FindHostByMac (mac);
+	return findHostByMac (mac);
 }
 
-std::shared_ptr<Host> HostCache::FindOrCreateHostByIp (const std::string inIp,
+std::shared_ptr<Host> HostCache::findOrCreateHostByIp (const std::string inIp,
         const std::string Uuid) {
     DLOG_IF(INFO, Debug) << "Find or create host for IP " << inIp;
 
@@ -140,7 +140,7 @@ std::shared_ptr<Host> HostCache::FindOrCreateHostByIp (const std::string inIp,
 	MacAddress Mac;
 	auto it = Ip2MacMap.find(inIp);
 	if ( it == Ip2MacMap.end()) {
-		Mac = MacLookup(inIp);
+		Mac = lookupMac(inIp);
 		if (Mac.isValid() == false) {
 		    DLOG_IF(INFO, Debug) << "Did not find ARP entry for " << inIp;
 			return nullptr;
@@ -149,10 +149,10 @@ std::shared_ptr<Host> HostCache::FindOrCreateHostByIp (const std::string inIp,
 	} else {
 		Mac.set(it->second);
 	}
-	return FindOrCreateHostByMac (Mac, Uuid, inIp);
+	return findOrCreateHostByMac (Mac, Uuid, inIp);
 }
 
-std::shared_ptr<Host> HostCache::FindHostByMac (const MacAddress &inMac) {
+std::shared_ptr<Host> HostCache::findHostByMac (const MacAddress &inMac) {
 	if (inMac.isValid() == false) {
 		LOG(WARNING) << "Mac Address with invalid value provided";
 		return nullptr;
@@ -163,7 +163,7 @@ std::shared_ptr<Host> HostCache::FindHostByMac (const MacAddress &inMac) {
 	return hC[inMac.get()];
 }
 
-std::shared_ptr<Host> HostCache::FindOrCreateHostByMac (const MacAddress inMac,
+std::shared_ptr<Host> HostCache::findOrCreateHostByMac (const MacAddress inMac,
         const std::string Uuid, const std::string inIp) {
     DLOG_IF(INFO, Debug) << "Find or create host for MAC " << inMac;
 	if (WhitelistedNodes.find(inMac.str()) != WhitelistedNodes.end()) {
@@ -191,7 +191,7 @@ std::shared_ptr<Host> HostCache::FindOrCreateHostByMac (const MacAddress inMac,
 	return hC[inMac.get()];
 }
 
-bool HostCache::AddByMac (const MacAddress inMacAddress, const std::string inIpAddress) {
+bool HostCache::addByMac (const MacAddress inMacAddress, const std::string inIpAddress) {
     DLOG_IF(INFO, Debug) << "Creating new host for MAC " << inMacAddress
             << " with IP " << inIpAddress;
 	if (hC.find(inMacAddress.get()) != hC.end()) {
@@ -204,7 +204,7 @@ bool HostCache::AddByMac (const MacAddress inMacAddress, const std::string inIpA
 	return true;
 }
 
-bool HostCache::AddFlow (const std::string srcip, const uint16_t srcport,
+bool HostCache::addFlow (const std::string srcip, const uint16_t srcport,
         const std::string dstip, const uint16_t dstport, const uint8_t protocol,
         const uint32_t expiration) {
     DLOG_IF(INFO, Debug) << "Adding flow for host with IP " << srcip;
@@ -218,7 +218,7 @@ bool HostCache::AddFlow (const std::string srcip, const uint16_t srcport,
 	}
 
 	try {
-	    std::shared_ptr<Host> h = FindOrCreateHostByIp(srcip);
+	    std::shared_ptr<Host> h = findOrCreateHostByIp(srcip);
 	    if (h != nullptr) {
 	        h->setFlowEntry(srcport, dstip, dstport, protocol, MinFlowTtl);
 	        return true;
@@ -228,7 +228,7 @@ bool HostCache::AddFlow (const std::string srcip, const uint16_t srcport,
 }
 
 
-bool HostCache::AddDnsQueryIp (const std::string clientip, const std::string fqdn,
+bool HostCache::addDnsQueryIp (const std::string clientip, const std::string fqdn,
         const std::string ip, const uint32_t inTtl) {
     DLOG_IF(INFO, Debug) << "Adding dns query for " << fqdn
             << " for host with IP " <<  clientip;
@@ -237,7 +237,7 @@ bool HostCache::AddDnsQueryIp (const std::string clientip, const std::string fqd
 	}
 
 	try {
-	    std::shared_ptr<Host> h = FindOrCreateHostByIp(clientip);
+	    std::shared_ptr<Host> h = findOrCreateHostByIp(clientip);
 	    if (h != nullptr) {
 	        h->addorupdateDnsQueryList(fqdn, inTtl);
 	        return true;
@@ -247,7 +247,7 @@ bool HostCache::AddDnsQueryIp (const std::string clientip, const std::string fqd
 }
 
 
-bool HostCache::AddDhcpRequest (const std::string IpAddress, const MacAddress inMac,
+bool HostCache::addDhcpRequest (const std::string IpAddress, const MacAddress inMac,
         const std::string Hostname, const std::string DhcpVendor) {
     DLOG_IF(INFO, Debug) << "Adding DHCP request for host with MAC " <<
             inMac << " & IP "  << IpAddress;
@@ -263,13 +263,13 @@ bool HostCache::AddDhcpRequest (const std::string IpAddress, const MacAddress in
 	std::shared_ptr<Host> h;
 	if (inMac.isValid() == true) {
 		try {
-		    h = FindOrCreateHostByMac(inMac, "", IpAddress);
+		    h = findOrCreateHostByMac(inMac, "", IpAddress);
 		} catch (...) {
 		    return false;
 		}
 	} else {
 	    try {
-	        h = FindOrCreateHostByIp(IpAddress);
+	        h = findOrCreateHostByIp(IpAddress);
 	    } catch (...) {
 	        return false;
         }
@@ -283,7 +283,7 @@ bool HostCache::AddDhcpRequest (const std::string IpAddress, const MacAddress in
 
 }
 
-bool HostCache::AddSsdpInfo (const std::shared_ptr<SsdpHost> sHost) {
+bool HostCache::addSsdpInfo (const std::shared_ptr<SsdpHost> sHost) {
     DLOG_IF(INFO, Debug) << "Adding SSDP info for host with IP " << sHost->IpAddress;
 	if (sHost->IpAddress == "") {
 		LOG(WARNING) << "AddSsdpInfo: no IP address provided";
@@ -294,7 +294,7 @@ bool HostCache::AddSsdpInfo (const std::shared_ptr<SsdpHost> sHost) {
 	}
 
 	try {
-	    std::shared_ptr<Host> h = FindOrCreateHostByIp(sHost->IpAddress);
+	    std::shared_ptr<Host> h = findOrCreateHostByIp(sHost->IpAddress);
 	    if (h != nullptr) {
 	        h->setSsdpInfo(sHost);
 	        return true;
@@ -303,7 +303,7 @@ bool HostCache::AddSsdpInfo (const std::shared_ptr<SsdpHost> sHost) {
 	return false;
 }
 
-bool HostCache::AddWsDiscoveryInfo (const std::shared_ptr<WsDiscoveryHost> inwsdHost) {
+bool HostCache::addWsDiscoveryInfo (const std::shared_ptr<WsDiscoveryHost> inwsdHost) {
     DLOG_IF(INFO, Debug) << "Adding WsDiscovery info for host with IP " << inwsdHost->IpAddress;
     if (inwsdHost->IpAddress == "") {
         LOG(WARNING) << "AddWsDiscoveryInfo: no IP address provided";
@@ -314,7 +314,7 @@ bool HostCache::AddWsDiscoveryInfo (const std::shared_ptr<WsDiscoveryHost> inwsd
     }
 
     try {
-        std::shared_ptr<Host> h = FindOrCreateHostByIp(inwsdHost->IpAddress);
+        std::shared_ptr<Host> h = findOrCreateHostByIp(inwsdHost->IpAddress);
         if (h != nullptr) {
             h->setWsDiscoveryInfo(inwsdHost);
             return true;
@@ -324,7 +324,7 @@ bool HostCache::AddWsDiscoveryInfo (const std::shared_ptr<WsDiscoveryHost> inwsd
 
 }
 
-bool HostCache::AddMdnsInfo (const std::shared_ptr<MdnsHost> inmdnsHost) {
+bool HostCache::addMdnsInfo (const std::shared_ptr<MdnsHost> inmdnsHost) {
     DLOG_IF(INFO, Debug) << "Adding mDNS info for host with IP " << inmdnsHost->IpAddress;
     if (inmdnsHost->IpAddress == "") {
         LOG(WARNING) << "AddMdnsInfo: no IP address provided";
@@ -335,7 +335,7 @@ bool HostCache::AddMdnsInfo (const std::shared_ptr<MdnsHost> inmdnsHost) {
     }
 
     try {
-        std::shared_ptr<Host> h = FindOrCreateHostByIp(inmdnsHost->IpAddress);
+        std::shared_ptr<Host> h = findOrCreateHostByIp(inmdnsHost->IpAddress);
         if (h != nullptr) {
             h->setMdnsInfo(inmdnsHost);
             return true;
@@ -381,7 +381,7 @@ uint32_t HostCache::pruneDnsQueryCache (bool Force) {
 	return deletecount;
 }
 
-MacAddress HostCache::MacLookup (const std::string inIpAddress) {
+MacAddress HostCache::lookupMac (const std::string inIpAddress) {
     MacAddress Mac("00:00:00:00:00:00");
     if (LocalIpAddresses.find(inIpAddress) != LocalIpAddresses.end()) {
         DLOG_IF(INFO, Debug) <<"HostCache: Skipping MacLookup of local IP address " << inIpAddress;
@@ -389,7 +389,7 @@ MacAddress HostCache::MacLookup (const std::string inIpAddress) {
     }
     DLOG_IF(INFO, Debug) <<"HostCache: MacLookup of " << inIpAddress;
     for (auto lanInterface: ifMap->getLanInterfaces()) {
-        Mac = MacLookup(inIpAddress, lanInterface, true);
+        Mac = lookupMac(inIpAddress, lanInterface, true);
         if (Mac.isValid() == true) {
             DLOG_IF(INFO, Debug) <<"HostCache: Found MAC entry " << Mac << " on interface " << lanInterface;
             return Mac;
@@ -400,7 +400,7 @@ MacAddress HostCache::MacLookup (const std::string inIpAddress) {
     return Mac;
 }
 
-MacAddress HostCache::MacLookup (const std::string inIpAddress, const std::string inInterface, bool Retry) {
+MacAddress HostCache::lookupMac (const std::string inIpAddress, const std::string inInterface, bool Retry) {
     int domain;
     struct arpreq areq;
     memset(&areq, 0, sizeof(areq));
@@ -437,7 +437,7 @@ MacAddress HostCache::MacLookup (const std::string inIpAddress, const std::strin
         close (s);
         if (Retry == true) {
             sendUdpPing (inIpAddress, 1900);
-            MacLookup (inIpAddress, inInterface, false);
+            lookupMac (inIpAddress, inInterface, false);
         }
         DLOG_IF(INFO, Debug) <<"HostCache: ARP lookup failure for " << inIpAddress << " on interface " << inInterface;
         return Mac;
@@ -541,7 +541,7 @@ uint32_t HostCache::getInterfaceIpAddresses() {
 
 
 
-bool HostCache::ExportDeviceProfileMatches(const std::string filename, bool detailed) {
+bool HostCache::exportDeviceProfileMatches(const std::string filename, bool detailed) {
 	std::ofstream ofs(filename);
 	json j;
 	for (auto it : hC) {
@@ -559,7 +559,7 @@ bool HostCache::ExportDeviceProfileMatches(const std::string filename, bool deta
 	return true;
 }
 
-void HostCache::RestApiCall_async (std::vector<std::future<uint32_t>> &futures, const std::string api, const json j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload) {
+void HostCache::callRestApi_async (std::vector<std::future<uint32_t>> &futures, const std::string api, const json j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload) {
      futures.emplace_back(std::async(RestApiCall, api, j, ClientApiCertFile, ClientApiKeyFile, doUpload, Debug));
 }
 
@@ -656,7 +656,7 @@ uint32_t RestApiCall (const std::string api, const json &j, const std::string Cl
 	}
 }
 
-void HostCache::UploadDeviceStats(std::vector<std::future<uint32_t>> &futures, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload) {
+void HostCache::uploadDeviceStats(std::vector<std::future<uint32_t>> &futures, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload) {
 	uint32_t uploads = 0;
 	json j;
 	for (auto it : hC) {
@@ -670,7 +670,7 @@ void HostCache::UploadDeviceStats(std::vector<std::future<uint32_t>> &futures, c
 	}
 	if (uploads > 0) {
 	    // TOD: Might be a race condition in RestApiCall as they both use global Curl instance
-	    RestApiCall_async(futures, "v1/uploaddevices", j, ClientApiCertFile, ClientApiKeyFile, doUpload);
+	    callRestApi_async(futures, "v1/uploaddevices", j, ClientApiCertFile, ClientApiKeyFile, doUpload);
 	    // RestApiCall("v1/uploaddevices", j, ClientApiCertFile, ClientApiKeyFile, doUpload);
 	    LOG(INFO) << "Called v1/uploaddevices API with for " << uploads << " devices";
 	} else {
@@ -679,7 +679,7 @@ void HostCache::UploadDeviceStats(std::vector<std::future<uint32_t>> &futures, c
 
 }
 
-void HostCache::UploadTrafficStats(std::vector<std::future<uint32_t>> &futures, const time_t interval, const bool ReportRfc1918, const std::string ClientCertFile, const std::string ClientApiKeyFile, bool doUpload) {
+void HostCache::uploadTrafficStats(std::vector<std::future<uint32_t>> &futures, const time_t interval, const bool ReportRfc1918, const std::string ClientCertFile, const std::string ClientApiKeyFile, bool doUpload) {
 	uint32_t uploads = 0;
 	json j;
 	for (auto it : hC) {
@@ -693,7 +693,7 @@ void HostCache::UploadTrafficStats(std::vector<std::future<uint32_t>> &futures, 
 	}
 	if (uploads > 0) {
         // TODO: Might be a race condition in RestApiCall as they both use global Curl instance
-	    RestApiCall_async(futures, "v1/uploadstats", j, ClientCertFile, ClientApiKeyFile, doUpload);
+	    callRestApi_async(futures, "v1/uploadstats", j, ClientCertFile, ClientApiKeyFile, doUpload);
 	    // RestApiCall("v1/uploadstats", j, ClientCertFile, ClientApiKeyFile, doUpload);
 		LOG(INFO) << "Called v1/uploadstats API with for " << uploads << " hosts";
 	} else {
@@ -701,7 +701,7 @@ void HostCache::UploadTrafficStats(std::vector<std::future<uint32_t>> &futures, 
 	}
 }
 
-uint32_t HostCache::ImportDeviceProfileMatches(const std::string filename) {
+uint32_t HostCache::importDeviceProfileMatches(const std::string filename) {
     DLOG_IF(INFO, Debug) << "Importing Device Profile matches from " << filename;
 
 	std::ifstream ifs(filename);
@@ -719,7 +719,7 @@ uint32_t HostCache::ImportDeviceProfileMatches(const std::string filename) {
 
 	uint32_t matches = 0;
 	for (auto it = j.begin(); it != j.end(); ++it) {
-		if (ImportDeviceInfo(*it) == true) {
+		if (importDeviceInfo(*it) == true) {
 		   matches++;
 	   }
 	}
@@ -850,6 +850,24 @@ void HostCache::addorupdateDnsCnameCache(const std::string inFqdn, const std::st
     dCcname.addorupdateCname(inFqdn, inCname, fdpMap, inTtl);
 }
 
+uint32_t HostCache::pruneDnsIpCache(bool Force) {
+    std::set<std::string> PrunedFqdns = dCipv4.pruneResourceRecords(Force);
+    std::set<std::string> PrunedIpv6Fqdns = dCipv6.pruneResourceRecords(Force);
+    PrunedFqdns.insert(PrunedIpv6Fqdns.begin(), PrunedIpv6Fqdns.end());
+    for(auto Fqdn: PrunedFqdns) {
+        fdpMap.erase(Fqdn);
+    }
+    return PrunedFqdns.size();
+}
+
+uint32_t HostCache::pruneDnsCnameCache(bool Force) {
+    std::set<std::string> PrunedCnames = dCcname.pruneCnames(Force);
+    for(auto Cname: PrunedCnames) {
+        fdpMap.erase(Cname);
+    }
+    return PrunedCnames.size();
+}
+
 bool HostCache::removeDeviceProfile(const std::string inUuid) {
     auto dp_it = dpMap.find(inUuid);
     if (dp_it == dpMap.end()) {
@@ -873,7 +891,7 @@ bool HostCache::removeDeviceProfile(const std::string inUuid) {
     return false;
 }
 
-bool HostCache::ImportDeviceInfo (json &j) {
+bool HostCache::importDeviceInfo (json &j) {
 	std::string DeviceProfileUuid;
 	if (j.find("DeviceProfileUuid") == j.end()) {
 	    LOG(WARNING) << "No DeviceProfileUuid set, ignoring this Object";
@@ -923,7 +941,7 @@ bool HostCache::ImportDeviceInfo (json &j) {
 		}
 	}
 	try {
-	    if (not FindOrCreateHostByMac(Mac, DeviceProfileUuid, Ipv4Address)) {
+	    if (not findOrCreateHostByMac(Mac, DeviceProfileUuid, Ipv4Address)) {
 	        LOG(WARNING) << "Failed to create Host with MacAddress " << MacAddressString
 	                << "and uuid  " << DeviceProfileUuid;
 	        return false;

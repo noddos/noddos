@@ -603,7 +603,7 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
             // FQDNs may resolve to the same IP address and the reverse path may thus result in multiple FQDNs,
             // we need to keep track which of those FQDNs were queried by the Host.
             try {
-                std::shared_ptr<Host> h = hC->FindOrCreateHostByMac(inMac, "",
+                std::shared_ptr<Host> h = hC->findOrCreateHostByMac(inMac, "",
                     sourceIp);
                 if (h != nullptr) {
                     h->addorupdateDnsQueryList(it.dname());
@@ -718,7 +718,7 @@ bool PacketSnoop::parseDhcpv4UdpPacket(unsigned char *payload, size_t size) {
         return false;
     }
 
-    hC->AddDhcpRequest(clientIp, mac, hostname, vendor);
+    hC->addDhcpRequest(clientIp, mac, hostname, vendor);
     delete d;
     return false;
 }

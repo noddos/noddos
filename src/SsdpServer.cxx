@@ -57,7 +57,7 @@ bool SsdpServer::processEvent (struct epoll_event &event) {
 			        << " with " << nbytes << " bytes";
 
 			if (ParseSsdpMessage(sHost, msgbuf, nbytes)) {
-				hCache.AddSsdpInfo(sHost);
+				hCache.addSsdpInfo(sHost);
 			} else {
 			    DLOG_IF(INFO, Debug) << "Didn't parse SSDP packet";
             }

@@ -119,22 +119,22 @@ public:
 
 	// Matching hosts with device profiles
 	uint32_t Match();
-	bool MatchByMac(const MacAddress &inMacAddress);
-	bool MatchByIpAddress(const std::string inIpAddress);
+	bool matchByMac(const MacAddress &inMacAddress);
+	bool matchByIpAddress(const std::string inIpAddress);
 
     // Adding collected information to a Host instance
-	bool AddByMac (const MacAddress inMacAddress, const std::string inIpAddress = "");
-	bool AddFlow (const std::string srcip, const uint16_t srcport, const std::string dstip, const uint16_t dstport, const uint8_t protocol, const uint32_t expiration);
-	bool AddDnsQueryIp (const std::string clientip, const std::string fqdn, const std::string ip, const uint32_t inTtl = DNSQUERYDEFAULTTTL);
-    bool AddDhcpRequest (const std::string IpAddress, const MacAddress inMac, const std::string Hostname, const std::string DhcpVendor);
-	bool AddSsdpInfo (const std::shared_ptr<SsdpHost> insHost);
-	bool AddWsDiscoveryInfo (std::shared_ptr<WsDiscoveryHost> inwsdHost);
-    bool AddMdnsInfo (std::shared_ptr<MdnsHost> inmdnsHost);
+	bool addByMac (const MacAddress inMacAddress, const std::string inIpAddress = "");
+	bool addFlow (const std::string srcip, const uint16_t srcport, const std::string dstip, const uint16_t dstport, const uint8_t protocol, const uint32_t expiration);
+	bool addDnsQueryIp (const std::string clientip, const std::string fqdn, const std::string ip, const uint32_t inTtl = DNSQUERYDEFAULTTTL);
+    bool addDhcpRequest (const std::string IpAddress, const MacAddress inMac, const std::string Hostname, const std::string DhcpVendor);
+	bool addSsdpInfo (const std::shared_ptr<SsdpHost> insHost);
+	bool addWsDiscoveryInfo (std::shared_ptr<WsDiscoveryHost> inwsdHost);
+    bool addMdnsInfo (std::shared_ptr<MdnsHost> inmdnsHost);
 
-	std::shared_ptr<Host> FindHostByIp (const std::string inIp);
-	std::shared_ptr<Host> FindOrCreateHostByIp (const std::string ip, const std::string Uuid = "");
-	std::shared_ptr<Host> FindHostByMac (const MacAddress &inMac);
-	std::shared_ptr<Host> FindOrCreateHostByMac (const MacAddress inMac, const std::string Uuid = "", const std::string inIp = "");
+	std::shared_ptr<Host> findHostByIp (const std::string inIp);
+	std::shared_ptr<Host> findOrCreateHostByIp (const std::string ip, const std::string Uuid = "");
+	std::shared_ptr<Host> findHostByMac (const MacAddress &inMac);
+	std::shared_ptr<Host> findOrCreateHostByMac (const MacAddress inMac, const std::string Uuid = "", const std::string inIp = "");
 
 	// Prune Hosts, DnsCache etc
 	uint32_t Prune (bool Force = false);
@@ -151,44 +151,29 @@ public:
 	void updateDeviceProfileMatchesDnsData ();
 
 	// DnsCache persistence
-	bool exportDnsCache (const std::string filename);
-    bool importDnsCache (const std::string filename);
-	uint32_t pruneDnsIpCache(bool Force = false) {
-	    std::set<std::string> PrunedFqdns = dCipv4.pruneResourceRecords(Force);
-        std::set<std::string> PrunedIpv6Fqdns = dCipv6.pruneResourceRecords(Force);
-        PrunedFqdns.insert(PrunedIpv6Fqdns.begin(), PrunedIpv6Fqdns.end());
-		for(auto Fqdn: PrunedFqdns) {
-		    fdpMap.erase(Fqdn);
-		}
-		return PrunedFqdns.size();
-	}
-
-    uint32_t pruneDnsCnameCache(bool Force = false) {
-        std::set<std::string> PrunedCnames = dCcname.pruneCnames(Force);
-        for(auto Cname: PrunedCnames) {
-            fdpMap.erase(Cname);
-        }
-        return PrunedCnames.size();
-    }
+	bool exportDnsCache(const std::string filename);
+    bool importDnsCache(const std::string filename);
+	uint32_t pruneDnsIpCache(const bool Force = false);
+	uint32_t pruneDnsCnameCache(const bool Force = false);
 
 	InterfaceMap * getInterfaceMap() { return ifMap; }
-	MacAddress MacLookup (const std::string inIpAddress);
-	MacAddress MacLookup (const std::string inIpAddress, const std::string inInterface, bool Retry = false);
+	MacAddress lookupMac (const std::string inIpAddress);
+	MacAddress lookupMac (const std::string inIpAddress, const std::string inInterface, bool Retry = false);
 	bool sendUdpPing (const std::string DstIpAddress, const uint16_t DstPort);
 	uint32_t getInterfaceIpAddresses();
 	std::set<std::string> getLocalIpAddresses() { return LocalIpAddresses; }
 
-	void UploadDeviceStats(std::vector<std::future<uint32_t>> &futures, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
-	void UploadTrafficStats(std::vector<std::future<uint32_t>> &futures, const time_t interval, const bool ReportRfc1918, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
-    void RestApiCall_async (std::vector<std::future<uint32_t>> &futures, const std::string api, const json j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
-    std::unique_ptr<std::future<uint32_t>> test_RestApiCall_async (const std::string api, const json j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
+	void uploadDeviceStats(std::vector<std::future<uint32_t>> &futures, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
+	void uploadTrafficStats(std::vector<std::future<uint32_t>> &futures, const time_t interval, const bool ReportRfc1918, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
+    void callRestApi_async (std::vector<std::future<uint32_t>> &futures, const std::string api, const json j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
+    std::unique_ptr<std::future<uint32_t>> test_callRestApi_async (const std::string api, const json j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
 
-    uint32_t ImportDeviceProfileMatches(const std::string filename);
-	bool ExportDeviceProfileMatches(const std::string filename, const bool detailed = false);
-	bool ImportDeviceInfo (json &j);
+    uint32_t importDeviceProfileMatches(const std::string filename);
+	bool exportDeviceProfileMatches(const std::string filename, const bool detailed = false);
+	bool importDeviceInfo (json &j);
 
 	// uint32_t HostCount() { return hC.size(); }
-	bool Debug_get() { return Debug; }
+	bool getDebug() { return Debug; }
 };
 
 #endif /* HOSTCACHE_H_ */

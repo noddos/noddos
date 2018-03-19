@@ -358,31 +358,31 @@ TEST(DeviceProfileTest, matchTest) {
     }
     InterfaceMap ifMap;
     HostCache hc(ifMap, "", 0, 0, "", false, false);
-    hc.AddByMac (MacAddress("00:00:00:00:00:01"), "192.168.1.232");
-    hc.AddByMac (MacAddress("00:00:00:00:00:02"), "192.168.1.98");
-    hc.AddByMac (MacAddress("00:00:00:00:00:03"), "192.168.1.99");
-    hc.AddByMac (MacAddress("00:00:00:00:00:04"), "192.168.1.235");
-    hc.AddByMac (MacAddress("00:00:00:00:00:05"), "192.168.1.241");
-    hc.AddByMac (MacAddress("00:00:00:00:00:06"), "192.168.1.251");
-    hc.AddByMac (MacAddress("00:00:00:00:00:07"), "192.168.1.234");
-    hc.AddByMac (MacAddress("00:00:00:00:00:08"), "192.168.1.240");
-    hc.AddByMac (MacAddress("00:00:00:00:00:09"), "192.168.1.238");
-    hc.AddByMac (MacAddress("00:00:00:00:00:10"), "192.168.1.234");
-    hc.AddByMac (MacAddress("00:00:00:00:00:13"), "192.168.1.80");
-    hc.AddByMac (MacAddress("00:00:00:00:00:11"), "192.168.1.225");
-    hc.AddByMac (MacAddress("00:00:00:00:00:12"), "192.168.1.242");
-    hc.AddByMac (MacAddress("00:00:00:00:00:14"), "192.168.1.231");
-    hc.AddByMac (MacAddress("00:00:00:00:00:15"), "192.168.1.133");
-    hc.AddByMac (MacAddress("00:00:00:00:00:16"), "192.168.1.238");
-    hc.AddByMac (MacAddress("00:00:00:00:00:17"), "192.168.1.146");
-    hc.AddByMac (MacAddress("00:00:00:00:00:18"), "192.168.1.224");
-    hc.AddByMac (MacAddress("00:00:00:00:00:19"), "192.168.1.239");
-    hc.AddByMac (MacAddress("00:00:00:00:00:20"), "192.168.1.11");
-    hc.AddByMac (MacAddress("00:00:00:00:00:21"), "192.168.1.227");
-    hc.AddByMac (MacAddress("00:00:00:00:00:22"), "192.168.1.226");
-    hc.AddByMac (MacAddress("00:00:00:00:00:23"), "192.168.1.248");
-    hc.AddByMac (MacAddress("00:00:00:00:00:24"), "192.168.1.243");
-    hc.AddByMac (MacAddress("00:00:00:00:00:25"), "192.168.1.229");
+    hc.addByMac (MacAddress("00:00:00:00:00:01"), "192.168.1.232");
+    hc.addByMac (MacAddress("00:00:00:00:00:02"), "192.168.1.98");
+    hc.addByMac (MacAddress("00:00:00:00:00:03"), "192.168.1.99");
+    hc.addByMac (MacAddress("00:00:00:00:00:04"), "192.168.1.235");
+    hc.addByMac (MacAddress("00:00:00:00:00:05"), "192.168.1.241");
+    hc.addByMac (MacAddress("00:00:00:00:00:06"), "192.168.1.251");
+    hc.addByMac (MacAddress("00:00:00:00:00:07"), "192.168.1.234");
+    hc.addByMac (MacAddress("00:00:00:00:00:08"), "192.168.1.240");
+    hc.addByMac (MacAddress("00:00:00:00:00:09"), "192.168.1.238");
+    hc.addByMac (MacAddress("00:00:00:00:00:10"), "192.168.1.234");
+    hc.addByMac (MacAddress("00:00:00:00:00:13"), "192.168.1.80");
+    hc.addByMac (MacAddress("00:00:00:00:00:11"), "192.168.1.225");
+    hc.addByMac (MacAddress("00:00:00:00:00:12"), "192.168.1.242");
+    hc.addByMac (MacAddress("00:00:00:00:00:14"), "192.168.1.231");
+    hc.addByMac (MacAddress("00:00:00:00:00:15"), "192.168.1.133");
+    hc.addByMac (MacAddress("00:00:00:00:00:16"), "192.168.1.238");
+    hc.addByMac (MacAddress("00:00:00:00:00:17"), "192.168.1.146");
+    hc.addByMac (MacAddress("00:00:00:00:00:18"), "192.168.1.224");
+    hc.addByMac (MacAddress("00:00:00:00:00:19"), "192.168.1.239");
+    hc.addByMac (MacAddress("00:00:00:00:00:20"), "192.168.1.11");
+    hc.addByMac (MacAddress("00:00:00:00:00:21"), "192.168.1.227");
+    hc.addByMac (MacAddress("00:00:00:00:00:22"), "192.168.1.226");
+    hc.addByMac (MacAddress("00:00:00:00:00:23"), "192.168.1.248");
+    hc.addByMac (MacAddress("00:00:00:00:00:24"), "192.168.1.243");
+    hc.addByMac (MacAddress("00:00:00:00:00:25"), "192.168.1.229");
     hc.loadDeviceProfiles(DeviceProfilesFile);
 
 
@@ -400,7 +400,7 @@ TEST(DeviceProfileTest, matchTest) {
 
 bool test_match (std::string inIp, std::string inDpUuid, HostCache &hc) {
     try {
-        std::shared_ptr<Host> h_ptr = hc.FindHostByIp(inIp);
+        std::shared_ptr<Host> h_ptr = hc.findHostByIp(inIp);
         if (h_ptr == nullptr) {
             std::cout << "IP address " << inIp << " not found in HostCache" << std::endl;
             return false;
@@ -430,7 +430,7 @@ TEST(HostCacheTest, importDeviceProfileMatches) {
     InterfaceMap ifMap;
     HostCache hC(ifMap, "", 0, 0, "", false, false);
     hC.loadDeviceProfiles("tests/DeviceProfiles.json");
-    auto  matches = hC.ImportDeviceProfileMatches("tests/DeviceMatches.json");
+    auto  matches = hC.importDeviceProfileMatches("tests/DeviceMatches.json");
     ASSERT_EQ(matches, 9);
 }
 
@@ -440,16 +440,16 @@ TEST(HostCacheTest, MacAddressTest) {
     InterfaceMap ifMap(c.LanInterfaces, c.WanInterfaces, false);
     HostCache hC(ifMap, "", 0, 0, "", false, false);
     MacAddress Mactest ("00:00:00:00:00:03");
-    hC.AddByMac (Mactest, "192.168.1.99");
+    hC.addByMac (Mactest, "192.168.1.99");
 
     std::string s;
-    auto h = hC.FindOrCreateHostByIp("192.168.1.99");
+    auto h = hC.findOrCreateHostByIp("192.168.1.99");
     ASSERT_EQ(h->getMacAddress(), "00:00:00:00:00:03");
 
     // Test only makes sense on local LAN, not in CI
-    ASSERT_EQ(hC.MacLookup("192.168.1.1").str(), "00:01:2E:6F:E0:F3");
+    ASSERT_EQ(hC.lookupMac("192.168.1.1").str(), "00:01:2E:6F:E0:F3");
 
-    MacAddress Mac = hC.MacLookup("99.99.99.99");
+    MacAddress Mac = hC.lookupMac("99.99.99.99");
     ASSERT_FALSE(Mac.isValid());
 
     // Test only makes sense on local LAN, not in CI
@@ -588,18 +588,18 @@ TEST(HostTest, exportDeviceInfo) {
     InterfaceMap ifMap;
     HostCache hC(ifMap, "", 0, 14400, "", false, false);
     hC.loadDeviceProfiles(deviceprofilesfile);
-    hC.AddByMac (MacAddress("00:00:00:00:00:01"), "192.168.1.234");
+    hC.addByMac (MacAddress("00:00:00:00:00:01"), "192.168.1.234");
 
     auto sh = std::make_shared<SsdpHost>();
     sh->IpAddress = "192.168.1.234";
     sh->Manufacturer = "Amazon.com, Inc.";
     sh->ModelName = "FireTV";
-    hC.AddSsdpInfo(sh);
+    hC.addSsdpInfo(sh);
     // This should match with UUID: 694e8c7e-69f0-400f-824d-b94af7c7b7cc
-    ASSERT_TRUE(hC.MatchByIpAddress("192.168.1.234"));
+    ASSERT_TRUE(hC.matchByIpAddress("192.168.1.234"));
 
     // We add additional data to it
-    hC.AddDhcpRequest("192.168.1.234", MacAddress("00:00:00:00:00:01"), "android-49e3daef3e116688", "android-dhcp-7.1.1");
+    hC.addDhcpRequest("192.168.1.234", MacAddress("00:00:00:00:00:01"), "android-49e3daef3e116688", "android-dhcp-7.1.1");
 
     std::string msg = "^txtvers=1^priority=30^ty=EPSON XP-410 Series^usb_MFG=EPSON^usb_MDL=XP-410 Series^product=(EPSON XP-410 Series)^pdl=application/octet-stream,image/urf,image/jpeg^rp=ipp/print^qtotal=1&adminurl=http://EPSON410.local.:80/PRESENTATION/BONJOUR^note=^Color=T^Duplex=F^Fax=F^Scan=T^URF=CP1,MT1-3-8-10-11-12,PQ4-5,OB9,OFU0,RS360,SRGB24,W8,IS1,V1.2^UUID=cfe92100-67c4-11d4-a45f-ac1826841a46";
     msg[0] = 9;
@@ -626,9 +626,9 @@ TEST(HostTest, exportDeviceInfo) {
 
     Mdns m(hC, 86400);
     m.parseTxtRr(mdnsHost, msg);
-    hC.AddMdnsInfo(mdnsHost);
+    hC.addMdnsInfo(mdnsHost);
 
-    auto h_sptr = hC.FindHostByIp("192.168.1.234");
+    auto h_sptr = hC.findHostByIp("192.168.1.234");
 
     h_sptr->addorupdateDnsQueryList("www.noddos.io", 60);
     json j;
@@ -654,16 +654,16 @@ TEST(HostTest, exportTrafficStats) {
     InterfaceMap ifMap;
     HostCache hC(ifMap, "", 0, 14400, "", false, false);
     hC.loadDeviceProfiles(deviceprofilesfile);
-    hC.AddByMac (MacAddress("00:00:00:00:00:01"), "192.168.1.234");
+    hC.addByMac (MacAddress("00:00:00:00:00:01"), "192.168.1.234");
 
     auto sh = std::make_shared<SsdpHost>();
     sh->IpAddress = "192.168.1.234";
     sh->Manufacturer = "Amazon.com, Inc.";
     sh->ModelName = "FireTV";
-    hC.AddSsdpInfo(sh);
+    hC.addSsdpInfo(sh);
     // This should match with UUID: 694e8c7e-69f0-400f-824d-b94af7c7b7cc
-    ASSERT_TRUE(hC.MatchByIpAddress("192.168.1.234"));
-    auto h_sptr = hC.FindHostByIp("192.168.1.234");
+    ASSERT_TRUE(hC.matchByIpAddress("192.168.1.234"));
+    auto h_sptr = hC.findHostByIp("192.168.1.234");
 
     json j;
     std::set<std::string> localIps;
@@ -736,56 +736,56 @@ TEST(HostTest, matchHostsToDeviceProfile) {
     InterfaceMap ifMap;
     HostCache hC(ifMap, "", 0, 14400, "", false, false);
     hC.loadDeviceProfiles(deviceprofilesfile);
-    hC.AddByMac (MacAddress("00:00:00:00:00:01"), "192.168.1.232");
-    hC.AddByMac (MacAddress("00:00:00:00:00:02"), "192.168.1.98");
-    hC.AddByMac (MacAddress("00:00:00:00:00:03"), "192.168.1.99");
-    hC.AddByMac (MacAddress("00:00:00:00:00:04"), "192.168.1.235");
-    hC.AddByMac (MacAddress("00:00:00:00:00:05"), "192.168.1.241");
-    hC.AddByMac (MacAddress("00:00:00:00:00:20"), "192.168.1.251");
-    hC.AddByMac (MacAddress("00:00:00:00:00:06"), "192.168.1.234");
-    hC.AddByMac (MacAddress("00:00:00:00:00:07"), "192.168.1.240");
+    hC.addByMac (MacAddress("00:00:00:00:00:01"), "192.168.1.232");
+    hC.addByMac (MacAddress("00:00:00:00:00:02"), "192.168.1.98");
+    hC.addByMac (MacAddress("00:00:00:00:00:03"), "192.168.1.99");
+    hC.addByMac (MacAddress("00:00:00:00:00:04"), "192.168.1.235");
+    hC.addByMac (MacAddress("00:00:00:00:00:05"), "192.168.1.241");
+    hC.addByMac (MacAddress("00:00:00:00:00:20"), "192.168.1.251");
+    hC.addByMac (MacAddress("00:00:00:00:00:06"), "192.168.1.234");
+    hC.addByMac (MacAddress("00:00:00:00:00:07"), "192.168.1.240");
 
-    hC.AddByMac (MacAddress("00:00:00:00:00:08"), "192.168.1.227");
-    hC.AddByMac (MacAddress("00:00:00:00:00:09"), "192.168.1.226");
-    hC.AddByMac (MacAddress("00:00:00:00:00:10"), "192.168.1.80");
-    hC.AddByMac (MacAddress("00:00:00:00:00:11"), "192.168.1.225");
-    hC.AddByMac (MacAddress("00:00:00:00:00:12"), "192.168.1.242");
-    hC.AddByMac (MacAddress("00:00:00:00:00:14"), "192.168.1.231");
-    hC.AddByMac (MacAddress("00:00:00:00:00:15"), "192.168.1.133");
-    hC.AddByMac (MacAddress("00:00:00:00:00:16"), "192.168.1.238");
-    hC.AddByMac (MacAddress("00:00:00:00:00:17"), "192.168.1.146");
-    hC.AddByMac (MacAddress("00:00:00:00:00:18"), "192.168.1.224");
-    hC.AddByMac (MacAddress("00:00:00:00:00:19"), "192.168.1.239");
+    hC.addByMac (MacAddress("00:00:00:00:00:08"), "192.168.1.227");
+    hC.addByMac (MacAddress("00:00:00:00:00:09"), "192.168.1.226");
+    hC.addByMac (MacAddress("00:00:00:00:00:10"), "192.168.1.80");
+    hC.addByMac (MacAddress("00:00:00:00:00:11"), "192.168.1.225");
+    hC.addByMac (MacAddress("00:00:00:00:00:12"), "192.168.1.242");
+    hC.addByMac (MacAddress("00:00:00:00:00:14"), "192.168.1.231");
+    hC.addByMac (MacAddress("00:00:00:00:00:15"), "192.168.1.133");
+    hC.addByMac (MacAddress("00:00:00:00:00:16"), "192.168.1.238");
+    hC.addByMac (MacAddress("00:00:00:00:00:17"), "192.168.1.146");
+    hC.addByMac (MacAddress("00:00:00:00:00:18"), "192.168.1.224");
+    hC.addByMac (MacAddress("00:00:00:00:00:19"), "192.168.1.239");
 
-    hC.AddDhcpRequest("192.168.1.226", MacAddress("00:00:00:00:00:09"), "android-49e3daef3e116688", "android-dhcp-7.1.1");
-    hC.AddDnsQueryIp("192.168.1.226", "android.clients.google.com", "1.1.1.1");
-    hC.AddDnsQueryIp("192.168.1.226", "play.googleapis.com", "1.1.1.2");
+    hC.addDhcpRequest("192.168.1.226", MacAddress("00:00:00:00:00:09"), "android-49e3daef3e116688", "android-dhcp-7.1.1");
+    hC.addDnsQueryIp("192.168.1.226", "android.clients.google.com", "1.1.1.1");
+    hC.addDnsQueryIp("192.168.1.226", "play.googleapis.com", "1.1.1.2");
 
-    ASSERT_TRUE(hC.MatchByIpAddress("192.168.1.226"));
+    ASSERT_TRUE(hC.matchByIpAddress("192.168.1.226"));
 
     auto sh = std::make_shared<SsdpHost>();
     sh->IpAddress = "192.168.1.234";
     sh->Manufacturer = "Amazon.com, Inc.";
     sh->ModelName = "FireTV";
-    hC.AddSsdpInfo(sh);
-    ASSERT_TRUE(hC.MatchByIpAddress("192.168.1.234"));
+    hC.addSsdpInfo(sh);
+    ASSERT_TRUE(hC.matchByIpAddress("192.168.1.234"));
 
     // This should match with 2ae4a61f-75f7-481f-b28c-e3534ee1e04b
-    hC.AddDhcpRequest("192.168.1.98", MacAddress("00:00:00:00:00:02"), "", "udhcp 0.9.9-pre" );
-    hC.AddDnsQueryIp("192.168.1.98", "control-zoo-dtsprod.tvinteractive.tv", "1.1.1.1");
-    hC.AddDnsQueryIp("192.168.1.98", "control2.tvinteractive.tv", "1.1.1.1");
-    hC.AddDnsQueryIp("192.168.1.98", "bis-tv-widgets.secure.yahoo.com", "1.1.1.2");
-    ASSERT_TRUE(hC.MatchByIpAddress("192.168.1.98"));
+    hC.addDhcpRequest("192.168.1.98", MacAddress("00:00:00:00:00:02"), "", "udhcp 0.9.9-pre" );
+    hC.addDnsQueryIp("192.168.1.98", "control-zoo-dtsprod.tvinteractive.tv", "1.1.1.1");
+    hC.addDnsQueryIp("192.168.1.98", "control2.tvinteractive.tv", "1.1.1.1");
+    hC.addDnsQueryIp("192.168.1.98", "bis-tv-widgets.secure.yahoo.com", "1.1.1.2");
+    ASSERT_TRUE(hC.matchByIpAddress("192.168.1.98"));
 
-    hC.AddDnsQueryIp("192.168.1.241", "init.itunes.apple.com", "2.2.2.2");
-    hC.AddDnsQueryIp("192.168.1.241", "iosapps.itunes.apple.com", "2.2.2.3");
-    hC.AddDnsQueryIp("192.168.1.241", "sync.itunes.apple.com", "2.2.2.4");
-    hC.AddDnsQueryIp("192.168.1.241", "time-ios.apple.com", "2.2.2.5");
-    ASSERT_TRUE(hC.MatchByIpAddress("192.168.1.241"));
+    hC.addDnsQueryIp("192.168.1.241", "init.itunes.apple.com", "2.2.2.2");
+    hC.addDnsQueryIp("192.168.1.241", "iosapps.itunes.apple.com", "2.2.2.3");
+    hC.addDnsQueryIp("192.168.1.241", "sync.itunes.apple.com", "2.2.2.4");
+    hC.addDnsQueryIp("192.168.1.241", "time-ios.apple.com", "2.2.2.5");
+    ASSERT_TRUE(hC.matchByIpAddress("192.168.1.241"));
 
-    hC.AddDhcpRequest("192.168.1.251", MacAddress("00:00:00:00:00:20"), "kindle-a40752280", "");
-    hC.AddDnsQueryIp("192.168.1.251", "api.amazon.com", "1.1.1.5");
-    ASSERT_TRUE(hC.MatchByIpAddress("192.168.1.251"));
+    hC.addDhcpRequest("192.168.1.251", MacAddress("00:00:00:00:00:20"), "kindle-a40752280", "");
+    hC.addDnsQueryIp("192.168.1.251", "api.amazon.com", "1.1.1.5");
+    ASSERT_TRUE(hC.matchByIpAddress("192.168.1.251"));
 }
 
 TEST(IpsetTest, blah) {
