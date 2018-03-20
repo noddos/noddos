@@ -62,25 +62,24 @@ typedef std::list<std::shared_ptr<FlowEntry>> FlowEntryList;
  */
 class Host : public iCache {
 private:
-
     std::map<std::string,time_t> DnsQueryList; //!< All DNS queries performed by the host
     uint32_t MinDnsTtl; //!< Mininum TTL for DNS data, as data must not be expired before the next Traffic Report interval
- 	std::map<Tins::IPv4Address, std::shared_ptr<FlowEntryList>> FlowCacheIpv4; //!< Tracking of all IPv4 flows of the host
-   	std::map<Tins::IPv6Address, std::shared_ptr<FlowEntryList>> FlowCacheIpv6; //!< Tracking of all IPv6 flows of the host
+    std::map<Tins::IPv4Address, std::shared_ptr<FlowEntryList>> FlowCacheIpv4; //!< Tracking of all IPv4 flows of the host
+    std::map<Tins::IPv6Address, std::shared_ptr<FlowEntryList>> FlowCacheIpv6; //!< Tracking of all IPv6 flows of the host
 
-   	std::string Ipv4Address; //!< IPv4 address of the host TODO: support multiple IPv6 addresses
-   	std::string Ipv6Address; //!< IPv6 address of the host TODO: support multiple IPv6 addresses
-   	MacAddress Mac; //!< Ethernet MAC address of the host
-   	DhcpRequest Dhcp; //!< Data on any DHCP request sent by the host
-   	SsdpHost Ssdp; //!< Simple Service Discovery Protocol data sent by the host
-   	WsDiscoveryHost Wsd; //!< Web Service Discovery data sent by the host
-   	MdnsHost Mdns; //!< Multicast Domain Name Service data sent by the host
-   	std::string Uuid; //!< UUID of the DeviceProfile that the host has been matched with
-   	uint16_t matchversion; //!< The version of the DeviceProfile used to match the host with
-   	ConfidenceLevel IdentifyConfidenceLevel; //!< Confidence level of the match
-   	ConfidenceLevel EnforceConfidenceLevel; //!< Confidence level to restrict traffic of the host
-   	bool UploadStats; //!< Should statistics of this host be uploaded to the cloud API?
-   	bool Debug; //!< Should debug logging be generated for this host?
+    std::string Ipv4Address; //!< IPv4 address of the host TODO: support multiple IPv6 addresses
+    std::string Ipv6Address; //!< IPv6 address of the host TODO: support multiple IPv6 addresses
+    MacAddress Mac; //!< Ethernet MAC address of the host
+    DhcpRequest Dhcp; //!< Data on any DHCP request sent by the host
+    SsdpHost Ssdp; //!< Simple Service Discovery Protocol data sent by the host
+    WsDiscoveryHost Wsd; //!< Web Service Discovery data sent by the host
+    MdnsHost Mdns; //!< Multicast Domain Name Service data sent by the host
+    std::string Uuid; //!< UUID of the DeviceProfile that the host has been matched with
+    uint16_t matchversion; //!< The version of the DeviceProfile used to match the host with
+    ConfidenceLevel IdentifyConfidenceLevel; //!< Confidence level of the match
+    ConfidenceLevel EnforceConfidenceLevel; //!< Confidence level to restrict traffic of the host
+    bool UploadStats; //!< Should statistics of this host be uploaded to the cloud API?
+    bool Debug; //!< Should debug logging be generated for this host?
 
 public:
    	/*! \brief Constructor for the Host class
