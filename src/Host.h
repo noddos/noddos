@@ -93,14 +93,14 @@ public:
         UploadStats = true;
         matchversion = 0;
         IdentifyConfidenceLevel = EnforceConfidenceLevel = ConfidenceLevel::None;
-	}
+    }
     /*! \brief Constructor for the Host class
      *  Creates a new host object
      *  \param [in] inMac the Ethernet MAC address of the host
      *  \param [in] inUuid the UUID of the DeviceProfile to which the host has previously been matched
      *  \param [in] inDebug optional flag to enable debug logging for this host
      */
-	Host(const MacAddress inMac, const std::string inUuid,
+    Host(const MacAddress inMac, const std::string inUuid,
 	        const uint32_t inMinDnsTtl = DNSQUERYDEFAULTTTL, const bool inDebug = false):
 			Mac{inMac}, Uuid{inUuid}, MinDnsTtl{inMinDnsTtl}, Debug{inDebug} {
         iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);
