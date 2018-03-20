@@ -59,8 +59,8 @@ int main(int argc, char **argv) {
     int debug_flag = 0;
     while (1) {
         static struct option long_options[] = {
-            {"debug",       no_argument,       &debug_flag, 1},
-            {0, 0, 0, 0}
+                {"debug",       no_argument,       &debug_flag, 1},
+                {0, 0, 0, 0}
         };
         /* getopt_long stores the option index here. */
         int option_index = 0;
@@ -71,17 +71,17 @@ int main(int argc, char **argv) {
             break;
         }
         switch (c) {
-            case 0:
-                break;
-            case 'd':
-                debug_flag = 1;
-                Debug = true;
-                break;
-            case '?':
-            case 'h':
-            default:
-                printf ("noddos_test usage: -d/--debug\n");
-                exit (0);
+        case 0:
+            break;
+        case 'd':
+            debug_flag = 1;
+            Debug = true;
+            break;
+        case '?':
+        case 'h':
+        default:
+            printf ("noddos_test usage: -d/--debug\n");
+            exit (0);
         }
     }
     if (debug_flag) {
@@ -230,7 +230,7 @@ TEST(DnsCacheTest, pruneCnameRecords) {
     sleep (2);
     c.pruneCnames(false);
 
-   {
+    {
         try {
             std::set<std::string> fqdns = c.getFqdns("newcnamefqdn");
             ASSERT_EQ(fqdns.find("originalfqdn") != fqdns.end() ? 1 : 0, 0);
@@ -406,11 +406,11 @@ bool test_match (std::string inIp, std::string inDpUuid, HostCache &hc) {
             return false;
             std::string uuid = h_ptr->getUuid ();
             if (uuid != inDpUuid) {
-                    if (uuid == "") {
-                        DLOG_IF(INFO, Debug) << inIp << " did not match with profile " << inDpUuid;
-                    } else {
-                        DLOG_IF(INFO, Debug) << inIp << " did not match with profile " << inDpUuid << " but with " << uuid;
-                    }
+                if (uuid == "") {
+                    DLOG_IF(INFO, Debug) << inIp << " did not match with profile " << inDpUuid;
+                } else {
+                    DLOG_IF(INFO, Debug) << inIp << " did not match with profile " << inDpUuid << " but with " << uuid;
+                }
                 json j;
                 h_ptr->exportDeviceStats(j, 604800, true, true);
                 DLOG_IF(INFO, Debug) << j;
@@ -960,7 +960,7 @@ size_t curlwriteFunction(void *ptr, size_t size, size_t nmemb, std::string* data
     data->append((char*) ptr, size * nmemb);
     return size * nmemb;
 }
-*/
+ */
 
 TEST(CurlTest, uploadStats) {
     std::string filename = "tests/v1-uploadstats-20170515-021413";

@@ -210,7 +210,7 @@ bool PacketSnoop::processEvent(struct epoll_event &event) {
 
 
 bool PacketSnoop::Parse(unsigned char *frame) {
-   	LOG_IF(INFO, Debug) << "Parsing packet on interface " << ifindex;
+    LOG_IF(INFO, Debug) << "Parsing packet on interface " << ifindex;
 
     struct ethhdr *ethh = (struct ethhdr *) frame;
     uint8_t af;
@@ -284,9 +284,9 @@ bool PacketSnoop::Parse(unsigned char *frame) {
         protocol = ipv6h->nexthdr;
         char buf[INET6_ADDRSTRLEN];
         if (inet_ntop(af, &(ipv6h->saddr), buf, INET6_ADDRSTRLEN)
-                 == nullptr) {
-             LOG(ERROR) << "PacketSnoop: Received packet with invalid source IPv6 address";
-             return false;
+                == nullptr) {
+            LOG(ERROR) << "PacketSnoop: Received packet with invalid source IPv6 address";
+            return false;
         }
         srcv6 = Tins::IPv6Address(buf);
 
@@ -386,7 +386,7 @@ bool PacketSnoop::Parse(unsigned char *frame) {
                     << srcPort << ", destination " << destPort;
         }
     }
-        break;
+    break;
     case 17: //UDP Protocol
     {
         struct udphdr *udph = (struct udphdr*) (frame + iphdrlen + sizeof(struct ethhdr));
@@ -398,8 +398,8 @@ bool PacketSnoop::Parse(unsigned char *frame) {
         size_t udpPayloadLen = ipPayloadLen - sizeof(struct udphdr);
 
         DLOG_IF(INFO, Debug) << "UDP source port " << ntohs(udph->source)
-                << ", dest port " << ntohs(udph->dest) << ", header size "
-                << header_size;
+                        << ", dest port " << ntohs(udph->dest) << ", header size "
+                        << header_size;
         if (ntohs(udph->source) == 53 || ntohs(udph->dest) == 53) {
             parseDnsPacket(udpPayload, udpPayloadLen, Mac, srcString, ifindex);
         } else if (ntohs(udph->source) == 67 || ntohs(udph->dest) == 68
@@ -411,7 +411,7 @@ bool PacketSnoop::Parse(unsigned char *frame) {
                     << ntohs(udph->dest);
         }
     }
-        break;
+    break;
     default: //Some Other Protocol like ARP, ICMP etc.
         LOG(INFO) << "PacketSnoop: Received packet with protocol other than TCP or UDP";
     }
@@ -597,14 +597,14 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
             && q->additional_count() == 0) {
         for (auto it : q->queries()) {
             DLOG_IF(INFO, Debug) << "Question " << q->id() << " : " << it.dname()
-                    << " " << it.query_class() << " " << it.query_type();
+                            << " " << it.query_class() << " " << it.query_type();
             // Here we track which DNS queries each Host has executed so when we report traffic stats, we can
             // look at the reverse DNS path from IP address and match that to the original DNS query. As multiple
             // FQDNs may resolve to the same IP address and the reverse path may thus result in multiple FQDNs,
             // we need to keep track which of those FQDNs were queried by the Host.
             try {
                 std::shared_ptr<Host> h = hC->findOrCreateHostByMac(inMac, "",
-                    sourceIp);
+                        sourceIp);
                 if (h != nullptr) {
                     h->addorupdateDnsQueryList(it.dname());
                 }
@@ -635,32 +635,32 @@ bool PacketSnoop::parseDnsPacket(const unsigned char *payload,
             char ipaddr[INET6_ADDRSTRLEN];
             if (it.query_type() != 41) { // OPT pseudo-RR
                 DLOG_IF(INFO, Debug) << "Answer " << ++i << " : " << it.dname()
-                        << " " << it.ttl() << " " << it.query_class() << " " <<
-                        it.query_type();
+                                << " " << it.ttl() << " " << it.query_class() << " " <<
+                                it.query_type();
                 std::string dnsdata = it.data();
                 switch (it.query_type()) {
-                  case Tins::DNS::QueryType::A: {
-                        DLOG_IF(INFO, Debug) << it.dname() << " has A record: " << it.data();
+                case Tins::DNS::QueryType::A: {
+                    DLOG_IF(INFO, Debug) << it.dname() << " has A record: " << it.data();
                     Tins::IPv4Address ip(it.data());
                     hC->addorupdateDnsIpCache(it.dname(), ip);
                     break;
-                  }
-                  case Tins::DNS::QueryType::AAAA: {
+                }
+                case Tins::DNS::QueryType::AAAA: {
                     Tins::IPv6Address ip(it.data());
 
                     hC->addorupdateDnsIpCache(it.dname(), ip);
                     DLOG_IF(INFO, Debug) << it.dname() << " has AAAA record: " << ip;
                     break;
-                  }
-                  case Tins::DNS::QueryType::CNAME: {
+                }
+                case Tins::DNS::QueryType::CNAME: {
                     hC->addorupdateDnsCnameCache(it.dname(), dnsdata);
                     DLOG_IF(INFO, Debug) << it.dname() << " has CNAME record: " << dnsdata;
                     break;
-                  }
-                  default: {
-                      DLOG_IF(INFO, Debug) << "unhandled resource record: " << dnsdata;
+                }
+                default: {
+                    DLOG_IF(INFO, Debug) << "unhandled resource record: " << dnsdata;
                     break;
-                  }
+                }
                 }
             } else {
                 DLOG_IF(INFO, Debug) << "RR OPT";

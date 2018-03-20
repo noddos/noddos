@@ -47,11 +47,11 @@ private:
 
 public:
     Mdns(HostCache &inhCache, const time_t inExpiration, const std::string inIpAddress = "", const bool inDebug = false):
-            hCache{inhCache}, Expiration{inExpiration}, IpAddress{inIpAddress}, Debug{inDebug} {
-        socket_fd = -1;
+        hCache{inhCache}, Expiration{inExpiration}, IpAddress{inIpAddress}, Debug{inDebug} {
+            socket_fd = -1;
 
-        Open (IpAddress);
-    }
+            Open (IpAddress);
+        }
 
     ~Mdns() {
         // TODO Auto-generated destructor stub

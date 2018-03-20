@@ -126,7 +126,7 @@ public:
 
 
 	bool setFlowEntry(const uint16_t inSrcPort, const std::string inDstIp,
-			const uint16_t inDstPort, const uint8_t inProtocol, const uint32_t inTtl);
+	        const uint16_t inDstPort, const uint8_t inProtocol, const uint32_t inTtl);
 
 	/*! \brief Get the total number of destinations in the FlowCache for a host
 	 *  \return Total number of IPv4 and IPv6 destinations to which a host has flows
@@ -136,15 +136,15 @@ public:
 	bool setDhcp (const std::string IpAddress, const MacAddress Mac, const std::string Hostname, const std::string DhcpVendor);
 	bool setSsdpInfo(const std::shared_ptr<SsdpHost> insHost);
 	bool setWsDiscoveryInfo(const std::shared_ptr<WsDiscoveryHost> inwsdHost);
-    bool setMdnsInfo(const std::shared_ptr<MdnsHost> inmdnsHost);
+	bool setMdnsInfo(const std::shared_ptr<MdnsHost> inmdnsHost);
 
-    void addorupdateDnsQueryList (const std::string inFqdn, const time_t inTtl = DNSQUERYDEFAULTTTL);
-    bool inDnsQueryList (const std::string inFqdn);
-  	uint32_t pruneDnsQueryList (const bool Force = false);
+	void addorupdateDnsQueryList (const std::string inFqdn, const time_t inTtl = DNSQUERYDEFAULTTTL);
+	bool inDnsQueryList (const std::string inFqdn);
+	uint32_t pruneDnsQueryList (const bool Force = false);
 
-  	/*! \brief Check whether a host has been matched to a Device Profile
-  	 *  \return bool on whether the host has been matched to a Device Profile
-  	 */
+	/*! \brief Check whether a host has been matched to a Device Profile
+	 *  \return bool on whether the host has been matched to a Device Profile
+	 */
 	bool isMatched () { return Uuid != ""; }
 
 	/*! \brief Get the UUID of the DeviceProfile to which the host has been matched
@@ -157,25 +157,25 @@ public:
 	 */
 	std::string getMacAddress () { return Mac.str(); }
 
-    /*! \brief Set the IPv4 address of the host
-     *  \param [in] inIpAddress constant string with an IPv4 address
-     */
-    void setIpAddress (const std::string inIpAddress) { Ipv4Address = inIpAddress; }
+	/*! \brief Set the IPv4 address of the host
+	 *  \param [in] inIpAddress constant string with an IPv4 address
+	 */
+	void setIpAddress (const std::string inIpAddress) { Ipv4Address = inIpAddress; }
 
-    /*! \brief Get the IPv4 address of the host
+	/*! \brief Get the IPv4 address of the host
 	 *  \return string with the IPv4 address of the host or empty string if the host does not have an IPv4 address
 	 */
 	std::string getIpv4Address () { return Ipv4Address; }
 
-    /*! \brief Get the IPv6 address of the host
-     *  \return string with the IPv6 address of the host or empty string if the host does not have an IPv4 address
-     */
+	/*! \brief Get the IPv6 address of the host
+	 *  \return string with the IPv6 address of the host or empty string if the host does not have an IPv4 address
+	 */
 	std::string getIpv6Address () { return Ipv6Address; }
 
 	/*! \brief Check whether the upload of statistics is enabled for this host
-     * \return bool whether uploads are enabled for the host
-     */
-    bool UploadsEnabled () { return UploadStats; }
+	 * \return bool whether uploads are enabled for the host
+	 */
+	bool UploadsEnabled () { return UploadStats; }
 
 	void exportDeviceInfo (json &j, const bool detailed = false);
 	bool exportDeviceStats(json& j, const uint32_t interval, bool force = false, bool detailed = false);
@@ -199,11 +199,11 @@ public:
 	/*! \brief Get the expiration of the host
 	 *  \return the timestamp of the expiration of the host
 	 */
-    time_t getExpiration () { return iCache::Expires; }
+	time_t getExpiration () { return iCache::Expires; }
 
-    /*! \brief is the host expired?
-     *  \return bool on whether the host has expired
-     */
+	/*! \brief is the host expired?
+	 *  \return bool on whether the host has expired
+	 */
 	bool isExpired() { return time(nullptr) >= iCache::Expires;}
 };
 #endif /* HOST_CXX_ */

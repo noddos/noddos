@@ -123,16 +123,16 @@ public:
 	bool matchByMac(const MacAddress &inMacAddress);
 	bool matchByIpAddress(const std::string inIpAddress);
 
-    // Adding collected information to a Host instance
+	// Adding collected information to a Host instance
 	bool addByMac (const MacAddress inMacAddress, const std::string inIpAddress = "");
 	bool addFlow (const std::string srcip, const uint16_t srcport, const std::string dstip, const uint16_t dstport, const uint8_t protocol, const uint32_t expiration);
 	bool addDnsQueryIp (const std::string clientip, const std::string fqdn, const std::string ip, const uint32_t inTtl = DNSQUERYDEFAULTTTL);
-    bool addDhcpRequest (const std::string IpAddress, const MacAddress inMac, const std::string Hostname, const std::string DhcpVendor);
+	bool addDhcpRequest (const std::string IpAddress, const MacAddress inMac, const std::string Hostname, const std::string DhcpVendor);
 	bool addSsdpInfo (const std::shared_ptr<SsdpHost> insHost);
 	bool addWsDiscoveryInfo (std::shared_ptr<WsDiscoveryHost> inwsdHost);
-    bool addMdnsInfo (std::shared_ptr<MdnsHost> inmdnsHost);
+	bool addMdnsInfo (std::shared_ptr<MdnsHost> inmdnsHost);
 
-    // Finding a host
+	// Finding a host
 	std::shared_ptr<Host> findHostByIp (const std::string inIp);
 	std::shared_ptr<Host> findOrCreateHostByIp (const std::string ip, const std::string Uuid = "");
 	std::shared_ptr<Host> findHostByMac (const MacAddress &inMac);
@@ -148,13 +148,13 @@ public:
 
 	// These functions are for the DnsCache filled by the PacketSnoop class
 	void addorupdateDnsIpCache(const std::string inFqdn, const Tins::IPv4Address inIp, time_t inTtl = 604800);
-    void addorupdateDnsIpCache(const std::string inFqdn, const Tins::IPv6Address inIp, time_t inTtl = 604800);
+	void addorupdateDnsIpCache(const std::string inFqdn, const Tins::IPv6Address inIp, time_t inTtl = 604800);
 	void addorupdateDnsCnameCache(const std::string inFqdn, const std::string inCname, time_t inTtl = 604800);
 	void updateDeviceProfileMatchesDnsData ();
 
 	// DnsCache persistence
 	bool exportDnsCache(const std::string filename);
-    bool importDnsCache(const std::string filename);
+	bool importDnsCache(const std::string filename);
 	uint32_t pruneDnsIpCache(const bool Force = false);
 	uint32_t pruneDnsCnameCache(const bool Force = false);
 
@@ -169,11 +169,11 @@ public:
 	// Upload data to the Noddos REST API
 	void uploadDeviceStats(std::vector<std::future<uint32_t>> &futures, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
 	void uploadTrafficStats(std::vector<std::future<uint32_t>> &futures, const time_t interval, const bool ReportRfc1918, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
-    void callRestApi_async (std::vector<std::future<uint32_t>> &futures, const std::string api, const json j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
-    std::unique_ptr<std::future<uint32_t>> test_callRestApi_async (const std::string api, const json j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
+	void callRestApi_async (std::vector<std::future<uint32_t>> &futures, const std::string api, const json j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
+	std::unique_ptr<std::future<uint32_t>> test_callRestApi_async (const std::string api, const json j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
 
-    // import persisted data
-    uint32_t importDeviceProfileMatches(const std::string filename);
+	// import persisted data
+	uint32_t importDeviceProfileMatches(const std::string filename);
 	bool exportDeviceProfileMatches(const std::string filename, const bool detailed = false);
 	bool importDeviceInfo (json &j);
 

@@ -37,90 +37,90 @@ using nlohmann::json;
 
 class Identifier {
 private:
-	ConfidenceLevel IdentifyConfidenceLevel;
-	ConfidenceLevel EnforceConfidenceLevel;
-	std::vector<std::shared_ptr<MatchCondition>> MatchConditions;
-	std::vector<std::shared_ptr<ContainCondition>> ContainConditions;
-	bool Debug;
+    ConfidenceLevel IdentifyConfidenceLevel;
+    ConfidenceLevel EnforceConfidenceLevel;
+    std::vector<std::shared_ptr<MatchCondition>> MatchConditions;
+    std::vector<std::shared_ptr<ContainCondition>> ContainConditions;
+    bool Debug;
 
 public:
-	Identifier(json &j, const bool inDebug = false): Debug{inDebug} {
-		if (j.find("IdentifyConfidenceLevel") == j.end()) {
-			LOG(INFO) << "No IdentifyConfidenceLevel set, defaulting to `Low'";
-			IdentifyConfidenceLevel = ConfidenceLevel::Low;
-		} else {
-			if (! j["IdentifyConfidenceLevel"].is_string()) {
-				LOG(ERROR) << "IdentifyConfidenceLevel is not a string, defaulting to `Low'";
-				IdentifyConfidenceLevel = ConfidenceLevel::Low;;
-			} else {
-				// TODO *sigh* surely there is a better way!
-				std::string cl = j["IdentifyConfidenceLevel"];
-				std::transform(cl.begin(), cl.end(), cl.begin(), ::tolower);
+    Identifier(json &j, const bool inDebug = false): Debug{inDebug} {
+        if (j.find("IdentifyConfidenceLevel") == j.end()) {
+            LOG(INFO) << "No IdentifyConfidenceLevel set, defaulting to `Low'";
+            IdentifyConfidenceLevel = ConfidenceLevel::Low;
+        } else {
+            if (! j["IdentifyConfidenceLevel"].is_string()) {
+                LOG(ERROR) << "IdentifyConfidenceLevel is not a string, defaulting to `Low'";
+                IdentifyConfidenceLevel = ConfidenceLevel::Low;;
+            } else {
+                // TODO *sigh* surely there is a better way!
+                std::string cl = j["IdentifyConfidenceLevel"];
+                std::transform(cl.begin(), cl.end(), cl.begin(), ::tolower);
 
-				if(cl == "low")
-					IdentifyConfidenceLevel = ConfidenceLevel::Low;
-				else if (cl == "medium")
-					IdentifyConfidenceLevel = ConfidenceLevel::Medium;
-				else if (cl == "high")
-					IdentifyConfidenceLevel = ConfidenceLevel::High;
-			}
-		}
-		if (j.find("EnforceConfidenceLevel") == j.end()) {
-			DLOG_IF(INFO, Debug) << "No EnforceConfidenceLevel set, defaulting to `None'";
-			EnforceConfidenceLevel = ConfidenceLevel::None;
-		} else {
-			if (not j["EnforceConfidenceLevel"].is_string()) {
-				LOG(ERROR) << "EnforceConfidenceLevel is not a string, defaulting to `None'";
-				EnforceConfidenceLevel = ConfidenceLevel::None;
-			} else {
-				// TODO *sigh* surely there must be a better way!
-				std::string cl = j["EnforceConfidenceLevel"];
-				std::transform(cl.begin(), cl.end(), cl.begin(), ::tolower);
-				EnforceConfidenceLevel = ConfidenceLevel::None;
-				if(cl == "low") {
-					EnforceConfidenceLevel = ConfidenceLevel::Low;
-				} else if (cl == "medium") {
-					EnforceConfidenceLevel = ConfidenceLevel::Medium;
-				} else if (cl == "high") {
-					EnforceConfidenceLevel = ConfidenceLevel::High;
-				}
-			}
-		}
-		if (j.find("MustMatch") == j.end() && j.find("MustContain") == j.end()) {
-			LOG(ERROR) << "Identifier has no MustMatch and no MustContain restrictions";
-			return;
-		}
-		if (j.find("MustMatch") != j.end()) {
-			if (not j["MustMatch"].is_object()) {
-				LOG(ERROR) << "MustMatch condition is not a JSON Object";
-			} else {
-				for (json::iterator it = j["MustMatch"].begin(); it != j["MustMatch"].end(); ++it ) {
-				    DLOG_IF(INFO, Debug) << "Adding MatchCondition " << it.key();
-					auto mc = std::make_shared<MatchCondition>(it.key(), it.value(), Debug);
-					MatchConditions.push_back(mc);
-				}
-			}
-		}
-		if (j.find("MustContain") != j.end()) {
-			if (!j["MustContain"].is_object()) {
-				LOG(ERROR) << "MustContain condition is not a JSON Object";
-			} else {
-				for (json::iterator it = j["MustContain"].begin(); it != j["MustContain"].end(); ++it) {
-					DLOG_IF(INFO, Debug) << "Adding ContainCondition " << it.key();
-					if (it.value().is_array()) {
-						auto cc = std::make_shared<ContainCondition>(it.key(), it.value(), Debug);
-						ContainConditions.push_back(cc);
-					}
-				}
-			}
-		}
-	}
-	~Identifier() {
-		DLOG_IF(INFO, Debug) << "Destroying Identifier instance";
-	};
-	ConfidenceLevel IdentifyConfidenceLevel_get () const { return IdentifyConfidenceLevel; }
-	const std::vector<std::shared_ptr<MatchCondition>>& MatchConditions_get() const { return MatchConditions; }
-	const std::vector<std::shared_ptr<ContainCondition>>& ContainConditions_get() const { return ContainConditions; }
+                if(cl == "low")
+                    IdentifyConfidenceLevel = ConfidenceLevel::Low;
+                else if (cl == "medium")
+                    IdentifyConfidenceLevel = ConfidenceLevel::Medium;
+                else if (cl == "high")
+                    IdentifyConfidenceLevel = ConfidenceLevel::High;
+            }
+        }
+        if (j.find("EnforceConfidenceLevel") == j.end()) {
+            DLOG_IF(INFO, Debug) << "No EnforceConfidenceLevel set, defaulting to `None'";
+            EnforceConfidenceLevel = ConfidenceLevel::None;
+        } else {
+            if (not j["EnforceConfidenceLevel"].is_string()) {
+                LOG(ERROR) << "EnforceConfidenceLevel is not a string, defaulting to `None'";
+                EnforceConfidenceLevel = ConfidenceLevel::None;
+            } else {
+                // TODO *sigh* surely there must be a better way!
+                std::string cl = j["EnforceConfidenceLevel"];
+                std::transform(cl.begin(), cl.end(), cl.begin(), ::tolower);
+                EnforceConfidenceLevel = ConfidenceLevel::None;
+                if(cl == "low") {
+                    EnforceConfidenceLevel = ConfidenceLevel::Low;
+                } else if (cl == "medium") {
+                    EnforceConfidenceLevel = ConfidenceLevel::Medium;
+                } else if (cl == "high") {
+                    EnforceConfidenceLevel = ConfidenceLevel::High;
+                }
+            }
+        }
+        if (j.find("MustMatch") == j.end() && j.find("MustContain") == j.end()) {
+            LOG(ERROR) << "Identifier has no MustMatch and no MustContain restrictions";
+            return;
+        }
+        if (j.find("MustMatch") != j.end()) {
+            if (not j["MustMatch"].is_object()) {
+                LOG(ERROR) << "MustMatch condition is not a JSON Object";
+            } else {
+                for (json::iterator it = j["MustMatch"].begin(); it != j["MustMatch"].end(); ++it ) {
+                    DLOG_IF(INFO, Debug) << "Adding MatchCondition " << it.key();
+                    auto mc = std::make_shared<MatchCondition>(it.key(), it.value(), Debug);
+                    MatchConditions.push_back(mc);
+                }
+            }
+        }
+        if (j.find("MustContain") != j.end()) {
+            if (!j["MustContain"].is_object()) {
+                LOG(ERROR) << "MustContain condition is not a JSON Object";
+            } else {
+                for (json::iterator it = j["MustContain"].begin(); it != j["MustContain"].end(); ++it) {
+                    DLOG_IF(INFO, Debug) << "Adding ContainCondition " << it.key();
+                    if (it.value().is_array()) {
+                        auto cc = std::make_shared<ContainCondition>(it.key(), it.value(), Debug);
+                        ContainConditions.push_back(cc);
+                    }
+                }
+            }
+        }
+    }
+    ~Identifier() {
+        DLOG_IF(INFO, Debug) << "Destroying Identifier instance";
+    };
+    ConfidenceLevel IdentifyConfidenceLevel_get () const { return IdentifyConfidenceLevel; }
+    const std::vector<std::shared_ptr<MatchCondition>>& MatchConditions_get() const { return MatchConditions; }
+    const std::vector<std::shared_ptr<ContainCondition>>& ContainConditions_get() const { return ContainConditions; }
 };
 
 #endif /* IDENTIFIER_H_ */

@@ -29,41 +29,45 @@
 
 class FlowEntry : public iCache {
 public:
-	uint16_t DstPort;
-	uint16_t SrcPort;
-	uint8_t Protocol;
-	bool Debug;
+    uint16_t DstPort;
+    uint16_t SrcPort;
+    uint8_t Protocol;
+    bool Debug;
 
-	FlowEntry(bool inDebug = false): Debug{inDebug}, SrcPort{0}, DstPort{0}, Protocol{0}
-		{ setExpiration(); iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);};
-	FlowEntry(uint16_t inSrcPort, uint16_t inDstPort, uint8_t inProtocol): SrcPort{inSrcPort}, DstPort{inDstPort}, Protocol{inProtocol}
-		{ setExpiration(); iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);};
-	bool operator == (const FlowEntry &rhs) const {
-		return DstPort == rhs.DstPort &&
-				SrcPort == rhs.SrcPort &&
-				Protocol == rhs.Protocol;
-	}
-	uint32_t FlowStats (json & j, uint32_t time_interval) {
-		if (! Fresh(time_interval))
-			return 0;
-		auto flowentries = 0;
+    FlowEntry(bool inDebug = false): Debug{inDebug}, SrcPort{0}, DstPort{0}, Protocol{0} {
+        setExpiration();
+        iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);
+    };
+    FlowEntry(uint16_t inSrcPort, uint16_t inDstPort, uint8_t inProtocol): SrcPort{inSrcPort}, DstPort{inDstPort}, Protocol{inProtocol} {
+        setExpiration();
+        iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);
+    };
+    bool operator == (const FlowEntry &rhs) const {
+        return DstPort == rhs.DstPort &&
+                SrcPort == rhs.SrcPort &&
+                Protocol == rhs.Protocol;
+    }
+    uint32_t FlowStats (json & j, uint32_t time_interval) {
+        if (! Fresh(time_interval))
+            return 0;
+        auto flowentries = 0;
 
-		j["SrcPort"] = SrcPort;
-		j["DstPort"] = DstPort;
-		j["Protocol"] = Protocol;
-		return 1;
-	}
+        j["SrcPort"] = SrcPort;
+        j["DstPort"] = DstPort;
+        j["Protocol"] = Protocol;
+        return 1;
+    }
     // iCache interface methods.
     time_t setExpiration( uint32_t inTtl = FLOWDEFAULTTTL) {
-    	return iCache::Expires = (time(nullptr) + inTtl);
+        return iCache::Expires = (time(nullptr) + inTtl);
     }
     time_t getExpiration () { return iCache::Expires; }
     bool isExpired() {
-    	return time(nullptr) >= iCache::Expires;
+        return time(nullptr) >= iCache::Expires;
     }
 
     uint32_t Prune (bool Force = false) {
-    	return 0;
+        return 0;
     }
 };
 

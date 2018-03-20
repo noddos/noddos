@@ -55,13 +55,13 @@ bool Mdns::parseMessage (std::shared_ptr<MdnsHost> host, const unsigned char * m
     try {
         q = new Tins::DNS(msgbuf, nbytes);
     } catch (const Tins::malformed_packet &e) {
-            LOG(INFO) << "Malformed mDNS packet";
+        LOG(INFO) << "Malformed mDNS packet";
         throw std::runtime_error ("malformed mDNS TXT record");
     }
     DLOG_IF(INFO, Debug) << "Query ID: " << q->id();
     DLOG_IF(INFO, Debug) << "Questions: " << q->questions_count()
-                                << "Answers: " << q->answers_count()
-                                << "Additional answers: " << q->additional_count();
+                                        << "Answers: " << q->answers_count()
+                                        << "Additional answers: " << q->additional_count();
     if (q->answers_count() == 0) {
         delete q;
         return false;
@@ -174,7 +174,7 @@ bool Mdns::processEvent (struct epoll_event &event) {
 
     socklen_t addrlen = sizeof(addr);
     int nbytes;
-	while ((nbytes = recvfrom(socket_fd, msgbuf, MSGBUFSIZE, 0, &addr, &addrlen)) > 0) {
+    while ((nbytes = recvfrom(socket_fd, msgbuf, MSGBUFSIZE, 0, &addr, &addrlen)) > 0) {
         if (addr.sa_family == AF_INET) {
             auto mdnsHost = std::make_shared<MdnsHost>();
             struct sockaddr_in  *addr_in_ptr = (struct sockaddr_in *) &addr;

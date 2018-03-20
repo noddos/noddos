@@ -117,79 +117,79 @@ public:
             LOG(ERROR) << "Failed to check existence of ipset " << ipsetName;
         }
         return false;
-     }
+    }
 
     template <class T>
     bool Add(const T &inIpAddress, time_t timeout) {
-         try {
-             return ipset_exec(IPSET_CMD_ADD, inIpAddress, timeout);
-         } catch (...) {
-             PLOG(ERROR) << "Failed to add IP address " << inIpAddress << " to ipset " << ipsetName;
-         }
-         return false;
-     }
+        try {
+            return ipset_exec(IPSET_CMD_ADD, inIpAddress, timeout);
+        } catch (...) {
+            PLOG(ERROR) << "Failed to add IP address " << inIpAddress << " to ipset " << ipsetName;
+        }
+        return false;
+    }
 
-     bool Add(const MacAddress &inMac, const time_t timeout) {
-         try {
-             return ipset_exec(IPSET_CMD_ADD, inMac.str(), timeout);
-         } catch (...) {
-             PLOG(ERROR) << "Failed to add MAC address " << inMac << " to ipset " << ipsetName;
-         }
-         return false;
-     }
-     bool Add(const std::string &inMac, const time_t timeout) {
-         try {
-             return ipset_exec(IPSET_CMD_ADD, inMac, timeout);
-         } catch (...) {
-             PLOG(ERROR) << "Failed to add MAC address " << inMac << " to ipset " << ipsetName;
-         }
-         return false;
-     }
-     template <class T>
-     bool Remove(const T &inIpAddress) {
-         try {
-             return ipset_exec(IPSET_CMD_DEL, inIpAddress, 0);
-         } catch (...) {
-             PLOG(ERROR) << "Failed to remove IP address " << inIpAddress << " from ipset " <<  ipsetName;
-         }
-         return false;
-     }
+    bool Add(const MacAddress &inMac, const time_t timeout) {
+        try {
+            return ipset_exec(IPSET_CMD_ADD, inMac.str(), timeout);
+        } catch (...) {
+            PLOG(ERROR) << "Failed to add MAC address " << inMac << " to ipset " << ipsetName;
+        }
+        return false;
+    }
+    bool Add(const std::string &inMac, const time_t timeout) {
+        try {
+            return ipset_exec(IPSET_CMD_ADD, inMac, timeout);
+        } catch (...) {
+            PLOG(ERROR) << "Failed to add MAC address " << inMac << " to ipset " << ipsetName;
+        }
+        return false;
+    }
+    template <class T>
+    bool Remove(const T &inIpAddress) {
+        try {
+            return ipset_exec(IPSET_CMD_DEL, inIpAddress, 0);
+        } catch (...) {
+            PLOG(ERROR) << "Failed to remove IP address " << inIpAddress << " from ipset " <<  ipsetName;
+        }
+        return false;
+    }
 
-     bool Remove(const MacAddress &Mac) {
-         try {
-         return ipset_exec(IPSET_CMD_DEL, Mac.str(), 0);
-         } catch (...) {
-             PLOG(ERROR) << "Failed to remove MAC address " << Mac << " from  ipset " << ipsetName;
-         }
-         return false;
-     }
-     bool Remove(const std::string &Mac) {
-         try {
-          return ipset_exec(IPSET_CMD_DEL, Mac, 0);
-         } catch (...) {
+    bool Remove(const MacAddress &Mac) {
+        try {
+            return ipset_exec(IPSET_CMD_DEL, Mac.str(), 0);
+        } catch (...) {
+            PLOG(ERROR) << "Failed to remove MAC address " << Mac << " from  ipset " << ipsetName;
+        }
+        return false;
+    }
+    bool Remove(const std::string &Mac) {
+        try {
+            return ipset_exec(IPSET_CMD_DEL, Mac, 0);
+        } catch (...) {
             PLOG(ERROR) << "Failed to remove Mac address " << Mac << " from ipset " << ipsetName;
-         }
-         return false;
-     }
+        }
+        return false;
+    }
 
-     template <class T>
-     bool In(const T &inIpAddress) {
-         try {
-         return ipset_exec(IPSET_CMD_TEST, inIpAddress, 0);
-         } catch (...) {
-             PLOG(ERROR) << "Failed to check wheth IP address " << inIpAddress << " is in ipset " << ipsetName;
-         }
-         return false;
-     }
+    template <class T>
+    bool In(const T &inIpAddress) {
+        try {
+            return ipset_exec(IPSET_CMD_TEST, inIpAddress, 0);
+        } catch (...) {
+            PLOG(ERROR) << "Failed to check wheth IP address " << inIpAddress << " is in ipset " << ipsetName;
+        }
+        return false;
+    }
 
-      bool In(const MacAddress &Mac) {
-         try {
-         return ipset_exec(IPSET_CMD_TEST, Mac.str(), 0);
-         } catch (...) {
-             PLOG(ERROR) << "Failed to check whether MAC address " << Mac << " is in ipset " << ipsetName;
-         }
-         return false;
-     }
+    bool In(const MacAddress &Mac) {
+        try {
+            return ipset_exec(IPSET_CMD_TEST, Mac.str(), 0);
+        } catch (...) {
+            PLOG(ERROR) << "Failed to check whether MAC address " << Mac << " is in ipset " << ipsetName;
+        }
+        return false;
+    }
 };
 
 

@@ -26,12 +26,12 @@
 #include <string>
 
 class iDeviceInfoSource {
-	public:
-		virtual int getFileHandle() = 0;
-		virtual bool processEvent(struct epoll_event &event) = 0;
-		virtual int Open(std::string input, uint32_t inExpiration) = 0;
-		virtual bool Close() = 0;
-		virtual ~iDeviceInfoSource(){};
+public:
+    virtual int getFileHandle() = 0;
+    virtual bool processEvent(struct epoll_event &event) = 0;
+    virtual int Open(std::string input, uint32_t inExpiration) = 0;
+    virtual bool Close() = 0;
+    virtual ~iDeviceInfoSource(){};
 };
 
 #endif /* IDEVICEINFOSOURCE_H_ */

@@ -141,7 +141,7 @@ void Ipset::Open (const std::string inIpsetName, std::string inIpsetType, bool i
         family = NFPROTO_IPV6;
     } else if (ipsetType == "hash:mac") {
         family = NFPROTO_UNSPEC;
-     } else {
+    } else {
         ipset_session_fini(session);
         throw std::invalid_argument("Unknown ipset data type " + ipsetType);
     }

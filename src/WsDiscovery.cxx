@@ -91,7 +91,7 @@ bool WsDiscovery::processEvent (struct epoll_event &event) {
 
     socklen_t addrlen = sizeof(addr);
     int nbytes;
-	while ((nbytes = recvfrom(socket_fd, msgbuf, MSGBUFSIZE, 0, &addr, &addrlen)) > 0) {
+    while ((nbytes = recvfrom(socket_fd, msgbuf, MSGBUFSIZE, 0, &addr, &addrlen)) > 0) {
         if (addr.sa_family == AF_INET) {
             auto wsdHost = std::make_shared<WsDiscoveryHost>();
             struct sockaddr_in  *addr_in_ptr = (struct sockaddr_in *) &addr;

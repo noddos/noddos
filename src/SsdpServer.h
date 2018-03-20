@@ -48,17 +48,18 @@ private:
 public:
 	SsdpServer(HostCache &inhCache, const time_t inExpiration, const std::string inIpAddress = "", const bool inDebug = false):
 	        hCache{inhCache}, Expiration{inExpiration}, IpAddress{inIpAddress}, Debug{inDebug} {
-		DLOG_IF(INFO , Debug) << "constructing instance";
+	    DLOG_IF(INFO , Debug) << "constructing instance";
 	    ssdp_rx = std::regex(R"delim(^(SERVER|LOCATION|NT|USN|USER-AGENT): (.*)$)delim",
-				std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
+	            std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
 
-		socket_fd = -1;
-		Open (IpAddress);
+	    socket_fd = -1;
+	    Open (IpAddress);
 
 	}
+
 	virtual ~SsdpServer() {
-		Close();
-		DLOG_IF(INFO, Debug) << "destructing instance";
+	    Close();
+	    DLOG_IF(INFO, Debug) << "destructing instance";
 	}
 
 	bool ParseSsdpMessage (std::shared_ptr<SsdpHost> host, const char * msgbuf, const int nbytes);

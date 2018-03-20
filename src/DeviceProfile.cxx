@@ -59,7 +59,7 @@ bool DeviceProfile::from_json(const json &j) {
         LOG(ERROR) << "DeviceProfileUuid is not a string, ignoring this Object";
         return false;
     }
-    if (DeviceProfileUuid != j["DeviceProfileUuid"].get<std::string>())
+    if (DeviceProfileUuid != j["DeviceProfileUuid"])
         return false;
 
 
@@ -73,7 +73,7 @@ bool DeviceProfile::from_json(const json &j) {
         LOG(ERROR) << "DeviceProfile:DeviceProfileVersion is not a number, ignoring this Object";
         return false;
     }
-    DeviceProfileVersion = j["DeviceProfileVersion"].get<uint32_t>();
+    DeviceProfileVersion = j["DeviceProfileVersion"];
 
     if (j.find("UploadStats") == j.end()) {
         DLOG_IF(INFO, Debug) << "DeviceProfile:No UploadStats value set, defaulting to false";
@@ -82,15 +82,15 @@ bool DeviceProfile::from_json(const json &j) {
         DLOG_IF(INFO, Debug) <<"UDeviceProfile:UploadStats is not a bool, defaulting to false";
         UploadStats = false;
     } else {
-        UploadStats = j["UploadStats"].get<bool>();
+        UploadStats = j["UploadStats"];
     }
 
     DeviceDescription = "";
     if (j.find("Manufacturer") != j.end() && j["Manufacturer"].is_string()) {
-        DeviceDescription = j["Manufacturer"].get<std::string>();
+        DeviceDescription = j["Manufacturer"];
     }
     if (j.find("Model") != j.end() && j["Model"].is_string()) {
-        DeviceDescription += j["Model"].get<std::string>();
+        DeviceDescription += j["Model"];
     }
 
     Identifiers.clear();
@@ -120,7 +120,7 @@ bool DeviceProfile::from_json(const json &j) {
         }
         for (json::iterator it = ajson.begin(); it != ajson.end(); ++it ) {
             withAllowedEndpoints = true;
-            std::string endpoint = it->get<std::string>();
+            std::string endpoint = *it;
             DLOG_IF(INFO, Debug) << "DeviceProfile: Adding allowed endpoint " << endpoint;
             try {
                 if (isIpv4Address(endpoint, Debug)) {
