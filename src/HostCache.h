@@ -51,26 +51,26 @@ uint32_t callRestApi (const std::string api, const json &j, const std::string Cl
  */
 class HostCache {
 private:
-	std::map<unsigned long long, std::shared_ptr<Host>> hC; //!< map from Mac to Host
-	std::map<std::string, unsigned long long> Ip2MacMap; 	//!< map from IP to MaC
+    std::map<unsigned long long, std::shared_ptr<Host>> hC; //!< map from Mac to Host
+    std::map<std::string, unsigned long long> Ip2MacMap; 	//!< map from IP to MaC
 
-	std::map<uint16_t, time_t> DnsQueryCache; //!< validate that DNS answers received correspond to DNS queries previously sent out.
-	// These maps cache IPv4 & IPv6 addresses and CNAMEs for at least the TrafficReport interval
-	DnsCache <Tins::IPv4Address> dCipv4; //!< Cache for DNS A RRs
-	DnsCache <Tins::IPv6Address> dCipv6; //!< Cache for DNS AAAA RRs
-	DnsCache <std::string> dCcname; //!< Cache for DNS CNAME RRs
-	FqdnDeviceProfileMap fdpMap; //!< Map maintained to check whether an FQDN (or a CNAME pointing to it) is listed as an allowed Destination in a Device Profile
+    std::map<uint16_t, time_t> DnsQueryCache; //!< validate that DNS answers received correspond to DNS queries previously sent out.
+    // These maps cache IPv4 & IPv6 addresses and CNAMEs for at least the TrafficReport interval
+    DnsCache <Tins::IPv4Address> dCipv4; //!< Cache for DNS A RRs
+    DnsCache <Tins::IPv6Address> dCipv6; //!< Cache for DNS AAAA RRs
+    DnsCache <std::string> dCcname; //!< Cache for DNS CNAME RRs
+    FqdnDeviceProfileMap fdpMap; //!< Map maintained to check whether an FQDN (or a CNAME pointing to it) is listed as an allowed Destination in a Device Profile
 
-	DeviceProfileMap dpMap; //!< Map of all device profiles, with key the UUID of the Device Profile
-	InterfaceMap *ifMap; //!< map of all interfaces of the host on which Noddos is running
-	std::unordered_set<std::string> WhitelistedNodes; //!< Set of hosts for which traffic will not be monitored or restricted
-	bool Debug; //!< Should debug logging be enabled?
-	std::set<std::string> LocalInterfaces;
-	std::set<std::string> LocalIpAddresses;
-	time_t MinFlowTtl; //!< Minimum TTL for flows
-	time_t MinDnsTtl; //!< Minimum TTL for DNS records.
-	bool FirewallBlockTraffic; //!< Should the firewall just log or also block traffic
-	std::string FirewallRulesFile; //!< location to store the temporary rules file that will be read by ip(6)tables
+    DeviceProfileMap dpMap; //!< Map of all device profiles, with key the UUID of the Device Profile
+    InterfaceMap *ifMap; //!< map of all interfaces of the host on which Noddos is running
+    std::unordered_set<std::string> WhitelistedNodes; //!< Set of hosts for which traffic will not be monitored or restricted
+    bool Debug; //!< Should debug logging be enabled?
+    std::set<std::string> LocalInterfaces;
+    std::set<std::string> LocalIpAddresses;
+    time_t MinFlowTtl; //!< Minimum TTL for flows
+    time_t MinDnsTtl; //!< Minimum TTL for DNS records.
+    bool FirewallBlockTraffic; //!< Should the firewall just log or also block traffic
+    std::string FirewallRulesFile; //!< location to store the temporary rules file that will be read by ip(6)tables
 
     void writeIptables();
 
