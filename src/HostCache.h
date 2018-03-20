@@ -41,7 +41,7 @@
 #include "DnsCache.h"
 #include "noddos.h"
 
-uint32_t RestApiCall (const std::string api, const json &j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload, bool Debug = false);
+uint32_t callRestApi (const std::string api, const json &j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload, bool Debug = false);
 
 /*! \class HostCache
  *  \brief Store of all the hosts discovered on the network
@@ -108,11 +108,12 @@ public:
 	    DLOG_IF(INFO, Debug) << "destructing instance";
 	}
 
+	// Manage Device Profiles
 	uint32_t loadDeviceProfiles(const std::string filename);
 	bool removeDeviceProfile(const std::string inUuid);
 	const DeviceProfileMap & getDeviceProfilesMap() { return dpMap; };
 
-
+	// Manage whitelists of IP addresses
 	uint32_t Whitelists_set (const std::unordered_set<std::string>& inIpv4Addresses, const std::unordered_set<std::string>& inIpv6Addresses, const std::unordered_set<std::string>& inMacAddresses);
 	bool isWhitelisted(const std::string inAddress) { return (WhitelistedNodes.find(inAddress) != WhitelistedNodes.end()); }
 	bool isWhitelisted(Host &inHost) { return isWhitelisted(inHost.getMacAddress()) || isWhitelisted(inHost.getIpv4Address()) || isWhitelisted(inHost.getIpv6Address()); }
@@ -131,6 +132,7 @@ public:
 	bool addWsDiscoveryInfo (std::shared_ptr<WsDiscoveryHost> inwsdHost);
     bool addMdnsInfo (std::shared_ptr<MdnsHost> inmdnsHost);
 
+    // Finding a host
 	std::shared_ptr<Host> findHostByIp (const std::string inIp);
 	std::shared_ptr<Host> findOrCreateHostByIp (const std::string ip, const std::string Uuid = "");
 	std::shared_ptr<Host> findHostByMac (const MacAddress &inMac);
@@ -144,7 +146,7 @@ public:
 	bool inDnsQueryCache (uint16_t id);
 	uint32_t pruneDnsQueryCache (bool Force = false);
 
-	// These functions are for the new DnsCache filled by the PacketSnoop class
+	// These functions are for the DnsCache filled by the PacketSnoop class
 	void addorupdateDnsIpCache(const std::string inFqdn, const Tins::IPv4Address inIp, time_t inTtl = 604800);
     void addorupdateDnsIpCache(const std::string inFqdn, const Tins::IPv6Address inIp, time_t inTtl = 604800);
 	void addorupdateDnsCnameCache(const std::string inFqdn, const std::string inCname, time_t inTtl = 604800);
@@ -156,6 +158,7 @@ public:
 	uint32_t pruneDnsIpCache(const bool Force = false);
 	uint32_t pruneDnsCnameCache(const bool Force = false);
 
+	// Functions about the interfaces of the host on which Noddos runs
 	InterfaceMap * getInterfaceMap() { return ifMap; }
 	MacAddress lookupMac (const std::string inIpAddress);
 	MacAddress lookupMac (const std::string inIpAddress, const std::string inInterface, bool Retry = false);
@@ -163,16 +166,21 @@ public:
 	uint32_t getInterfaceIpAddresses();
 	std::set<std::string> getLocalIpAddresses() { return LocalIpAddresses; }
 
+	// Upload data to the Noddos REST API
 	void uploadDeviceStats(std::vector<std::future<uint32_t>> &futures, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
 	void uploadTrafficStats(std::vector<std::future<uint32_t>> &futures, const time_t interval, const bool ReportRfc1918, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
     void callRestApi_async (std::vector<std::future<uint32_t>> &futures, const std::string api, const json j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
     std::unique_ptr<std::future<uint32_t>> test_callRestApi_async (const std::string api, const json j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
 
+    // import persisted data
     uint32_t importDeviceProfileMatches(const std::string filename);
 	bool exportDeviceProfileMatches(const std::string filename, const bool detailed = false);
 	bool importDeviceInfo (json &j);
 
-	// uint32_t HostCount() { return hC.size(); }
+	//! \brief Return the number of hosts in the cache
+	uint32_t getHostCount() { return hC.size(); }
+
+	//! \brief Get the Debug level
 	bool getDebug() { return Debug; }
 };
 

@@ -176,7 +176,7 @@ std::shared_ptr<Host> HostCache::findOrCreateHostByMac (const MacAddress inMac,
 	if (hC.find(inMac.get()) == hC.end()) {
 	    DLOG_IF(INFO, Debug) << "Adding new Host with MAC address " << inMac
 	            << " for IP " << inIp;
-		auto h = std::make_shared<Host>(inMac.str(), Uuid, Debug);
+		auto h = std::make_shared<Host>(inMac.str(), Uuid, MinDnsTtl, Debug);
 		h->setIpAddress (inIp);
 		hC[inMac.get()] = h;
 		return h;
@@ -197,7 +197,7 @@ bool HostCache::addByMac (const MacAddress inMacAddress, const std::string inIpA
 	if (hC.find(inMacAddress.get()) != hC.end()) {
 		return false;
     }
-	auto h = std::make_shared<Host>(inMacAddress, Debug);
+	auto h = std::make_shared<Host>(inMacAddress, MinDnsTtl, Debug);
 	h->setIpAddress (inIpAddress);
 	hC[inMacAddress.get()] = h;
 	Ip2MacMap[inIpAddress] = inMacAddress.get();
@@ -560,10 +560,10 @@ bool HostCache::exportDeviceProfileMatches(const std::string filename, bool deta
 }
 
 void HostCache::callRestApi_async (std::vector<std::future<uint32_t>> &futures, const std::string api, const json j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload) {
-     futures.emplace_back(std::async(RestApiCall, api, j, ClientApiCertFile, ClientApiKeyFile, doUpload, Debug));
+     futures.emplace_back(std::async(callRestApi, api, j, ClientApiCertFile, ClientApiKeyFile, doUpload, Debug));
 }
 
-uint32_t RestApiCall (const std::string api, const json &j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload, bool Debug) {
+uint32_t callRestApi (const std::string api, const json &j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload, bool Debug) {
 	std::string url = "https://api.noddos.io/" + api;
 
     std::string body = j.dump();

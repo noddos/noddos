@@ -48,18 +48,21 @@ using json = nlohmann::json;
  * \param [in] inFqdn FQDN of the DNS lookup
  * \param [in] inTtl constant time_t of time to live for the DNS record
  */
-void Host::addorupdateDnsQueryList (std::string inFqdn, const time_t inTtl) {
+void Host::addorupdateDnsQueryList (const std::string inFqdn, const time_t inTtl) {
     std::string fqdn = inFqdn;
     std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
-    DLOG_IF(INFO, Debug) << "Host(" << Ipv4Address <<"): Setting DnsQueryList for " << fqdn << " to now";
-    DnsQueryList[fqdn] = time(nullptr) + inTtl;
+
+    uint32_t Ttl = (inTtl < MinDnsTtl ? MinDnsTtl : inTtl);
+    DLOG_IF(INFO, Debug) << "Host(" << Ipv4Address << "): Setting DnsQueryList for "
+            << fqdn << " to now plus " << Ttl << " seconds.";
+    DnsQueryList[fqdn] = time(nullptr) + Ttl;
 }
 
 /*! \brief Check whether the host has performed a DNS lookup for an FQDN
- *  \param [in] FQDN of the DNS lookup
+ *  \param [in] inFqdn constant string FQDN for the DNS lookup
  *  \return [out] Boolean value whether the host has performed a DNS lookup for the FQDN that has not expired
  */
-bool Host::inDnsQueryList (std::string inFqdn) {
+bool Host::inDnsQueryList (const std::string inFqdn) {
     std::string fqdn = inFqdn;
     std::transform(fqdn.begin(), fqdn.end(), fqdn.begin(), ::tolower);
     if (DnsQueryList.find(fqdn) == DnsQueryList.end()) {

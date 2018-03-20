@@ -64,7 +64,7 @@ class Host : public iCache {
 private:
 
     std::map<std::string,time_t> DnsQueryList; //!< All DNS queries performed by the host
-
+    uint32_t MinDnsTtl; //!< Mininum TTL for DNS data, as data must not be expired before the next Traffic Report interval
  	std::map<Tins::IPv4Address, std::shared_ptr<FlowEntryList>> FlowCacheIpv4; //!< Tracking of all IPv4 flows of the host
    	std::map<Tins::IPv6Address, std::shared_ptr<FlowEntryList>> FlowCacheIpv6; //!< Tracking of all IPv6 flows of the host
 
@@ -88,7 +88,8 @@ public:
    	 *  \param [in] inMac the Ethernet MAC address of the host
    	 *  \param [in] inDebug optional flag to enable debug logging for this host
    	 */
-	Host(const MacAddress inMac, const bool inDebug = false): Mac{inMac}, Debug{inDebug}  {
+	Host(const MacAddress inMac, const uint32_t inMinDnsTtl = DNSQUERYDEFAULTTTL, const bool inDebug = false):
+	        Mac{inMac}, MinDnsTtl{inMinDnsTtl}, Debug{inDebug}  {
 		iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);
 		UploadStats = true;
 		matchversion = 0;
@@ -100,13 +101,17 @@ public:
      *  \param [in] inUuid the UUID of the DeviceProfile to which the host has previously been matched
      *  \param [in] inDebug optional flag to enable debug logging for this host
      */
-	Host(const MacAddress inMac, const std::string inUuid, const bool inDebug = false):
-			Mac{inMac}, Uuid{inUuid}, Debug{inDebug} {
+	Host(const MacAddress inMac, const std::string inUuid,
+	        const uint32_t inMinDnsTtl = DNSQUERYDEFAULTTTL, const bool inDebug = false):
+			Mac{inMac}, Uuid{inUuid}, MinDnsTtl{inMinDnsTtl}, Debug{inDebug} {
 		iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);
 		UploadStats = true;
 		matchversion = 0;
 		IdentifyConfidenceLevel = EnforceConfidenceLevel = ConfidenceLevel::None;
 	}
+
+    /*! \brief class destructor
+     */
 	virtual ~Host() {
 	    DLOG_IF(INFO, Debug) << "Destroying Host instance: " << Ipv4Address;
 	};
@@ -134,7 +139,7 @@ public:
     bool setMdnsInfo(const std::shared_ptr<MdnsHost> inmdnsHost);
 
     void addorupdateDnsQueryList (const std::string inFqdn, const time_t inTtl = DNSQUERYDEFAULTTTL);
-    bool inDnsQueryList (std::string inFqdn);
+    bool inDnsQueryList (const std::string inFqdn);
   	uint32_t pruneDnsQueryList (const bool Force = false);
 
   	/*! \brief Check whether a host has been matched to a Device Profile

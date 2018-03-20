@@ -573,7 +573,7 @@ TEST(HostTest, Comparison) {
 
 TEST(HostTest, pruneHost) {
     MacAddress m("00:00:00:00:00:01");
-    Host h(m, false);
+    Host h(m, 14400, false);
     ASSERT_TRUE(h.setFlowEntry(1000, "10.0.0.0", 80, 17, 0));
     ASSERT_TRUE(h.setFlowEntry(1001, "10.0.0.1", 81, 17, 60));
     ASSERT_FALSE(h.setFlowEntry(1001, "10.0.0.1", 81, 17, 60));
@@ -671,15 +671,16 @@ TEST(HostTest, exportTrafficStats) {
     DnsCache <Tins::IPv6Address> dCipv6;
     DnsCache <std::string> dCcname;
 
+    // Use case 1: a flow without DNS entry
     ASSERT_TRUE(h_sptr->setFlowEntry(1000, "1.0.0.0", 80, 17, 0));
 
-    // Use case: single A RR
+    // Use case 2: single A RR
     Tins::IPv4Address ip1("1.0.0.1");
     ASSERT_TRUE(h_sptr->setFlowEntry(1001, "1.0.0.1", 81, 17, 60));
     dCipv4.addorupdateResourceRecord("www.noddos.io", ip1, 60);
     h_sptr->addorupdateDnsQueryList("www.noddos.io", 60);
 
-    // Use case: CNAME to CNAME to A RR, only DNS query for A RR and CNAME RR #1
+    // Use case 3: CNAME to CNAME to A RR, only DNS query for A RR and CNAME RR #1
     Tins::IPv4Address ip2("1.0.0.2");
     ASSERT_TRUE(h_sptr->setFlowEntry(1002, "1.0.0.2", 82, 17, 60));
     dCipv4.addorupdateResourceRecord("aRR.noddos.io", ip2, 60);
@@ -688,35 +689,62 @@ TEST(HostTest, exportTrafficStats) {
     h_sptr->addorupdateDnsQueryList("cnameRR1.noddos.io", 60);
     h_sptr->addorupdateDnsQueryList("aRR.noddos.io", 60);
 
-    // Use case: 2 A RRs, only DNS query for A RR #2
+    // Use case 4: 2 A RRs, only DNS query for A RR #2
     ASSERT_TRUE(h_sptr->setFlowEntry(1003, "1.0.0.3", 83, 17, 60));
     Tins::IPv4Address ip3("1.0.0.3");
     dCipv4.addorupdateResourceRecord("aRR1.noddos.io", ip3, 60);
     dCipv4.addorupdateResourceRecord("aRR2.noddos.io", ip3, 60);
     h_sptr->addorupdateDnsQueryList("aRR2.noddos.io", 60);
 
+    // Use case 5: A CNAME to an FQDN with many A RRs
+    ASSERT_TRUE(h_sptr->setFlowEntry(1006, "1.0.0.6", 86, 17, 60));
+    Tins::IPv4Address ip4("1.0.0.4");
+    Tins::IPv4Address ip5("1.0.0.5");
+    Tins::IPv4Address ip6("1.0.0.6");
+    Tins::IPv4Address ip7("1.0.0.7");
+    dCipv4.addorupdateResourceRecord("DNSRR.noddos.io", ip4, 60);
+    dCipv4.addorupdateResourceRecord("DNSRR.noddos.io", ip5, 60);
+    dCipv4.addorupdateResourceRecord("DNSRR.noddos.io", ip6, 60);
+    dCipv4.addorupdateResourceRecord("DNSRR.noddos.io", ip7, 60);
+    dCcname.addorupdateCname("mainwebsite.noddos.io", "DNSRR.noddos.io", 60);
+    h_sptr->addorupdateDnsQueryList("mainwebsite.noddos.io", 60);
+
     h_sptr->exportTrafficStats(j, 14400, false, localIps, dCipv4, dCipv6, dCcname, false);
     ASSERT_EQ(j["DeviceProfileUuid"], h_sptr->getUuid());
     std::set<std::string> endpoints = j["TrafficStats"];
+
+    // Use case 1:
     ASSERT_NE(endpoints.find("1.0.0.0"), endpoints.end());
+
+    // Use case 2:
     ASSERT_NE(endpoints.find("www.noddos.io"), endpoints.end());
 
-    // Use case: CNAME to CNAME to A RR, only DNS query for A RR and CNAME RR #1
+    // Use case 3: CNAME to CNAME to A RR, only DNS query for A RR and CNAME RR #1
     ASSERT_NE(endpoints.find("arr.noddos.io"), endpoints.end());
     ASSERT_NE(endpoints.find("cnamerr1.noddos.io"), endpoints.end());
     ASSERT_EQ(endpoints.find("cnamerr2.noddos.io"), endpoints.end());
 
-    // Use case: 2 A RRs, only DNS query for A RR #2
+    // Use case 4: 2 A RRs, only DNS query for A RR #2
     ASSERT_NE(endpoints.find("arr2.noddos.io"), endpoints.end());
     ASSERT_EQ(endpoints.find("arr1.noddos.io"), endpoints.end());
 
-    // Use case: no flow from host
+    // Use case 5:
+    ASSERT_NE(endpoints.find("mainwebsite.noddos.io"), endpoints.end());
+    ASSERT_EQ(endpoints.find("dnsrr.noddos.io"), endpoints.end());
+    ASSERT_EQ(endpoints.find("10.0.0.4"), endpoints.end());
+    ASSERT_EQ(endpoints.find("10.0.0.5"), endpoints.end());
+    ASSERT_EQ(endpoints.find("10.0.0.6"), endpoints.end());
+    ASSERT_EQ(endpoints.find("10.0.0.7"), endpoints.end());
+
+    // Use case <last>: no flow from host
     ASSERT_EQ(endpoints.find("1.0.0.255"), endpoints.end());
 }
 
 TEST (HostTest, dnsQueryList) {
     MacAddress mac("00:00:00:00:00:01");
-    Host h(mac, false);
+    // must set MinDnsTtl = 0 otherwise expiration won't work as
+    // it should for this test case
+    Host h(mac, 0, false);
     h.addorupdateDnsQueryList("www.noddos.io", 0);
     h.addorupdateDnsQueryList("api.noddos.io", 60);
     ASSERT_TRUE(h.inDnsQueryList("www.noddos.io"));
@@ -758,8 +786,8 @@ TEST(HostTest, matchHostsToDeviceProfile) {
     hC.addByMac (MacAddress("00:00:00:00:00:19"), "192.168.1.239");
 
     hC.addDhcpRequest("192.168.1.226", MacAddress("00:00:00:00:00:09"), "android-49e3daef3e116688", "android-dhcp-7.1.1");
-    hC.addDnsQueryIp("192.168.1.226", "android.clients.google.com", "1.1.1.1");
-    hC.addDnsQueryIp("192.168.1.226", "play.googleapis.com", "1.1.1.2");
+    hC.addDnsQueryIp("192.168.1.226", "android.clients.google.com", "1.1.1.1", 60);
+    hC.addDnsQueryIp("192.168.1.226", "play.googleapis.com", "1.1.1.2", 60);
 
     ASSERT_TRUE(hC.matchByIpAddress("192.168.1.226"));
 
@@ -772,19 +800,19 @@ TEST(HostTest, matchHostsToDeviceProfile) {
 
     // This should match with 2ae4a61f-75f7-481f-b28c-e3534ee1e04b
     hC.addDhcpRequest("192.168.1.98", MacAddress("00:00:00:00:00:02"), "", "udhcp 0.9.9-pre" );
-    hC.addDnsQueryIp("192.168.1.98", "control-zoo-dtsprod.tvinteractive.tv", "1.1.1.1");
-    hC.addDnsQueryIp("192.168.1.98", "control2.tvinteractive.tv", "1.1.1.1");
-    hC.addDnsQueryIp("192.168.1.98", "bis-tv-widgets.secure.yahoo.com", "1.1.1.2");
+    hC.addDnsQueryIp("192.168.1.98", "control-zoo-dtsprod.tvinteractive.tv", "1.1.1.1", 60);
+    hC.addDnsQueryIp("192.168.1.98", "control2.tvinteractive.tv", "1.1.1.1", 60);
+    hC.addDnsQueryIp("192.168.1.98", "bis-tv-widgets.secure.yahoo.com", "1.1.1.2", 60);
     ASSERT_TRUE(hC.matchByIpAddress("192.168.1.98"));
 
-    hC.addDnsQueryIp("192.168.1.241", "init.itunes.apple.com", "2.2.2.2");
-    hC.addDnsQueryIp("192.168.1.241", "iosapps.itunes.apple.com", "2.2.2.3");
-    hC.addDnsQueryIp("192.168.1.241", "sync.itunes.apple.com", "2.2.2.4");
-    hC.addDnsQueryIp("192.168.1.241", "time-ios.apple.com", "2.2.2.5");
+    hC.addDnsQueryIp("192.168.1.241", "init.itunes.apple.com", "2.2.2.2", 60);
+    hC.addDnsQueryIp("192.168.1.241", "iosapps.itunes.apple.com", "2.2.2.3", 60);
+    hC.addDnsQueryIp("192.168.1.241", "sync.itunes.apple.com", "2.2.2.4", 60);
+    hC.addDnsQueryIp("192.168.1.241", "time-ios.apple.com", "2.2.2.5", 60);
     ASSERT_TRUE(hC.matchByIpAddress("192.168.1.241"));
 
     hC.addDhcpRequest("192.168.1.251", MacAddress("00:00:00:00:00:20"), "kindle-a40752280", "");
-    hC.addDnsQueryIp("192.168.1.251", "api.amazon.com", "1.1.1.5");
+    hC.addDnsQueryIp("192.168.1.251", "api.amazon.com", "1.1.1.5", 60);
     ASSERT_TRUE(hC.matchByIpAddress("192.168.1.251"));
 }
 
