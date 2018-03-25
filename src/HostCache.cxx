@@ -206,7 +206,7 @@ bool HostCache::addByMac (const MacAddress inMacAddress, const std::string inIpA
 
 bool HostCache::addFlow (const std::string srcip, const uint16_t srcport,
         const std::string dstip, const uint16_t dstport, const uint8_t protocol,
-        const uint32_t expiration) {
+        const uint32_t inTtl) {
     DLOG_IF(INFO, Debug) << "Adding flow for host with IP " << srcip;
     // DHCP requests are sent from 0.0.0.0. As we can't associate this flow with
     // a MAC address from the FlowTrack data, we ignore the flow
@@ -216,11 +216,11 @@ bool HostCache::addFlow (const std::string srcip, const uint16_t srcport,
     if (WhitelistedNodes.find(srcip) != WhitelistedNodes.end()) {
         return false;
     }
-
+    uint32_t Ttl = (inTtl < MinFlowTtl ? MinFlowTtl : inTtl);
     try {
         std::shared_ptr<Host> h = findOrCreateHostByIp(srcip);
         if (h != nullptr) {
-            h->setFlowEntry(srcport, dstip, dstport, protocol, MinFlowTtl);
+            h->setFlowEntry(srcport, dstip, dstport, protocol, Ttl);
             return true;
         }
     } catch (...) {}
@@ -348,8 +348,7 @@ bool HostCache::addMdnsInfo (const std::shared_ptr<MdnsHost> inmdnsHost) {
 
 // These functions are for DnsQueryCache
 void HostCache::addorupdateDnsQueryCache (uint16_t id) {
-    time_t Expiration = time(nullptr) + 60;
-    DLOG_IF(INFO, Debug) <<"HostCache: setting DnsQueryCache for " << id << " to " << Expiration;
+    DLOG_IF(INFO, Debug) <<"HostCache: setting DnsQueryCache for " << id << " to now plus 60 seconds";
     DnsQueryCache[id] = time(nullptr) + 60;
 }
 
@@ -894,31 +893,31 @@ bool HostCache::removeDeviceProfile(const std::string inUuid) {
 bool HostCache::importDeviceInfo (json &j) {
     std::string DeviceProfileUuid;
     if (j.find("DeviceProfileUuid") == j.end()) {
-        LOG(WARNING) << "No DeviceProfileUuid set, ignoring this Object";
+        LOG(WARNING) << "No DeviceProfileUuid set, ignoring this device";
         return false;
     }
     if (not j["DeviceProfileUuid"].is_string()) {
-        LOG(ERROR) << "DeviceProfileUuid is not a string, ignoring this Object";
+        LOG(ERROR) << "DeviceProfileUuid is not a string, ignoring this device";
         return false;
     }
     DeviceProfileUuid = j["DeviceProfileUuid"];
     if (DeviceProfileUuid == "") {
-        LOG(ERROR) << "DeviceProfileUuid is not set, ignoring this Object";
+        LOG(ERROR) << "DeviceProfileUuid is not set, ignoring this device";
         return false;
     }
 
     std::string MacAddressString;
     if (j.find("MacAddress") == j.end()) {
-        LOG(ERROR) << "No MacAddress set, ignoring this Object";
+        LOG(ERROR) << "No MacAddress set, ignoring this device";
         return false;
     }
     if (not j["MacAddress"].is_string()) {
-        LOG(ERROR) << "MacAddress is not a string, ignoring this Object";
+        LOG(ERROR) << "MacAddress is not a string, ignoring this device";
         return false;
     }
     MacAddressString = j["MacAddress"];
     if (MacAddressString == "" ) {
-        LOG(ERROR) << "MacAddress set to empty value, ignoring this Object";
+        LOG(ERROR) << "MacAddress set to empty value, ignoring this device";
         return false;
     }
 

@@ -125,7 +125,7 @@ public:
 
 
     bool setFlowEntry(const uint16_t inSrcPort, const std::string inDstIp,
-            const uint16_t inDstPort, const uint8_t inProtocol, const uint32_t inTtl);
+            const uint16_t inDstPort, const uint8_t inProtocol, const uint32_t inTtl = 14400);
 
     /*! \brief Get the total number of destinations in the FlowCache for a host
      *  \return Total number of IPv4 and IPv6 destinations to which a host has flows

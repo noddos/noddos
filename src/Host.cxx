@@ -54,7 +54,7 @@ void Host::addorupdateDnsQueryList (const std::string inFqdn, const time_t inTtl
 
     uint32_t Ttl = (inTtl < MinDnsTtl ? MinDnsTtl : inTtl);
     DLOG_IF(INFO, Debug) << "Host(" << Ipv4Address << "): Setting DnsQueryList for "
-            << fqdn << " to now plus " << Ttl << " seconds.";
+            << fqdn << " to expire now plus " << Ttl << " seconds.";
     DnsQueryList[fqdn] = time(nullptr) + Ttl;
 }
 
@@ -535,7 +535,8 @@ bool Host::setFlowEntry(const uint16_t inSrcPort, const std::string inDstIp,
     }
     auto f = std::make_shared<FlowEntry>();
     DLOG_IF(INFO, Debug) <<"Host(" << Ipv4Address << "): Creating new Flow Entry for src port " <<
-            inSrcPort << ", dest ip " << inDstIp << ", dest port " << inDstPort << ", protocol " << inProtocol;
+            inSrcPort << ", dest ip " << inDstIp << ", dest port " << inDstPort << ", protocol " <<
+            (inProtocol == 6 ? "udp" : "tcp") << " Ttl " << inTtl;
     iCache::LastModified = time(nullptr);
     f->SrcPort = inSrcPort;
     f->DstPort = inDstPort;
@@ -549,7 +550,7 @@ bool Host::setFlowEntry(const uint16_t inSrcPort, const std::string inDstIp,
             FlowCacheIpv4[dstIpv4Address] = std::make_shared<FlowEntryList>();
             FlowCacheIpv4[dstIpv4Address]->push_back(f);
             DLOG_IF(INFO, Debug) <<"Host(" << Ipv4Address << "): Adding to IPv4 FlowCache with destination "
-                    << inDstIp << " : " << inDstPort << " Protocol " << inProtocol;
+                    << inDstIp << " : " << inDstPort << " Protocol " << (inProtocol == 6 ? "udp" : "tcp");
             return true;
         }
         // Create or update existing flow to destination IP
@@ -575,7 +576,7 @@ bool Host::setFlowEntry(const uint16_t inSrcPort, const std::string inDstIp,
                 FlowCacheIpv6[dstIpv6Address] = std::make_shared<FlowEntryList>();
                 FlowCacheIpv6[dstIpv6Address]->push_back(f);
                 DLOG_IF(INFO, Debug) <<"Host(" << Ipv4Address << "): Adding to IPv6 FlowCache with destination " << inDstIp <<
-                        ": " << inDstPort << " Protocol " << inProtocol;
+                        ": " << inDstPort << " Protocol " << (inProtocol == 6 ? "udp" : "tcp");
                 return true;
             }
             // Create or update existing flow to destination IP
@@ -729,7 +730,7 @@ uint32_t Host::Prune (const bool Force) {
                 if (Force || (*it)->isExpired()) {
                     std::string dstIp = (fc->first).to_string();
                     DLOG_IF(INFO, Debug) <<"Host(" << Ipv4Address << "): Pruning IPv4 FlowEntry to " << fc->first <<
-                            "for DstPort " << (*it)->DstPort << " with expiration " <<  (*it)->getExpiration() <<
+                            " for DstPort " << (*it)->DstPort << " with expiration " <<  (*it)->getExpiration() <<
                             "while now is " << time(nullptr);
                     // Remove element from list
                     it = fel.erase(it);

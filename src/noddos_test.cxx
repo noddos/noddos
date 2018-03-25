@@ -37,6 +37,7 @@
 #include <tins/ipv6_address.h>
 
 #include <gtest/gtest.h>
+#include <glog/logging.h>
 
 #include "noddos.h"
 #include "WsDiscovery.h"
@@ -57,6 +58,7 @@ bool Debug = false;
 
 int main(int argc, char **argv) {
     int debug_flag = 0;
+    google::InitGoogleLogging(argv[0]);
     while (1) {
         static struct option long_options[] = {
                 {"debug",       no_argument,       &debug_flag, 1},
@@ -84,9 +86,12 @@ int main(int argc, char **argv) {
             exit (0);
         }
     }
-    if (debug_flag) {
-        openlog(argv[0], LOG_NOWAIT | LOG_PID | LOG_PERROR, LOG_UUCP);
+    if (debug_flag == true) {
+        FLAGS_logtostderr= true;
+        FLAGS_stderrthreshold = 0;
     }
+
+
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

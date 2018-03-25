@@ -100,7 +100,7 @@ int netfilter_cb(enum nf_conntrack_msg_type type, struct nf_conntrack *ct, void 
         // std::string bidirectional = m.str(10);
         // std::string assured = m.str(12);
         DLOG_IF(INFO, hC.getDebug()) << "Flowtrack matched " << srcip << ":" << srcport << " "
-                << dstip << ":" << dstport << " protcol " << protocol
+                << dstip << ":" << dstport << " protcol " << (protocol == 6 ? "udp" : "tcp")
                 << " expiration " << expiration;
         hC.addFlow(srcip, srcport, dstip, dstport, protocol, expiration);
     } else {
@@ -129,17 +129,17 @@ int FlowTrack::parseLogLine() {
         // std::string ipversion = m.str(1);
         uint8_t ipversionnumber = std::stoi(m.str(2));
         // std::string ipproto = m.str(3);
-        uint8_t ipprotonumber= std::stoi(m.str(4));
-        uint32_t expiration = std::stoi(m.str(5));
+        uint8_t protocol = std::stoi(m.str(4));
+        uint32_t ttl  = std::stoi(m.str(5));
         // std::string flowstatus = m.str(6);
         std::string srcip = m.str(7);
         std::string dstip = m.str(8);
         uint16_t srcport = std::stoi(m.str(9));
         uint16_t dstport = std::stoi(m.str(10));
         DLOG_IF(INFO, hC.getDebug()) << "Flowtrack matched " << srcip << ":" << srcport << " "
-                << dstip << ":" << dstport << " protcol " << ipprotonumber
-                << " expiration " << expiration;
-        hC.addFlow(srcip, srcport, dstip, dstport, ipprotonumber, expiration);
+                << dstip << ":" << dstport << " protcol " << (protocol == 6 ? "udp" : "tcp")
+                << " ttl " << ttl;
+        hC.addFlow(srcip, srcport, dstip, dstport, protocol, ttl);
     } else {
         DLOG_IF(INFO, hC.getDebug()) << "not matched " << line;
     }
