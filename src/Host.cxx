@@ -416,13 +416,15 @@ bool Host::exportTrafficStats(json& j, const uint32_t report_interval, const boo
             DLOG_IF(INFO, Debug) << "Host(" << Ipv4Address << "): Getting all DNS lookups for " << ip;
             std::vector<std::string> fqdns = dCipv4.getAllFqdns(ip);
             DLOG_IF(INFO, Debug) << "The DNS A record cache has " << fqdns.size() << " A records for " << ip;
-            std::set<std::string> allFqdns;
-            allFqdns.insert (fqdns.begin(), fqdns.end());
+            std::vector<std::string> allFqdns = fqdns;
+            // allFqdns.append (fqdns.begin(), fqdns.end());
 
             for (auto itf : fqdns) {
                 std::set<std::string> cname_fqdns = dCcname.getFqdns(itf);
                 DLOG_IF(INFO, Debug) << "The DNS CNAME cache has " << cname_fqdns.size() << " CNAME records for " << itf;
-                allFqdns.insert(cname_fqdns.begin(), cname_fqdns.end());
+                for (auto c: cname_fqdns) {
+                    allFqdns.emplace_back(c);
+                }
             }
             bool foundDestination = false;
             for (auto fqdn: allFqdns) {

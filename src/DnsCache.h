@@ -217,8 +217,9 @@ public:
             auto fdp_it = fdpMap.find(fqdn);
             json ipj = it.value();
             for (json::iterator ip_it = ipj.begin(); ip_it != ipj.end(); ++ip_it) {
-                T IpAddress = T(ip_it.key());
-                /* TODO? When running above line in try block, an exception is caught but without try block, program runs without issue
+                // T IpAddress = T(ip_it.key());
+                T IpAddress;
+                // TODO? When running above line in try block, an exception is caught but without try block, program runs without issue
                 try {
                     IpAddress = T(ip_it.key());
                 } catch (...) {
@@ -226,7 +227,7 @@ public:
                     // Exceptions are expected here as value can also be a CNAME
                     DLOG_IF(INFO, Debug) << "Record " << fqdn << " has value " << ip_it.key() << " which is neither an IPv4 or IPv6 address";
                 }
-                */
+                // */
 
                 dnsRecords++;
 

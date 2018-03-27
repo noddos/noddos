@@ -176,7 +176,7 @@ std::shared_ptr<Host> HostCache::findOrCreateHostByMac (const MacAddress inMac,
     if (hC.find(inMac.get()) == hC.end()) {
         DLOG_IF(INFO, Debug) << "Adding new Host with MAC address " << inMac
                 << " for IP " << inIp;
-        auto h = std::make_shared<Host>(inMac.str(), Uuid, MinDnsTtl, Debug);
+        auto h = std::make_shared<Host>(inMac, Uuid, MinDnsTtl, Debug);
         h->setIpAddress (inIp);
         hC[inMac.get()] = h;
         return h;

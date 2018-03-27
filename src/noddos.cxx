@@ -91,12 +91,15 @@ int main(int argc, char** argv) {
     //
     parse_commandline(argc, argv, debug, configfile, daemon);
 
-    if (daemon) {
+    if (daemon == true) {
         google::InitGoogleLogging(argv[0]);
         FLAGS_stderrthreshold = google::FATAL;
     } else {
         google::InitGoogleLogging(argv[0]);
         FLAGS_logtostderr= true;
+        if (debug == true) {
+            FLAGS_stderrthreshold = google::INFO;
+        }
     }
     Config config(debug);
     try {
@@ -105,7 +108,7 @@ int main(int argc, char** argv) {
         LOG (FATAL) << "Config: couldn't open, read or parse config file" << configfile << " :" << e.what();
         exit (1);
     }
-    InterfaceMap ifMap(config.LanInterfaces, config.WanInterfaces, config.DebugHostCache);
+    InterfaceMap ifMap(config.LanInterfaces, config.WanInterfaces, config.Debug && config.DebugHostCache);
 
     if (daemon) {
         daemonize(config);
@@ -214,7 +217,10 @@ int main(int argc, char** argv) {
     uint32_t NextWsDiscoveryProbe = 0; // Send out probe at first opportunity
 
     struct epoll_event* epoll_events = static_cast<epoll_event*>(calloc(MAXEPOLLEVENTS, sizeof (epoll_event)));
-
+    if(epoll_events == nullptr) {
+        PLOG(FATAL) << "Can't calloc for epoll_events";
+        throw std::system_error(errno, std::system_category());;
+    }
     //
     // epoll setup complete
     //

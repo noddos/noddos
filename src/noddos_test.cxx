@@ -88,7 +88,8 @@ int main(int argc, char **argv) {
     }
     if (debug_flag == true) {
         FLAGS_logtostderr= true;
-        FLAGS_stderrthreshold = 0;
+        FLAGS_stderrthreshold = 1;
+        FLAGS_minloglevel = 0;
     }
 
 
@@ -272,7 +273,7 @@ TEST(DnsTest, importCnameRecords) {
     ifs.close();
 
     size_t importedRecords = c.importJson(k,fdpMap);
-    ASSERT_EQ(importedRecords, 85);
+    ASSERT_EQ(importedRecords, 5098);
 
     std::ofstream ofs("/tmp/DnsCache.json");
     ASSERT_TRUE(ofs.is_open());
@@ -280,7 +281,7 @@ TEST(DnsTest, importCnameRecords) {
     json j;
 
     auto exportRecords = c.exportJson(j);
-    ASSERT_EQ(exportRecords, 85);
+    ASSERT_EQ(exportRecords, 4787);
 
     ofs << std::setw(4) << j << std::endl;
     ofs.close();
@@ -288,7 +289,7 @@ TEST(DnsTest, importCnameRecords) {
 
     std::set<std::string> PrunedCnames = c.pruneCnames(true);
     size_t pruned = PrunedCnames.size();
-    ASSERT_EQ(pruned, 130);
+    ASSERT_EQ(pruned, 7555);
 }
 
 TEST(DnsCacheTest, importARecords) {
@@ -305,28 +306,28 @@ TEST(DnsCacheTest, importARecords) {
     ifs.close();
 
     size_t importedRecords = i.importJson(k, fdpMap);
-    ASSERT_EQ(importedRecords, 564);
+    ASSERT_EQ(importedRecords, 25479);
 
     importedRecords = isix.importJson(k, fdpMap);
-    ASSERT_EQ(importedRecords, 7);
+    ASSERT_EQ(importedRecords, 25479);
 
-    Tins::IPv4Address ip4("23.41.176.89");
+    Tins::IPv4Address ip4("104.155.144.4");
     std::vector<std::string> fqdns = i.getAllFqdns(ip4);
-    ASSERT_EQ(fqdns.size(), 1);
+    ASSERT_EQ(fqdns.size(), 2);
 
     std::ofstream ofs("/tmp/DnsCache.json");
     ASSERT_TRUE(ofs.is_open());
 
     json j;
     auto exportRecords = i.exportJson(j);
-    ASSERT_EQ(exportRecords, 74);
+    ASSERT_EQ(exportRecords, 4730);
     ofs << std::setw(4) << j << std::endl;
     ofs.close();
     unlink("/tmp/DnsCache.json");
 
     std::set<std::string> PrunedFqdns = i.pruneResourceRecords(true);
     size_t pruned_fqdns = PrunedFqdns.size();
-    ASSERT_EQ(pruned_fqdns, 74);
+    ASSERT_EQ(pruned_fqdns, 4730);
 }
 
 TEST(DnsCacheTest, addARecord) {
