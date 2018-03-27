@@ -369,6 +369,7 @@ int main(int argc, char** argv) {
     w.Close();
     for (auto p: pInstances) {
         p->Close();
+        delete p;
     }
     ft.Close();
     close (epfd);

@@ -90,6 +90,7 @@ public:
     Host(const MacAddress inMac, const uint32_t inMinDnsTtl = DNSQUERYDEFAULTTTL, const bool inDebug = false):
             Mac{inMac}, MinDnsTtl{inMinDnsTtl}, Debug{inDebug}  {
         iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);
+        setExpiration();
         UploadStats = true;
         matchversion = 0;
         IdentifyConfidenceLevel = EnforceConfidenceLevel = ConfidenceLevel::None;
@@ -104,7 +105,8 @@ public:
 	        const uint32_t inMinDnsTtl = DNSQUERYDEFAULTTTL, const bool inDebug = false):
 			Mac{inMac}, Uuid{inUuid}, MinDnsTtl{inMinDnsTtl}, Debug{inDebug} {
         iCache::FirstSeen = iCache::LastSeen = iCache::LastModified = time(nullptr);
-	    UploadStats = true;
+	    setExpiration();
+        UploadStats = true;
 	    matchversion = 0;
 	    IdentifyConfidenceLevel = EnforceConfidenceLevel = ConfidenceLevel::None;
     }

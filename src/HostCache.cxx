@@ -63,14 +63,15 @@ uint32_t HostCache::Prune (bool Force) {
     uint32_t prunedhosts = 0;
 
     for (auto it = hC.begin(); it != hC.end();) {
-        std::string mac = it->second->getMacAddress();
-        std::string uuid = it->second->getUuid();
-        it->second->Prune(Force);
-        if (it->second->isExpired()) {
+        std::shared_ptr<Host> h = it->second;
+        std::string mac = h->getMacAddress();
+        std::string uuid = h->getUuid();
+        h->Prune(Force);
+        if (h->isExpired() == true) {
             if(uuid != "") {
-                auto it = dpMap.find(uuid);
-                if (it != dpMap.end()) {
-                    it->second->removeHost(mac);
+                auto it_dpm = dpMap.find(uuid);
+                if (it_dpm != dpMap.end()) {
+                    it_dpm->second->removeHost(mac);
                 }
             }
             it = hC.erase (it);
