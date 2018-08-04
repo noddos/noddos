@@ -48,24 +48,20 @@ bool Mdns::parseMessage (std::shared_ptr<MdnsHost> host, const unsigned char * m
     uint32_t pos = 0;
 
     if (nbytes < 12) {
-        syslog(LOG_NOTICE, "Mdns: Malformed mDNS packet smaller than 12 bytes");
-        throw std::runtime_error ("Mdns: malformed mDNS TXT record");
+        LOG(INFO) << "Malformed mDNS packet smaller than 12 bytes";
+        throw std::runtime_error ("malformed mDNS TXT record");
     }
     Tins::DNS *q;
     try {
         q = new Tins::DNS(msgbuf, nbytes);
     } catch (const Tins::malformed_packet &e) {
-        if (Debug == true) {
-            syslog(LOG_NOTICE, "Mdns: Malformed mDNS packet");
-        }
-        throw std::runtime_error ("Mdns: malformed mDNS TXT record");
+        LOG(INFO) << "Malformed mDNS packet";
+        throw std::runtime_error ("malformed mDNS TXT record");
     }
-    if (Debug == true) {
-        syslog(LOG_DEBUG, "Mdns: Query ID: %u", q->id());
-        syslog(LOG_DEBUG, "Mdns: Questions: %u Answers: %u Additional answers: %u",
-                q->questions_count(), q->answers_count(),
-                q->additional_count());
-    }
+    DLOG_IF(INFO, Debug) << "Query ID: " << q->id();
+    DLOG_IF(INFO, Debug) << "Questions: " << q->questions_count()
+                                        << "Answers: " << q->answers_count()
+                                        << "Additional answers: " << q->additional_count();
     if (q->answers_count() == 0) {
         delete q;
         return false;
@@ -77,68 +73,50 @@ bool Mdns::parseMessage (std::shared_ptr<MdnsHost> host, const unsigned char * m
     for (auto it : rt) {
         char ipaddr[INET6_ADDRSTRLEN];
         if (it.query_type() != 41) { // OPT pseudo-RR
-            if (Debug == true) {
-                syslog(LOG_DEBUG, "Mdns: Answer %u : %-24s %5u %u %u", ++i,
-                        it.dname().c_str(), it.ttl(), it.query_class(),
-                        it.query_type());
-            }
+            DLOG_IF(INFO, Debug) << "Answer " << ++i << ": " << it.dname() << " "
+                    << it.ttl() << " " << it.query_class()
+                    << " " << it.query_type();
             std::string dnsdata = it.data();
             switch (it.query_type()) {
             case Tins::DNS::QueryType::A: {
-                if (Debug == true) {
-                    syslog(LOG_DEBUG, "Mdns: A record: %s", it.data().c_str());
-                }
+                DLOG_IF(INFO, Debug) << "A record: " << it.data();
                 Tins::IPv4Address ip(it.data());
                 break;
             }
             case Tins::DNS::QueryType::AAAA: {
                 Tins::IPv6Address ip(it.data());
-                if (Debug == true) {
-                    syslog(LOG_DEBUG, "Mdns: AAAA record: %s", ip.to_string().c_str());
-                }
+                DLOG_IF(INFO, Debug) << "AAAA record: " << ip;
                 break;
             }
             case Tins::DNS::QueryType::CNAME:
-                if (Debug == true) {
-                    syslog(LOG_DEBUG, "Mdns: CNAME record: %s", dnsdata.c_str());
-                }
+                DLOG_IF(INFO, Debug) << "CNAME record: " << dnsdata;
                 break;
             case Tins::DNS::QueryType::PTR:
-                if (Debug == true) {
-                    syslog(LOG_DEBUG, "Mdns: PTR record: %s", dnsdata.c_str());
-                }
+                DLOG_IF(INFO, Debug) << "PTR record: " << dnsdata;
                 // We give preference to FQDN in TXT record
                 if (host->Hostname == "") {
                     host->Hostname = it.dname();
                 }
                 break;
             case Tins::DNS::QueryType::TXT:
-                if (Debug == true) {
-                    syslog(LOG_DEBUG, "Mdns: TXT record: %s", dnsdata.c_str());
-                }
+                DLOG_IF(INFO, Debug) << "TXT record: " << dnsdata;
                 // We give preference to FQDN in TXT record
                 host->Hostname = it.dname();
                 parseTxtRr(host, dnsdata);
                 break;
             case Tins::DNS::QueryType::SRV:
-                if (Debug == true) {
-                    syslog(LOG_DEBUG, "Mdns: SRV record: %s", dnsdata.c_str());
-                }
+                DLOG_IF(INFO, Debug) << "SRV record: " << dnsdata;
                 // We give preference to FQDN in TXT record
                 if (host->Hostname == "") {
                     host->Hostname = it.dname();
                 }
                 break;
             default:
-                if (Debug == true) {
-                    syslog(LOG_DEBUG, "Mdns: unhandled resource record type %d: %s", it.query_type(), dnsdata.c_str());
-                }
+                DLOG_IF(INFO, Debug) << "unhandled resource record type " << it.query_type() << ": " << dnsdata;
                 break;
             }
         } else {
-            if (Debug == true) {
-                syslog(LOG_DEBUG, "Mdns: RR OPT");
-            }
+            DLOG_IF(INFO, Debug) << "RR OPT";
         }
     }
     delete q;
@@ -151,31 +129,24 @@ void Mdns::parseTxtRr (std::shared_ptr<MdnsHost> host, const std::string txt) {
     while (stridx < txtlen) {
         unsigned char len = txt[stridx++];
         if (stridx + len > txtlen) {
-            if(Debug == true) {
-                syslog (LOG_NOTICE, "Mdns: malformed mDNS TXT record");
-            }
-            throw std::runtime_error ("Mdns: malformed mDNS TXT record");
+            LOG(INFO) << "malformed mDNS TXT record";
+            throw std::runtime_error ("malformed mDNS TXT record");
         }
         size_t keylength = txt.find("=", stridx) - stridx;
         if (keylength == std::string::npos) {
-            if(Debug == true) {
-                syslog (LOG_NOTICE, "Mdns: malformed mDNS TXT record with '=' separating key and value");
-            }
-            throw std::runtime_error ("Mdns: malformed mDNS TXT record");
+            LOG(INFO) << "malformed mDNS TXT record with '=' separating key and value";
+            throw std::runtime_error ("malformed mDNS TXT record");
         }
         std::string key = txt.substr(stridx, keylength);
         std::transform(key.begin(),key.end(), key.begin(), ::tolower);
         size_t valuepos = stridx + keylength + 1;
         size_t valuelength = len - keylength - 1;
-        if(Debug == true) {
-            syslog (LOG_DEBUG, "Mdns: TXT-len: %zu, strindex: %zu, kv-pair length: %d, key-length: %zu, value-length %zu", txtlen, stridx, len, keylength, valuelength);
-        }
+        DLOG_IF(INFO, Debug) << "TXT-len: " << txtlen <<", strindex: " << stridx
+                << ", kv-pair length: " << len << ", key-length: " << keylength
+                << ", value-length " << valuelength;
         std::string value = txt.substr(valuepos, valuelength);
         stridx += len;
-        if (Debug == true) {
-            syslog(LOG_DEBUG, "Mdns: TXT record kv-pair %s = %s",
-                    key.c_str(), value.c_str());
-        }
+        DLOG_IF(INFO, Debug) << "TXT record kv-pair " << key << " = " << value;
         if (key == "os") {
             host->Os = value;
         } else if(key == "hw") {
@@ -193,11 +164,9 @@ void Mdns::parseTxtRr (std::shared_ptr<MdnsHost> host, const std::string txt) {
 
 bool Mdns::processEvent (struct epoll_event &event) {
     if (socket_fd != event.data.fd) {
-        syslog(LOG_CRIT, "Mdns: Mismatch in socket FD between class object and epoll event");
+        LOG(ERROR) << "Mismatch in socket FD between class object and epoll event";
     }
-    if (Debug == true) {
-        syslog(LOG_DEBUG, "Mdns: processing event");
-    }
+    DLOG_IF(INFO, Debug) << "processing event";
     unsigned char msgbuf[MSGBUFSIZE];
     memset(&msgbuf, 0, MSGBUFSIZE);
     struct sockaddr addr;
@@ -205,46 +174,40 @@ bool Mdns::processEvent (struct epoll_event &event) {
 
     socklen_t addrlen = sizeof(addr);
     int nbytes;
-	while ((nbytes = recvfrom(socket_fd, msgbuf, MSGBUFSIZE, 0, &addr, &addrlen)) > 0) {
+    while ((nbytes = recvfrom(socket_fd, msgbuf, MSGBUFSIZE, 0, &addr, &addrlen)) > 0) {
         if (addr.sa_family == AF_INET) {
             auto mdnsHost = std::make_shared<MdnsHost>();
             struct sockaddr_in  *addr_in_ptr = (struct sockaddr_in *) &addr;
             mdnsHost->IpAddress = inet_ntoa(addr_in_ptr->sin_addr);
-            if(Debug) {
-                syslog(LOG_DEBUG, "Mdns: Received packet from %s with %d bytes", mdnsHost->IpAddress.c_str(), nbytes);
-            }
-
+            DLOG_IF(INFO, Debug) << "Received packet from " << mdnsHost->IpAddress
+                    << " with " << nbytes << " bytes";
             try {
                 if (parseMessage(mdnsHost, msgbuf, nbytes) == true) {
-                    hCache.AddMdnsInfo(mdnsHost);
+                    hCache.addMdnsInfo(mdnsHost);
                 }
             } catch (...) {
-                if(Debug) {
-                    syslog(LOG_DEBUG, "Mdns: Couldn't parse packet");
-                }
+                DLOG_IF(INFO, Debug) << "Couldn't parse packet";
             }
         } else {
-            syslog(LOG_WARNING, "Mdns: Unknown address family: %u", addr.sa_family);
+            LOG(WARNING) << "Unknown address family: ", addr.sa_family;
         }
     }
     if (nbytes < 0 && ! (errno == EWOULDBLOCK || errno == EAGAIN)) {
-        syslog(LOG_ERR, "Mdns: recvfrom");
+        PLOG(ERROR) << "recvfrom";
         return false;
     }
     return true;
 }
 int Mdns::Open (std::string input, uint32_t inExpiration) {
     IpAddress = input;
-    if(Debug) {
-        syslog(LOG_DEBUG, "Mdns: Opening socket");
-    }
+    DLOG_IF(INFO, Debug) << "Opening socket";
     if ((socket_fd=socket(AF_INET,SOCK_DGRAM | SOCK_NONBLOCK,0)) < 0) {
-        syslog(LOG_CRIT, "Mdns: socket");
+        PLOG(ERROR) << "socket";
         throw std::system_error(errno, std::system_category());
     }
     int yes = 1;
     if (setsockopt(socket_fd,SOL_SOCKET,SO_REUSEADDR,&yes,sizeof(yes)) < 0) {
-        syslog(LOG_ERR, "Mdns: Reusing ADDR failed");
+        PLOG(ERROR) << "Reusing ADDR failed";
         throw std::system_error(errno, std::system_category());
     }
     struct sockaddr_in addr;
@@ -253,7 +216,7 @@ int Mdns::Open (std::string input, uint32_t inExpiration) {
     addr.sin_addr.s_addr=htonl(INADDR_ANY);
     addr.sin_port=htons(MDNS_PORT);
     if (bind(socket_fd,(struct sockaddr *) &addr,sizeof(addr)) < 0) {
-        syslog(LOG_CRIT, "Mdns: bind");
+        PLOG(ERROR) << "bind";
         throw std::system_error(errno, std::system_category());
     }
     // TODO: add support for multiple IP addresses or interfaces to join multicast groups with
@@ -266,9 +229,10 @@ int Mdns::Open (std::string input, uint32_t inExpiration) {
     }
     mreqn.imr_ifindex = 0;
     if (setsockopt(socket_fd,IPPROTO_IP,IP_ADD_MEMBERSHIP,&mreqn,sizeof(mreqn)) < 0) {
-        syslog(LOG_CRIT, "setsockopt");
+        PLOG(ERROR) <<  "setsockopt";
         throw std::system_error(errno, std::system_category());
-    }    return socket_fd;
+    }
+    return socket_fd;
 }
 
 bool Mdns::Close() {

@@ -24,6 +24,7 @@ ListenIpAddresses:
 ListenInterfaces: 
 LanInterfaces: 
  - enp3s0
+ - enp1s0
 WanInterfaces: 
  - enp2s0
 WsDiscoveryProbeInterval: 3600

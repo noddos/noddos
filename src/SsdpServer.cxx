@@ -37,139 +37,130 @@
 
 
 bool SsdpServer::processEvent (struct epoll_event &event) {
-	if (socket_fd != event.data.fd) {
-		syslog(LOG_CRIT, "SsdpServer: Mismatch in socket FD between class object and epoll event");
-	}
-	char msgbuf[MSGBUFSIZE];
-	memset(&msgbuf, 0, MSGBUFSIZE);
-	struct sockaddr addr;
+    if (socket_fd != event.data.fd) {
+        LOG(ERROR) << "Mismatch in socket FD between class object and epoll event";
+    }
+    char msgbuf[MSGBUFSIZE];
+    memset(&msgbuf, 0, MSGBUFSIZE);
+    struct sockaddr addr;
     socklen_t addrlen = sizeof(addr);
-	memset(&addr, 0, addrlen);
+    memset(&addr, 0, addrlen);
 
-	int nbytes;
-	while ((nbytes = recvfrom(socket_fd, msgbuf, MSGBUFSIZE, 0, &addr, &addrlen)) > 0) {
-		if (addr.sa_family == AF_INET) {
-			auto sHost = std::make_shared<SsdpHost>();
-			struct sockaddr_in  *addr_in_ptr = (struct sockaddr_in *) &addr;
-	        addrlen = sizeof(addr);
-			sHost->IpAddress = inet_ntoa(addr_in_ptr->sin_addr);
-			if(Debug) {
-				syslog(LOG_DEBUG, "SsdpServer: Received multicast packet from %s with %d bytes", sHost->IpAddress.c_str(), nbytes);
-			}
+    int nbytes;
+    while ((nbytes = recvfrom(socket_fd, msgbuf, MSGBUFSIZE, 0, &addr, &addrlen)) > 0) {
+        if (addr.sa_family == AF_INET) {
+            auto sHost = std::make_shared<SsdpHost>();
+            struct sockaddr_in  *addr_in_ptr = (struct sockaddr_in *) &addr;
+            addrlen = sizeof(addr);
+            sHost->IpAddress = inet_ntoa(addr_in_ptr->sin_addr);
+            DLOG_IF(INFO, Debug) << "Received multicast packet from " << sHost->IpAddress
+                    << " with " << nbytes << " bytes";
 
-			if (ParseSsdpMessage(sHost, msgbuf, nbytes)) {
-				hCache.AddSsdpInfo(sHost);
-			} else {
-				if(Debug) {
-					syslog(LOG_DEBUG, "SsdpServer: Didn't parse SSDP packet");
-				}
+            if (ParseSsdpMessage(sHost, msgbuf, nbytes)) {
+                hCache.addSsdpInfo(sHost);
+            } else {
+                DLOG_IF(INFO, Debug) << "Didn't parse SSDP packet";
             }
-		} else {
-			syslog(LOG_WARNING, "SsdpServer: Unknown address family: %u", addr.sa_family);
-		}
+        } else {
+            LOG(WARNING) << "Unknown address family: " << addr.sa_family;
+        }
 
-	}
-	if (nbytes < 0 && ! (errno == EWOULDBLOCK || errno == EAGAIN)) {
-		syslog(LOG_ERR, "SsdpServer: recvfrom");
-		return false;
-	}
-	return true;
+    }
+    if (nbytes < 0 && ! (errno == EWOULDBLOCK || errno == EAGAIN)) {
+        PLOG(ERROR) << "recvfrom";
+        return false;
+    }
+    return true;
 
 }
 
 
 //! Parses SSDP information for certain fields, then adds this info to the Host instance
 bool SsdpServer::ParseSsdpMessage (std::shared_ptr<SsdpHost> host, const char * msgbuf, const int nbytes) {
-	uint32_t pos = 0;
-	std::string line = "";
-	while (pos < nbytes) {
-		// Lines in SSDP packets are separated by \r\n
-		if (msgbuf[pos] == '\r') {
-			 if (line != "") {
-				 std::smatch m;
-				 if(Debug) {
-					 syslog(LOG_DEBUG, "SsdpServer: Line %s", line.c_str());
-				 }
-				 std::regex_search(line, m, ssdp_rx);
-				 if (not m.empty()) {
-					 std::string header = m.str(1);
-					 std::transform(header.begin(), header.end(), header.begin(), std::ptr_fun<int, int>(std::toupper));
-					 std::string value = m.str(2);
-					 if(Debug) {
-						 syslog(LOG_DEBUG, "SsdpServer: Matched SSDP regex %s %s", header.c_str(), value.c_str());
-					 }
-					 if (header == "SERVER") {
-						 host->Server = value;
-				 	 }
-					 if (header == "LOCATION") {
-						 host->Location = value;
-				 	 }
-					 if (header == "USER-AGENT") {
-						 host->UserAgent = value;
-				 	 }
-				 }
-			 }
-		 	 line.erase();
-		} else {
-			if (msgbuf[pos] != '\n') {
-				line.push_back(msgbuf[pos]);
-			}
-		}
-		pos++;
-	}
-	if (host->Server == "" && host->Location == "" && host->UserAgent == "") {
-		return false;
+    uint32_t pos = 0;
+    std::string line = "";
+    while (pos < nbytes) {
+        // Lines in SSDP packets are separated by \r\n
+        if (msgbuf[pos] == '\r') {
+            if (line != "") {
+                std::smatch m;
+                DLOG_IF(INFO, Debug) << "Line " << line;
+                std::regex_search(line, m, ssdp_rx);
+                if (not m.empty()) {
+                    std::string header = m.str(1);
+                    std::transform(header.begin(), header.end(), header.begin(), std::ptr_fun<int, int>(std::toupper));
+                    std::string value = m.str(2);
+                    DLOG_IF(INFO, Debug) << "Matched SSDP regex " << header << " " << value;
+                    if (header == "SERVER") {
+                        host->Server = value;
+                    }
+                    if (header == "LOCATION") {
+                        host->Location = value;
+                    }
+                    if (header == "USER-AGENT") {
+                        host->UserAgent = value;
+                    }
+                }
+            }
+            line.erase();
+        } else {
+            if (msgbuf[pos] != '\n') {
+                line.push_back(msgbuf[pos]);
+            }
+        }
+        pos++;
     }
-	return true;
+    if (host->Server == "" && host->Location == "" && host->UserAgent == "") {
+        return false;
+    }
+    return true;
 }
 
 int SsdpServer::Open (std::string input, uint32_t inExpiration) {
-	IpAddress = input;
-	if(Debug) {
-		syslog(LOG_DEBUG, "SsdpServer: Opening socket");
-	}
-	if ((socket_fd=socket(AF_INET,SOCK_DGRAM | SOCK_NONBLOCK,0)) < 0) {
-		syslog(LOG_CRIT, "SsdpServer: socket");
-		throw std::system_error(errno, std::system_category());
-	}
-	int yes = 1;
-	if (setsockopt(socket_fd,SOL_SOCKET,SO_REUSEADDR,&yes,sizeof(yes)) < 0) {
-		syslog(LOG_ERR, "SsdpServer: Reusing ADDR failed");
-		throw std::system_error(errno, std::system_category());
-	}
-
-	struct sockaddr_in addr;
-	memset(&addr,0,sizeof(addr));
-	addr.sin_family=AF_INET;
-	addr.sin_addr.s_addr=htonl(INADDR_ANY);
-	addr.sin_port=htons(1900);
-	if (bind(socket_fd,(struct sockaddr *) &addr,sizeof(addr)) < 0) {
-		syslog(LOG_CRIT, "SsdpServer: bind");
-		throw std::system_error(errno, std::system_category());
-	}
-
-	// TODO: add support for multiple IP addresses or interfaces to join multicast groups with
-	struct ip_mreqn mreqn;
-	mreqn.imr_multiaddr.s_addr=inet_addr("239.255.255.250");
-	if (IpAddress == "") {
-		mreqn.imr_address.s_addr=htonl(INADDR_ANY);
-	} else {
-		mreqn.imr_address.s_addr=inet_addr(IpAddress.c_str());
+    IpAddress = input;
+    DLOG_IF(INFO, Debug) << "Opening socket";
+    if ((socket_fd=socket(AF_INET,SOCK_DGRAM | SOCK_NONBLOCK,0)) < 0) {
+        PLOG(ERROR) << "socket";
+        throw std::system_error(errno, std::system_category());
     }
-	mreqn.imr_ifindex = 0;
-	if (setsockopt(socket_fd,IPPROTO_IP,IP_ADD_MEMBERSHIP,&mreqn,sizeof(mreqn)) < 0) {
-		syslog(LOG_CRIT, "setsockopt");
-		throw std::system_error(errno, std::system_category());
-	}
-	return socket_fd;
+    int yes = 1;
+    if (setsockopt(socket_fd,SOL_SOCKET,SO_REUSEADDR,&yes,sizeof(yes)) < 0) {
+        PLOG(ERROR) << "Reusing ADDR failed";
+        throw std::system_error(errno, std::system_category());
+    }
+
+    struct sockaddr_in addr;
+    memset(&addr,0,sizeof(addr));
+    addr.sin_family=AF_INET;
+    addr.sin_addr.s_addr=htonl(INADDR_ANY);
+    addr.sin_port=htons(1900);
+    if (bind(socket_fd,(struct sockaddr *) &addr,sizeof(addr)) < 0) {
+        PLOG(ERROR) << "bind";
+        throw std::system_error(errno, std::system_category());
+    }
+
+    // TODO: add support for multiple IP addresses or interfaces to join multicast groups with
+    struct ip_mreqn mreqn;
+    mreqn.imr_multiaddr.s_addr=inet_addr("239.255.255.250");
+    if (IpAddress == "") {
+        mreqn.imr_address.s_addr=htonl(INADDR_ANY);
+    } else {
+        mreqn.imr_address.s_addr=inet_addr(IpAddress.c_str());
+    }
+    mreqn.imr_ifindex = 0;
+    if (setsockopt(socket_fd,IPPROTO_IP,IP_ADD_MEMBERSHIP,&mreqn,sizeof(mreqn)) < 0) {
+        PLOG(ERROR) << "setsockopt";
+        throw std::system_error(errno, std::system_category());
+    }
+    return socket_fd;
 }
 
 bool SsdpServer::Close() {
-	if(socket_fd >= 0) {
-		close (socket_fd);
-		return true;
-	}
-	return false;
+    if(socket_fd >= 0) {
+        close (socket_fd);
+        return true;
+    }
+    return false;
 }
 
 int SsdpServer::getFileHandle () { return socket_fd; }

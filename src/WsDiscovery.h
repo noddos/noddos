@@ -23,15 +23,17 @@
 #ifndef WSDISCOVERY_H_
 #define WSDISCOVERY_H_
 
-#include "iDeviceInfoSource.h"
-#include "HostCache.h"
-#include "noddos.h"
-
 #include <regex>
 #include <string>
 #include <ctime>
 #include <memory>
 #include <sys/epoll.h>
+
+#include <glog/logging.h>
+
+#include "iDeviceInfoSource.h"
+#include "HostCache.h"
+#include "noddos.h"
 
 
 class WsDiscovery : public iDeviceInfoSource {
@@ -54,11 +56,12 @@ public:
                 std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
 
         Open (IpAddress);
-
     }
+
     ~WsDiscovery() {
         // TODO Auto-generated destructor stub
     }
+
     int Open(std::string input, uint32_t inExpiration = 0);
     bool Close();
     bool processEvent(struct epoll_event &event);

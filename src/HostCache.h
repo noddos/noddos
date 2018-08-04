@@ -41,44 +41,55 @@
 #include "DnsCache.h"
 #include "noddos.h"
 
-uint32_t RestApiCall (const std::string api, const json &j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload, bool Debug = false);
+uint32_t callRestApi (const std::string api, const json &j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload, bool Debug = false);
 
+/*! \class HostCache
+ *  \brief Store of all the hosts discovered on the network
+ *
+ *  The main data structure of Noddos. All hosts are stored in here, together with all DNS data. All listeners have a reference
+ *  to this data structure and invoke the various methods to add data.
+ */
 class HostCache {
 private:
-	std::map<unsigned long long, std::shared_ptr<Host>> hC; 	// map from Mac to Host
-	std::map<std::string, unsigned long long> Ip2MacMap; 	// map from IP to MaC
+    std::map<unsigned long long, std::shared_ptr<Host>> hC; //!< map from Mac to Host
+    std::map<std::string, unsigned long long> Ip2MacMap; 	//!< map from IP to MaC
 
-	// This map is used to validate that answers received correspond to queries sent out. They are pruned after 30 seconds
-	std::map<uint16_t, time_t> DnsQueryCache;
-	// These maps cache IPv4 & IPv6 addresses and CNAMEs for at least the TrafficReport interval
-	DnsIpCache <Tins::IPv4Address> dCipv4;
-	DnsIpCache <Tins::IPv6Address> dCipv6;
-	DnsCnameCache dCcname;
-	FqdnDeviceProfileMap fdpMap;
+    std::map<uint16_t, time_t> DnsQueryCache; //!< validate that DNS answers received correspond to DNS queries previously sent out.
+    // These maps cache IPv4 & IPv6 addresses and CNAMEs for at least the TrafficReport interval
+    DnsCache <Tins::IPv4Address> dCipv4; //!< Cache for DNS A RRs
+    DnsCache <Tins::IPv6Address> dCipv6; //!< Cache for DNS AAAA RRs
+    DnsCache <std::string> dCcname; //!< Cache for DNS CNAME RRs
+    FqdnDeviceProfileMap fdpMap; //!< Map maintained to check whether an FQDN (or a CNAME pointing to it) is listed as an allowed Destination in a Device Profile
 
-	DeviceProfileMap dpMap;
-	InterfaceMap *ifMap;
-	std::unordered_set<std::string> WhitelistedNodes;
-	bool Debug;
-	std::set<std::string> LocalInterfaces;
-	std::set<std::string> LocalIpAddresses;
-	time_t MinFlowTtl; //!< Minimum TTL for flows
-	time_t MinDnsTtl; //!< Minimum TTL for DNS records.
-	bool FirewallBlockTraffic; //!< Should the firewall just log or block traffic
-	std::string FirewallRulesFile; //!< location to store the temporary rules file that will be read by ip(6)tables
+    DeviceProfileMap dpMap; //!< Map of all device profiles, with key the UUID of the Device Profile
+    InterfaceMap *ifMap; //!< map of all interfaces of the host on which Noddos is running
+    std::unordered_set<std::string> WhitelistedNodes; //!< Set of hosts for which traffic will not be monitored or restricted
+    bool Debug; //!< Should debug logging be enabled?
+    std::set<std::string> LocalInterfaces;
+    std::set<std::string> LocalIpAddresses;
+    time_t MinFlowTtl; //!< Minimum TTL for flows
+    time_t MinDnsTtl; //!< Minimum TTL for DNS records.
+    bool FirewallBlockTraffic; //!< Should the firewall just log or also block traffic
+    std::string FirewallRulesFile; //!< location to store the temporary rules file that will be read by ip(6)tables
 
     void writeIptables();
 
 public:
-	HostCache(InterfaceMap &inifMap, const std::string inDnsCacheFilename, const time_t inMinFlowTtl,
-	        const time_t inMinDnsTtl, std::string inFirewallRulesFile,
+    /*! \brief constructer for HostCache
+     * \param [in] inifMap reference to InterfaceMap
+     * \param [in] inDnsCacheFilename constant string with the filename containing cached DNS records
+     * \param [in] inMinFlowTtl constant unsigned integer of 32 bits with the minium Time To Live for Flow entries, should match the traffic report interval
+     * \param [in] inFirewallRulesFile
+     * \param [in] inFirewallBlockTraffic contant bool of whether the host firewall should only log traffic or also block it
+     * \param [in]
+     */
+	HostCache(InterfaceMap &inifMap, const std::string inDnsCacheFilename, const uint32_t inMinFlowTtl,
+	        const time_t inMinDnsTtl, const std::string inFirewallRulesFile,
 	        const bool inFirewallBlockTraffic, const bool inDebug = false):
 			ifMap{&inifMap}, MinFlowTtl{inMinFlowTtl}, MinDnsTtl{inMinDnsTtl}, Debug{inDebug},
 			FirewallRulesFile{inFirewallRulesFile},
 			FirewallBlockTraffic{inFirewallBlockTraffic} {
-		if (Debug == true) {
-			syslog (LOG_DEBUG, "HostCache: constructing instance");
-		}
+		DLOG_IF(INFO, Debug) << "constructing instance";
 
 		getInterfaceIpAddresses();
 		dCipv4.setDebug(Debug);
@@ -92,39 +103,40 @@ public:
 		    importDnsCache(inDnsCacheFilename);
 		}
 	}
+	//! \brief destructer for HostCache
 	virtual ~HostCache() {
-		if (Debug == true) {
-			syslog (LOG_DEBUG, "HostCache: destructing instance");
-		}
+	    DLOG_IF(INFO, Debug) << "destructing instance";
 	}
 
+	// Manage Device Profiles
 	uint32_t loadDeviceProfiles(const std::string filename);
 	bool removeDeviceProfile(const std::string inUuid);
 	const DeviceProfileMap & getDeviceProfilesMap() { return dpMap; };
 
-
+	// Manage whitelists of IP addresses
 	uint32_t Whitelists_set (const std::unordered_set<std::string>& inIpv4Addresses, const std::unordered_set<std::string>& inIpv6Addresses, const std::unordered_set<std::string>& inMacAddresses);
 	bool isWhitelisted(const std::string inAddress) { return (WhitelistedNodes.find(inAddress) != WhitelistedNodes.end()); }
 	bool isWhitelisted(Host &inHost) { return isWhitelisted(inHost.getMacAddress()) || isWhitelisted(inHost.getIpv4Address()) || isWhitelisted(inHost.getIpv6Address()); }
 
 	// Matching hosts with device profiles
 	uint32_t Match();
-	bool MatchByMac(const MacAddress &inMacAddress);
-	bool MatchByIpAddress(const std::string inIpAddress);
+	bool matchByMac(const MacAddress &inMacAddress);
+	bool matchByIpAddress(const std::string inIpAddress);
 
-    // Adding collected information to a Host instance
-	bool AddByMac (const MacAddress inMacAddress, const std::string inIpAddress = "");
-	bool AddFlow (const std::string srcip, const uint16_t srcport, const std::string dstip, const uint16_t dstport, const uint8_t protocol, const uint32_t expiration);
-	bool AddDnsQueryIp (const std::string clientip, const std::string fqdn, const std::string ip, const uint32_t expire = 86400);
-    bool AddDhcpRequest (const std::string IpAddress, const MacAddress inMac, const std::string Hostname, const std::string DhcpVendor);
-	bool AddSsdpInfo (const std::shared_ptr<SsdpHost> insHost);
-	bool AddWsDiscoveryInfo (std::shared_ptr<WsDiscoveryHost> inwsdHost);
-    bool AddMdnsInfo (std::shared_ptr<MdnsHost> inmdnsHost);
+	// Adding collected information to a Host instance
+	bool addByMac (const MacAddress inMacAddress, const std::string inIpAddress = "");
+	bool addFlow (const std::string srcip, const uint16_t srcport, const std::string dstip, const uint16_t dstport, const uint8_t protocol, const uint32_t inTtl = 14400);
+	bool addDnsQueryIp (const std::string clientip, const std::string fqdn, const std::string ip, const uint32_t inTtl = DNSQUERYDEFAULTTTL);
+	bool addDhcpRequest (const std::string IpAddress, const MacAddress inMac, const std::string Hostname, const std::string DhcpVendor);
+	bool addSsdpInfo (const std::shared_ptr<SsdpHost> insHost);
+	bool addWsDiscoveryInfo (std::shared_ptr<WsDiscoveryHost> inwsdHost);
+	bool addMdnsInfo (std::shared_ptr<MdnsHost> inmdnsHost);
 
-	std::shared_ptr<Host> FindHostByIp (const std::string inIp);
-	std::shared_ptr<Host> FindOrCreateHostByIp (const std::string ip, const std::string Uuid = "");
-	std::shared_ptr<Host> FindHostByMac (const MacAddress &inMac);
-	std::shared_ptr<Host> FindOrCreateHostByMac (const MacAddress inMac, const std::string Uuid = "", const std::string inIp = "");
+	// Finding a host
+	std::shared_ptr<Host> findHostByIp (const std::string inIp);
+	std::shared_ptr<Host> findOrCreateHostByIp (const std::string ip, const std::string Uuid = "");
+	std::shared_ptr<Host> findHostByMac (const MacAddress &inMac);
+	std::shared_ptr<Host> findOrCreateHostByMac (const MacAddress inMac, const std::string Uuid = "", const std::string inIp = "");
 
 	// Prune Hosts, DnsCache etc
 	uint32_t Prune (bool Force = false);
@@ -134,51 +146,42 @@ public:
 	bool inDnsQueryCache (uint16_t id);
 	uint32_t pruneDnsQueryCache (bool Force = false);
 
-	// These functions are for the new DnsCache filled by the PacketSnoop class
+	// These functions are for the DnsCache filled by the PacketSnoop class
 	void addorupdateDnsIpCache(const std::string inFqdn, const Tins::IPv4Address inIp, time_t inTtl = 604800);
-    void addorupdateDnsIpCache(const std::string inFqdn, const Tins::IPv6Address inIp, time_t inTtl = 604800);
+	void addorupdateDnsIpCache(const std::string inFqdn, const Tins::IPv6Address inIp, time_t inTtl = 604800);
 	void addorupdateDnsCnameCache(const std::string inFqdn, const std::string inCname, time_t inTtl = 604800);
 	void updateDeviceProfileMatchesDnsData ();
 
 	// DnsCache persistence
-	bool exportDnsCache (const std::string filename);
-    bool importDnsCache (const std::string filename);
-	uint32_t pruneDnsIpCache(bool Force = false) {
-		std::set<std::string> PrunedFqdns = dCipv4.pruneResourceRecords(Force);
-        std::set<std::string> PrunedIpv6Fqdns = dCipv6.pruneResourceRecords(Force);
-        PrunedFqdns.insert(PrunedIpv6Fqdns.begin(), PrunedIpv6Fqdns.end());
-		for(auto Fqdn: PrunedFqdns) {
-		    fdpMap.erase(Fqdn);
-		}
-		return PrunedFqdns.size();
-	}
+	bool exportDnsCache(const std::string filename);
+	bool importDnsCache(const std::string filename);
+	uint32_t pruneDnsIpCache(const bool Force = false);
+	uint32_t pruneDnsCnameCache(const bool Force = false);
 
-    uint32_t pruneDnsCnameCache(bool Force = false) {
-        std::set<std::string> PrunedCnames = dCcname.pruneCnames(Force);
-        for(auto Cname: PrunedCnames) {
-            fdpMap.erase(Cname);
-        }
-        return PrunedCnames.size();
-    }
-
+	// Functions about the interfaces of the host on which Noddos runs
 	InterfaceMap * getInterfaceMap() { return ifMap; }
-	MacAddress MacLookup (const std::string inIpAddress);
-	MacAddress MacLookup (const std::string inIpAddress, const std::string inInterface, bool Retry = false);
+	MacAddress lookupMac (const std::string inIpAddress);
+	MacAddress lookupMac (const std::string inIpAddress, const std::string inInterface, bool Retry = false);
 	bool sendUdpPing (const std::string DstIpAddress, const uint16_t DstPort);
 	uint32_t getInterfaceIpAddresses();
 	std::set<std::string> getLocalIpAddresses() { return LocalIpAddresses; }
 
-	void UploadDeviceStats(std::vector<std::future<uint32_t>> &futures, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
-	void UploadTrafficStats(std::vector<std::future<uint32_t>> &futures, const time_t interval, const bool ReportRfc1918, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
-    void RestApiCall_async (std::vector<std::future<uint32_t>> &futures, const std::string api, const json j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
-    std::unique_ptr<std::future<uint32_t>> test_RestApiCall_async (const std::string api, const json j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
+	// Upload data to the Noddos REST API
+	void uploadDeviceStats(std::vector<std::future<uint32_t>> &futures, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
+	void uploadTrafficStats(std::vector<std::future<uint32_t>> &futures, const time_t interval, const bool ReportRfc1918, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
+	void callRestApi_async (std::vector<std::future<uint32_t>> &futures, const std::string api, const json j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
+	std::unique_ptr<std::future<uint32_t>> test_callRestApi_async (const std::string api, const json j, const std::string ClientApiCertFile, const std::string ClientApiKeyFile, bool doUpload = false);
 
-    uint32_t ImportDeviceProfileMatches(const std::string filename);
-	bool ExportDeviceProfileMatches(const std::string filename, const bool detailed = false);
-	bool ImportDeviceInfo (json &j);
+	// import persisted data
+	uint32_t importDeviceProfileMatches(const std::string filename);
+	bool exportDeviceProfileMatches(const std::string filename, const bool detailed = false);
+	bool importDeviceInfo (json &j);
 
-	// uint32_t HostCount() { return hC.size(); }
-	bool Debug_get() { return Debug; }
+	//! \brief Return the number of hosts in the cache
+	uint32_t getHostCount() { return hC.size(); }
+
+	//! \brief Get the Debug level
+	bool getDebug() { return Debug; }
 };
 
 #endif /* HOSTCACHE_H_ */

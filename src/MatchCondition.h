@@ -28,46 +28,42 @@
 
 struct MatchCondition {
 public:
-	std::string Key;
-	std::string Value;
-	bool Debug;
+    std::string Key;
+    std::string Value;
+    bool Debug;
 
-	MatchCondition(const std::string inKey, const std::string inValue, const bool inDebug): Key{inKey}, Value{inValue}, Debug{inDebug} {}
-	~MatchCondition() {
-		if(Debug) {
-			syslog (LOG_DEBUG, "Destroying MatchCondition instance");
-		}
-	}
+    MatchCondition(const std::string inKey, const std::string inValue, const bool inDebug): Key{inKey}, Value{inValue}, Debug{inDebug} {}
+    ~MatchCondition() {
+        DLOG_IF(INFO, Debug) << "Destroying MatchCondition instance";
+    }
 };
 
 class ContainCondition {
 public:
-	std::string Key;
-	std::unordered_set<std::string> Values;
-	bool Debug;
+    std::string Key;
+    std::unordered_set<std::string> Values;
+    bool Debug;
 
-	ContainCondition(const std::string inKey, const json j, const bool inDebug): Key{inKey}, Debug{inDebug} {
-		for (auto &it: j) {
-			if (it.is_string()) {
-				std::string v = it.get<std::string>();
-				std::transform(v.begin(), v.end(), v.begin(), ::tolower);
-				Values.insert (v);
-			} else {
-				syslog (LOG_ERR, "Contain condition %s contains a value other than a string", Key.c_str());
-			}
-		}
-	}
-	bool contains(std::string inValue) {
-		std::transform(inValue.begin(), inValue.end(), inValue.begin(), ::tolower);
-		if (Values.find(inValue) == Values.end()) {
-			return false;
-		}
-		return true;
-	}
-	~ContainCondition() {
-		if(Debug) {
-			syslog (LOG_DEBUG, "Destroying ContainCondition instance");
-		}
-	}
+    ContainCondition(const std::string inKey, const json j, const bool inDebug): Key{inKey}, Debug{inDebug} {
+        for (auto &it: j) {
+            if (it.is_string()) {
+                std::string v = it;
+                std::transform(v.begin(), v.end(), v.begin(), ::tolower);
+                Values.insert (v);
+            } else {
+                LOG(ERROR) << "Contain condition " << Key << " contains a value other than a string";
+            }
+        }
+    }
+    bool contains(std::string inValue) {
+        std::transform(inValue.begin(), inValue.end(), inValue.begin(), ::tolower);
+        if (Values.find(inValue) == Values.end()) {
+            return false;
+        }
+        return true;
+    }
+    ~ContainCondition() {
+        DLOG_IF(INFO, Debug) << "Destroying ContainCondition instance";
+    }
 };
 #endif /* MATCHCONDITION_H_ */

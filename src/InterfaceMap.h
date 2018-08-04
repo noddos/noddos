@@ -14,78 +14,68 @@
 #include <fstream>
 
 #include <net/if.h>
-#include "syslog.h"
+#include "glog/logging.h"
 
 class InterfaceMap {
 private:
-	std::unordered_map<uint32_t, std::string> lanInterfaceMap;
-	std::unordered_map<uint32_t, std::string> wanInterfaceMap;
-	bool Debug;
+    std::unordered_map<uint32_t, std::string> lanInterfaceMap;
+    std::unordered_map<uint32_t, std::string> wanInterfaceMap;
+    bool Debug;
 
-	bool LoadInterfaces (std::unordered_set<std::string> &set, std::unordered_map<uint32_t, std::string> &map) {
-	    map.clear();
+    bool LoadInterfaces (std::unordered_set<std::string> &set, std::unordered_map<uint32_t, std::string> &map) {
+        map.clear();
         uint32_t index;
         bool failure = false;
         for (auto i : set) {
-            if (Debug == true) {
-                syslog(LOG_DEBUG, "InterfaceMap: Looking up interface %s", i.c_str());
-            }
+            DLOG_IF(INFO, Debug) << "InterfaceMap: Looking up interface " << i;
             if ((index = if_nametoindex(i.c_str())) > 0) {
-                if (Debug == true) {
-                    syslog(LOG_DEBUG, "Interface: %s -> Index %d", i.c_str(), index);
-                }
+                DLOG_IF(INFO, Debug) << "Interface: " << i << " -> Index " << index;
                 map[index] = i;
             } else {
-                syslog (LOG_ERR, "Can't find interface %s", i.c_str());
+                LOG(ERROR) << "Can't find interface " << i;
                 failure = true;
             }
         }
         return failure;
-	}
+    }
 
 public:
-	InterfaceMap (bool inDebug = false): Debug{inDebug} {};
-	InterfaceMap(std::unordered_set<std::string> inLanInterfaces, std::unordered_set<std::string> inWanInterfaces, bool inDebug = false): Debug{inDebug} {
-		if (Debug == true) {
-		    syslog (LOG_DEBUG, "InterfaceMap: constructing instance");
-		}
-	    Load(inLanInterfaces, inWanInterfaces);
-	}
-	~InterfaceMap() {
-	    if (Debug == true) {
-	        syslog (LOG_DEBUG, "InterfaceMap: deleting instance");
-	    }
-	};
+    InterfaceMap (bool inDebug = false): Debug{inDebug} {};
+    InterfaceMap(std::unordered_set<std::string> inLanInterfaces, std::unordered_set<std::string> inWanInterfaces, bool inDebug = false): Debug{inDebug} {
+        DLOG_IF(INFO, Debug) << "InterfaceMap: constructing instance";
+        Load(inLanInterfaces, inWanInterfaces);
+    }
+    ~InterfaceMap() {
+        DLOG_IF(INFO, Debug) << "InterfaceMap: deleting instance";
+    };
 
-	bool Load (std::unordered_set<std::string> &inLanInterfaces, std::unordered_set<std::string> &inWanInterfaces) {
-		if (Debug == true) {
-		    syslog (LOG_DEBUG, "InterfaceMap: loading interfaces");
-		}
-	    bool failure = false;
-		failure |= LoadInterfaces(inLanInterfaces, lanInterfaceMap);
+    bool Load (std::unordered_set<std::string> &inLanInterfaces, std::unordered_set<std::string> &inWanInterfaces) {
+        DLOG_IF(INFO, Debug) << "InterfaceMap: loading interfaces";
+        bool failure = false;
+        failure |= LoadInterfaces(inLanInterfaces, lanInterfaceMap);
         failure |= LoadInterfaces(inWanInterfaces, wanInterfaceMap);
-		return failure;
-	}
-	bool isLanInterface (int ifIndex) {
-		if (lanInterfaceMap.find(ifIndex) == lanInterfaceMap.end()) {
-			return false;
-		}
-		return true;
-	}
-	bool isWanInterface (int ifIndex) {
-		if (wanInterfaceMap.find(ifIndex) == wanInterfaceMap.end()) {
-			return false;
-		}
-		return true;
-	}
-	std::vector<std::string> getLanInterfaces() {
-	    std::vector<std::string> ifaces;
-	    for (auto iface: lanInterfaceMap) {
-	        ifaces.push_back(iface.second);
-	    }
-	    return ifaces;
+        return failure;
+    }
+    bool isLanInterface (int ifIndex) {
+        if (lanInterfaceMap.find(ifIndex) == lanInterfaceMap.end()) {
+            return false;
+        }
+        return true;
+    }
+    bool isWanInterface (int ifIndex) {
+        if (wanInterfaceMap.find(ifIndex) == wanInterfaceMap.end()) {
+            return false;
+        }
+        return true;
+    }
+    std::vector<std::string> getLanInterfaces() {
+        std::vector<std::string> ifaces;
+        for (auto iface: lanInterfaceMap) {
+            ifaces.push_back(iface.second);
+        }
+        return ifaces;
 
-	}
+    }
 };
 
 #endif /* INTERFACEMAP_H_ */

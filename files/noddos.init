@@ -14,7 +14,7 @@ reload_service() {
 }
 
 start_service() {
-	# Add multicast route if it does not exist as it is
+    # Add multicast route if it does not exist as it is
     # needed for listening to multicast traffic
     netstat -nr | grep '224.0.0' > /dev/null
     if [ "$?" -gt "0" ]; then
@@ -30,7 +30,7 @@ start_service() {
     grep getnoddosdeviceprofiles /etc/crontabs/root >/dev/null 2>/dev/null
     if [ "$?" -gt "0" ]; then
         echo "Installing cronjob for noddos"
-		# Use awk to generate a random minute
+        # Use awk to generate a random minute
         MINUTE=$(awk -v min=0 -v max=59 'BEGIN{srand(); print int(min+rand()*(max-min+1))}')
         echo "${MINUTE} */3 * * * /usr/bin/getnoddosdeviceprofiles; " 'if [ $? -gt 0 ]; then service noddos reload; fi' >> /etc/crontabs/root
         killall -SIGHUP crond 2>/dev/null
@@ -65,19 +65,19 @@ start_service() {
     CONFFILE=/var/etc/noddos.yml
     cp /etc/noddos/noddos.yml-base $CONFFILE
 
-	LANINT=$(uci get network.lan.ifname)
-	LANBRIDGE=$(uci get network.lan.type)
-	echo 'LanInterfaces:' >> $CONFFILE
-	if [ "${LANBRIDGE}" == "bridge" ]; then
-		echo "  - br-lan" >> $CONFFILE
+    LANINT=$(uci get network.lan.ifname)
+    LANBRIDGE=$(uci get network.lan.type)
+    echo 'LanInterfaces:' >> $CONFFILE
+    if [ "${LANBRIDGE}" == "bridge" ]; then
+        echo "  - br-lan" >> $CONFFILE
     fi
     echo "  - ${LANINT}" >> $CONFFILE
-	echo '' >>$CONFFILE
+    echo '' >>$CONFFILE
 
-	WANINT=$(uci get network.wan.ifname)
-	echo 'WanInterfaces:' >> $CONFFILE
+    WANINT=$(uci get network.wan.ifname)
+    echo 'WanInterfaces:' >> $CONFFILE
     echo "  - ${WANINT}" >> $CONFFILE
-	echo '' >>$CONFFILE
+    echo '' >>$CONFFILE
 
 
     if [ "$(uci get noddos.@noddos[0].rfc1918)" -eq "1" ]; then
@@ -87,17 +87,17 @@ start_service() {
     fi
     if [ $(uci get noddos.@noddos[0].upload) -eq "1" ]; then
         echo 'TrafficReportInterval: 3600' >>$CONFFILE
-    	echo '' >>$CONFFILE
+        echo '' >>$CONFFILE
         echo 'DeviceReportInterval: 14400' >>$CONFFILE
-    	echo '' >>$CONFFILE
+        echo '' >>$CONFFILE
     else
         echo 'TrafficReportInterval: 0' >>$CONFFILE
-    	echo '' >>$CONFFILE
+        echo '' >>$CONFFILE
         echo 'DeviceReportInterval: 0' >>$CONFFILE
-    	echo '' >>$CONFFILE
+        echo '' >>$CONFFILE
     fi
 
-	whitelist=$(uci get noddos.@noddos[0].whitelistipv4 | tr -d "'")
+    whitelist=$(uci get noddos.@noddos[0].whitelistipv4 | tr -d "'")
     echo 'WhitelistedIpv4Addresses: ' >> $CONFFILE
     for ipv4 in $whitelist; do
         echo "  - ${ipv4}" >>$CONFFILE

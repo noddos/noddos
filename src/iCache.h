@@ -27,15 +27,15 @@
 
 class iCache {
 protected:
-	time_t Expires;
-	uint32_t FirstSeen, LastSeen, LastModified;
+    time_t Expires;
+    time_t FirstSeen, LastSeen, LastModified;
 public:
-	virtual time_t setExpiration (time_t inExpiration) = 0;
-	virtual time_t getExpiration () = 0;
-	virtual bool isExpired () = 0;
-	bool Fresh(uint32_t time_interval) { return iCache::LastSeen > (time(nullptr) - time_interval); }
-	virtual uint32_t Prune(bool Force) = 0;
-	virtual ~iCache() {};
+    virtual time_t setExpiration (uint32_t inTtl) = 0;
+    virtual time_t getExpiration () = 0;
+    virtual bool isExpired () = 0;
+    bool Fresh(uint32_t time_interval) { return iCache::LastSeen > (time(nullptr) - time_interval); }
+    virtual uint32_t Prune(bool Force) = 0;
+    virtual ~iCache() {};
 };
 
 #endif /* ICACHE_H_ */
