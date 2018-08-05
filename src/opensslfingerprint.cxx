@@ -109,7 +109,11 @@ std::string getCertFingerprint(const std::string certfile, const bool Debug = fa
     }
     snprintf(&fpbuf[57], 3, "%02x", md[19]);
 
-    DLOG_IF(INFO, Debug) << "Cert: " << x->name << ", fingerprint: " << fpbuf;
+	if (Debug) {
+		char *namebuf = X509_NAME_oneline(X509_get_subject_name(x),NULL,0);
+    	DLOG_IF(INFO, Debug) << "Cert: " << namebuf  << ", fingerprint: " << fpbuf;
+		free(namebuf);
+	}
 
     std::string fp = fpbuf;
     // frees memory
