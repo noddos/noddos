@@ -86,7 +86,12 @@ fi
 # That's also why we don't delete the downloaded file
 if [ "$WGET" != "" ]
 then
-    GETURL="$WGET --quiet --timestamping"
+    GETURL="$WGET --quiet"
+    # Make sure wget accepts --timestamping
+    if wget --help 2>&1 | egrep timestamping > /dev/null
+    then
+        GETURL="$GETURL --timestamping"
+    fi
 else
     if [ "$CURL" != "" ]
     then
