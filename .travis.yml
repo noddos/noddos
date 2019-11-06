@@ -1,0 +1,50 @@
+sudo: required
+language: cpp
+script:
+compiler: gcc
+dist: trusty
+ 
+
+services:
+ - docker
+
+env:
+ global:
+   - distribution=ubuntu
+   - version=16.04
+   # - init: /usr/lib/systemd/systemd
+   # - run_opts: "--privileged --volume=/sys/fs/cgroup:/sys/fs/cgroup:ro"
+   # playbook: test.yml
+
+before_install:
+  # C++11
+  - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+  - sudo apt-get update -qq
+  - sudo docker --version
+  - sudo echo "ENV GIT_SHA ${TRAVIS_COMMIT}" >> Dockerfile
+  - sudo docker pull ${distribution}:${version}
+ 
+install: 
+  #- docker pull ${DOCKER_REPOSITORY}:last_successful_build || true
+  #- docker pull ${DOCKER_REPOSITORY}:${TRAVIS_COMMIT} || true
+  #- docker build -t ${DOCKER_REPOSITORY}:${TRAVIS_COMMIT} --pull=true .
+  #- sudo apt-get install libnetfilter-conntrack-dev
+  #- sudo apt-get install libcurl4-openssl-dev
+  #- sudo apt-get install libssl-dev libtins-dev libipset-dev
+  #- sudo apt-get install libtins-dev
+  #- sudo apt-get install libipset-dev
+  #- sudo apt-get install openssl 
+  #- sudo apt-get install libtins3.4
+  #- sudo apt-get install ca-certificates 
+  # Not needed for tests: ipset iptables-persistent brotli wget
+  # C++11
+  #- sudo apt-get install -qq g++-5
+  #- sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-5 90
+ 
+script: 
+  - sudo docker run ubuntu:16.04 'apt install libnetfilter-conntrack-dev libcurl4-openssldev libssl-dev libtins-dev libipset-dev libtins-dev openssl libtins3.4 ca-certificates'
+  - sudo docker run ubuntu:16.04 'cd src; cmake .; make; make test'
+#  - cd src
+#  - cmake .
+#  - make 
+#  - make test
